@@ -9,4 +9,10 @@ Next.js ile web sitesi. Asıl kullanım mobilde; web'in görevi sınırlı:
 
 **Kural:** Sayfalar renk/yazı tipi yazmaz, sadece `@fitapp/ui-web` parçalarını kullanır.
 
-> Durum: İskelet. Next.js kurulumu bir sonraki adımda yapılacak.
+## Komutlar
+| Komut | Ne yapar |
+|---|---|
+| `pnpm dev` | Siteyi geliştirme modunda başlatır (http://localhost:3001) |
+| `pnpm build` | Derler |
+
+> Durum: Next.js kurulu, geçici tanıtım sayfası var.

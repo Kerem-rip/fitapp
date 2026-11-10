@@ -7,6 +7,19 @@ dist/
 .expo/
 .turbo/
 build/
+*.tsbuildinfo
+
+# Mobil (Expo) — otomatik üretilen dosyalar
+expo-env.d.ts
+.metro-health-check*
+apps/mobile/ios/
+apps/mobile/android/
+*.jks
+*.p8
+*.p12
+*.key
+*.mobileprovision
+*.pem
 
 # Gizli ayarlar (ASLA GitHub'a gitmez)
 .env

@@ -10,4 +10,10 @@ Telefon ve tablette düzgün görünmeli.
 
 **Kural:** Ekranlar renk/yazı tipi yazmaz, sadece `@fitapp/ui-mobile` parçalarını kullanır.
 
-> Durum: İskelet. Expo kurulumu bir sonraki adımda yapılacak.
+## Komutlar
+| Komut | Ne yapar |
+|---|---|
+| `pnpm dev` | Uygulamayı başlatır. Telefonda **Expo Go** ile QR kodu okutarak açılır. |
+| `pnpm typecheck` | Tip hatası var mı kontrol eder |
+
+> Durum: Expo kurulu, geçici açılış ekranı var.

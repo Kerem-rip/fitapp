@@ -19,4 +19,11 @@ Uygulamanın beyni. Web ve mobil buraya istek atar; veritabanıyla sadece buras�
 └── README.md              → Bu modül ne yapar
 ```
 
-> Durum: İskelet. NestJS kurulumu bir sonraki adımda yapılacak.
+## Komutlar
+| Komut | Ne yapar |
+|---|---|
+| `pnpm dev` | Sunucuyu geliştirme modunda başlatır (http://localhost:3000/api) |
+| `pnpm build` | Derler |
+| `pnpm test:e2e` | Uçtan uca testleri çalıştırır |
+
+> Durum: NestJS kurulu, `GET /api/health` çalışıyor. Veritabanı (Prisma) tasarım onayından sonra bağlanacak.
