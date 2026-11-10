@@ -34,4 +34,5 @@
 - Kayıtta kullanıcı adı (@kullaniciadi) seçilir.
 - Hesap silme uygulama ve web'den yapılabilir; 30 gün geri dönüş, sonra kalıcı silme.
 - Danışan bağlantısı bitince profesyonel verilere erişimi hemen kaybeder.
-- Profesyonellere yorum: herkes yazabilir, sahte yorumlar şikayetle incelenir ("Danışan" rozeti onay bekliyor).
+- Profesyonellere herkes **doğrudan** mesaj atabilir (istek yok). Normal kullanıcılara ilk mesaj istek olarak gider.
+- Profesyonellere sadece danışan bağlantısı kurulmuş kullanıcılar yorum yazabilir; yorumlarda "Danışan" rozeti.

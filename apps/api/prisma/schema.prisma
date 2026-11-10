@@ -1,16 +1,20 @@
-// Veritabanı şeması. Tüm tablolar burada tanımlanır.
-// Şimdilik sadece temel hesap yapısı var; özellikler netleştikçe tablolar eklenecek.
+// Veritabanı şeması — tüm tablolar burada.
+// Her bölüm docs/features/ altındaki bir özellik dokümanına karşılık gelir.
+// Birimler metriktir: kg, cm, ml, gram, kcal.
 
 generator client {
-  provider = "prisma-client-js"
+  provider = "prisma-client"
+  output   = "../src/generated/prisma"
 }
 
 datasource db {
   provider = "postgresql"
-  url      = env("DATABASE_URL")
 }
 
-// Bir hesap birden fazla role sahip olabilir (ör. diyetisyen aynı zamanda kullanıcı)
+// ═══════════════════════════════════════════════════════════════
+// HESAP — docs/features/accounts-and-profiles.md
+// ═══════════════════════════════════════════════════════════════
+
 enum RoleType {
   USER
   DIETITIAN
@@ -19,18 +23,61 @@ enum RoleType {
   ADMIN
 }
 
-model User {
-  id           String    @id @default(uuid())
-  email        String    @unique
-  passwordHash String
-  firstName    String?
-  lastName     String?
-  createdAt    DateTime  @default(now())
-  updatedAt    DateTime  @updatedAt
-  deletedAt    DateTime? // Hesap silme (KVKK)
+enum Gender {
+  FEMALE
+  MALE
+  OTHER
+  UNSPECIFIED
+}
 
-  roles    UserRole[]
-  consents Consent[]
+model User {
+  id                  String    @id @default(uuid())
+  email               String    @unique
+  passwordHash        String
+  username            String    @unique // @kullaniciadi
+  firstName           String?
+  lastName            String?
+  birthDate           DateTime  @db.Date // Yaş kuralları (genç modu) buradan hesaplanır
+  gender              Gender    @default(UNSPECIFIED)
+  heightCm            Float?
+  createdAt           DateTime  @default(now())
+  updatedAt           DateTime  @updatedAt
+  // Hesap silme: talep tarihi. 30 gün sonra kalıcı silinir; bu sürede giriş yaparsa iptal olur.
+  deletionRequestedAt DateTime?
+
+  roles            UserRole[]
+  consents         Consent[]
+  parentalConsents ParentalConsent[]
+  sessions         Session[]
+  profile          Profile?
+
+  following   Follow[] @relation("follower")
+  followers   Follow[] @relation("followed")
+  blocking    Block[]  @relation("blocker")
+  blockedBy   Block[]  @relation("blocked")
+  reportsMade Report[] @relation("reporter")
+
+  onboardingAnswers OnboardingAnswer[]
+  goals             UserGoal[]
+
+  mealLogs         MealLog[]
+  nutritionTargets NutritionTarget[]
+  waterLogs        WaterLog[]
+  weightLogs       WeightLog[]
+  bodyMeasurements BodyMeasurement[]
+  progressPhotos   ProgressPhoto[]
+
+  programsAuthored Program[]
+  enrollments      ProgramEnrollment[]
+
+  professionalProfile ProfessionalProfile?
+  clientOf            ClientRelationship[] @relation("client")
+  reviewsWritten      Review[]
+
+  conversations ConversationParticipant[]
+  messagesSent  Message[]
+  notifications Notification[]
+  files         File[]
 }
 
 model UserRole {
@@ -39,7 +86,7 @@ model UserRole {
   role      RoleType
   createdAt DateTime @default(now())
 
-  user User @relation(fields: [userId], references: [id])
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@unique([userId, role])
 }
@@ -48,10 +95,611 @@ model UserRole {
 model Consent {
   id          String    @id @default(uuid())
   userId      String
-  type        String // ör. "health_data", "marketing"
+  type        String // ör. "health_data", "marketing", "terms"
   textVersion String
   grantedAt   DateTime  @default(now())
   revokedAt   DateTime?
 
-  user User @relation(fields: [userId], references: [id])
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, type])
+}
+
+// Genç modu: 13–17 yaş kullanıcılar için veli onayı
+model ParentalConsent {
+  id          String    @id @default(uuid())
+  userId      String
+  parentEmail String
+  scope       String // ör. "health_data", "contact_professionals"
+  token       String    @unique // Veliye giden onay bağlantısındaki kod
+  approvedAt  DateTime?
+  revokedAt   DateTime?
+  createdAt   DateTime  @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+// Giriş oturumları (her cihaz ayrı oturum, tek tek kapatılabilir)
+model Session {
+  id               String    @id @default(uuid())
+  userId           String
+  refreshTokenHash String    @unique
+  deviceName       String?
+  createdAt        DateTime  @default(now())
+  expiresAt        DateTime
+  revokedAt        DateTime?
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+// ═══════════════════════════════════════════════════════════════
+// PROFİL VE SOSYAL — docs/features/accounts-and-profiles.md
+// ═══════════════════════════════════════════════════════════════
+
+model Profile {
+  userId    String  @id
+  bio       String?
+  avatarId  String? // File.id
+  isPrivate Boolean @default(true) // Normal kullanıcılar varsayılan gizli hesap
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+enum FollowStatus {
+  PENDING // Gizli hesaba gönderilmiş, onay bekliyor
+  ACCEPTED
+}
+
+model Follow {
+  followerId String
+  followedId String
+  status     FollowStatus @default(PENDING)
+  createdAt  DateTime     @default(now())
+
+  follower User @relation("follower", fields: [followerId], references: [id], onDelete: Cascade)
+  followed User @relation("followed", fields: [followedId], references: [id], onDelete: Cascade)
+
+  @@id([followerId, followedId])
+  @@index([followedId, status])
+}
+
+model Block {
+  blockerId String
+  blockedId String
+  createdAt DateTime @default(now())
+
+  blocker User @relation("blocker", fields: [blockerId], references: [id], onDelete: Cascade)
+  blocked User @relation("blocked", fields: [blockedId], references: [id], onDelete: Cascade)
+
+  @@id([blockerId, blockedId])
+}
+
+enum ReportTargetType {
+  USER
+  MESSAGE
+  REVIEW
+  PROGRAM
+}
+
+enum ReportStatus {
+  OPEN
+  ACTION_TAKEN
+  DISMISSED
+}
+
+// Şikayetler admin panelinde incelenir
+model Report {
+  id         String           @id @default(uuid())
+  reporterId String
+  targetType ReportTargetType
+  targetId   String
+  reason     String
+  details    String?
+  status     ReportStatus     @default(OPEN)
+  reviewedBy String? // Admin User.id
+  reviewedAt DateTime?
+  createdAt  DateTime         @default(now())
+
+  reporter User @relation("reporter", fields: [reporterId], references: [id], onDelete: Cascade)
+
+  @@index([status, createdAt])
+}
+
+// ═══════════════════════════════════════════════════════════════
+// KAYIT ÖNCESİ SORULAR — docs/features/onboarding.md
+// ═══════════════════════════════════════════════════════════════
+
+enum GoalType {
+  LOSE_WEIGHT
+  GAIN_MUSCLE
+  STAY_FIT
+  IMPROVE_POSTURE
+  EAT_HEALTHY
+  FACE_CARE
+}
+
+model OnboardingAnswer {
+  id          String   @id @default(uuid())
+  userId      String
+  questionKey String // ör. "workout_location", "level"
+  answer      Json
+  createdAt   DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, questionKey])
+}
+
+model UserGoal {
+  userId    String
+  goal      GoalType
+  isPrimary Boolean  @default(false) // Ana sayfa düzeni ana hedefe göre belirlenir
+  createdAt DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@id([userId, goal])
+}
+
+// ═══════════════════════════════════════════════════════════════
+// BESLENME — docs/features/nutrition.md
+// ═══════════════════════════════════════════════════════════════
+
+enum FoodSource {
+  USDA
+  OPEN_FOOD_FACTS
+  RECIPE // Türk yemekleri: standart tariften hesaplanmış
+  ADMIN
+}
+
+model Food {
+  id         String     @id @default(uuid())
+  name       String
+  category   String?
+  barcode    String?    @unique
+  // 100 g başına değerler
+  kcal       Float
+  proteinG   Float
+  carbsG     Float
+  fatG       Float
+  source     FoodSource
+  isEstimate Boolean    @default(true) // Tüm değerler varsayılan tahmini
+  verifiedBy String? // Düzelten diyetisyenin User.id'si
+  verifiedAt DateTime?
+  createdAt  DateTime   @default(now())
+  updatedAt  DateTime   @updatedAt
+
+  portions FoodPortion[]
+  logItems MealLogItem[]
+
+  @@index([name])
+}
+
+// Ev ölçüleri: "1 kepçe" = 250 g gibi
+model FoodPortion {
+  id     String @id @default(uuid())
+  foodId String
+  label  String // "1 kepçe", "1 dilim", "1 kase"
+  grams  Float
+
+  food Food @relation(fields: [foodId], references: [id], onDelete: Cascade)
+}
+
+enum MealType {
+  BREAKFAST
+  LUNCH
+  DINNER
+  SNACK
+}
+
+model MealLog {
+  id       String   @id @default(uuid())
+  userId   String
+  date     DateTime @db.Date
+  mealType MealType
+
+  user  User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  items MealLogItem[]
+
+  @@unique([userId, date, mealType])
+}
+
+model MealLogItem {
+  id        String  @id @default(uuid())
+  mealLogId String
+  foodId    String
+  grams     Float
+  portionId String? // Ev ölçüsüyle eklendiyse hangisi
+  quantity  Float? // Kaç porsiyon
+
+  mealLog MealLog @relation(fields: [mealLogId], references: [id], onDelete: Cascade)
+  food    Food    @relation(fields: [foodId], references: [id])
+}
+
+// Günlük kalori/makro hedefi. Diyetisyen belirlediyse setById dolu olur.
+model NutritionTarget {
+  id        String   @id @default(uuid())
+  userId    String
+  kcal      Float
+  proteinG  Float?
+  carbsG    Float?
+  fatG      Float?
+  waterMl   Float?
+  setById   String? // Diyetisyen User.id; boşsa sistem hesapladı
+  validFrom DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, validFrom])
+}
+
+// ═══════════════════════════════════════════════════════════════
+// İLERLEME — docs/features/progress-tracking.md
+// ═══════════════════════════════════════════════════════════════
+
+model WaterLog {
+  id       String   @id @default(uuid())
+  userId   String
+  amountMl Float
+  loggedAt DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, loggedAt])
+}
+
+model WeightLog {
+  id       String   @id @default(uuid())
+  userId   String
+  weightKg Float
+  loggedAt DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, loggedAt])
+}
+
+model BodyMeasurement {
+  id       String   @id @default(uuid())
+  userId   String
+  part     String // "waist", "hip", "chest", "arm"...
+  valueCm  Float
+  loggedAt DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, part, loggedAt])
+}
+
+model ProgressPhoto {
+  id      String   @id @default(uuid())
+  userId  String
+  fileId  String
+  takenAt DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  file File @relation(fields: [fileId], references: [id])
+}
+
+// ═══════════════════════════════════════════════════════════════
+// EGZERSİZ — docs/features/exercises.md
+// ═══════════════════════════════════════════════════════════════
+
+enum ExerciseCategory {
+  FITNESS
+  HOME
+  POSTURE
+  FACE_MASSAGE
+}
+
+enum Difficulty {
+  BEGINNER
+  INTERMEDIATE
+  ADVANCED
+}
+
+model Exercise {
+  id          String           @id @default(uuid())
+  code        String           @unique // "squat" — video dosyası bu kodla eşleşir
+  name        String
+  category    ExerciseCategory
+  difficulty  Difficulty
+  equipment   String[]
+  steps       String[] // Adım adım yapılış
+  mistakes    String[] // Sık yapılan hatalar
+  warnings    String[]
+  videoFileId String? // Boşsa video alanı gizlenir
+  createdAt   DateTime         @default(now())
+  updatedAt   DateTime         @updatedAt
+
+  muscles     ExerciseMuscle[]
+  programDays ProgramDayExercise[]
+}
+
+// Kas haritası için kaslar
+model Muscle {
+  id   String @id @default(uuid())
+  code String @unique // "quadriceps", "trapezius"... çizimdeki bölgeyle eşleşir
+  name String
+
+  exercises ExerciseMuscle[]
+}
+
+enum MuscleRole {
+  PRIMARY // Haritada koyu
+  SECONDARY // Haritada açık
+}
+
+model ExerciseMuscle {
+  exerciseId String
+  muscleId   String
+  role       MuscleRole
+
+  exercise Exercise @relation(fields: [exerciseId], references: [id], onDelete: Cascade)
+  muscle   Muscle   @relation(fields: [muscleId], references: [id], onDelete: Cascade)
+
+  @@id([exerciseId, muscleId])
+}
+
+// ═══════════════════════════════════════════════════════════════
+// PROGRAMLAR — docs/features/programs.md
+// ═══════════════════════════════════════════════════════════════
+
+enum PublishStatus {
+  DRAFT
+  PENDING_REVIEW // Profesyonel yayınlamak istedi, admin onayı bekliyor
+  PUBLISHED
+  REJECTED
+}
+
+model Program {
+  id            String        @id @default(uuid())
+  authorId      String? // Boşsa platformun kendi programı
+  title         String
+  description   String?
+  difficulty    Difficulty
+  durationWeeks Int
+  daysPerWeek   Int
+  status        PublishStatus @default(DRAFT)
+  createdAt     DateTime      @default(now())
+  updatedAt     DateTime      @updatedAt
+
+  author      User?               @relation(fields: [authorId], references: [id], onDelete: SetNull)
+  days        ProgramDay[]
+  enrollments ProgramEnrollment[]
+}
+
+model ProgramDay {
+  id        String  @id @default(uuid())
+  programId String
+  dayNumber Int
+  title     String?
+
+  program   Program              @relation(fields: [programId], references: [id], onDelete: Cascade)
+  exercises ProgramDayExercise[]
+
+  @@unique([programId, dayNumber])
+}
+
+model ProgramDayExercise {
+  id           String @id @default(uuid())
+  programDayId String
+  exerciseId   String
+  order        Int
+  sets         Int?
+  reps         Int?
+  durationSec  Int?
+  restSec      Int?
+
+  programDay ProgramDay @relation(fields: [programDayId], references: [id], onDelete: Cascade)
+  exercise   Exercise   @relation(fields: [exerciseId], references: [id])
+}
+
+// Kullanıcı bir programa başladı (kendisi veya profesyoneli atadı)
+model ProgramEnrollment {
+  id            String    @id @default(uuid())
+  userId        String
+  programId     String
+  assignedById  String? // Profesyonel atadıysa
+  startedAt     DateTime  @default(now())
+  completedDays Int[] // Tamamlanan gün numaraları
+  finishedAt    DateTime?
+
+  user    User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  program Program @relation(fields: [programId], references: [id], onDelete: Cascade)
+}
+
+model DietGuide {
+  id        String        @id @default(uuid())
+  slug      String        @unique // "akdeniz", "keto"
+  title     String
+  content   String // Markdown
+  status    PublishStatus @default(DRAFT)
+  updatedAt DateTime      @updatedAt
+}
+
+// ═══════════════════════════════════════════════════════════════
+// PROFESYONELLER — docs/features/professionals.md
+// ═══════════════════════════════════════════════════════════════
+
+enum ProfessionalType {
+  DIETITIAN
+  TRAINER
+  GYM
+}
+
+enum VerificationStatus {
+  PENDING
+  APPROVED
+  REJECTED
+}
+
+enum ServiceMode {
+  ONLINE
+  IN_PERSON
+  BOTH
+}
+
+model ProfessionalProfile {
+  userId          String             @id
+  type            ProfessionalType
+  title           String? // "Uzman Diyetisyen"
+  specialties     String[]
+  city            String?
+  serviceMode     ServiceMode        @default(BOTH)
+  priceMin        Int? // TL, profesyonelin kendi beyanı
+  priceMax        Int?
+  verification    VerificationStatus @default(PENDING)
+  verifiedAt      DateTime?
+  rejectionReason String?
+  createdAt       DateTime           @default(now())
+
+  user      User                   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  documents ProfessionalDocument[]
+  clients   ClientRelationship[]   @relation("professional")
+  reviews   Review[]
+
+  @@index([type, verification, city])
+}
+
+// Diploma / sertifika — admin inceler
+model ProfessionalDocument {
+  id             String   @id @default(uuid())
+  professionalId String
+  fileId         String
+  kind           String // "diploma", "certificate"
+  uploadedAt     DateTime @default(now())
+
+  professional ProfessionalProfile @relation(fields: [professionalId], references: [userId], onDelete: Cascade)
+  file         File                @relation(fields: [fileId], references: [id])
+}
+
+enum ClientStatus {
+  OFFERED // Profesyonel teklif etti, kullanıcı henüz kabul etmedi
+  ACTIVE
+  ENDED
+}
+
+enum SharedDataType {
+  MEALS
+  WATER
+  WEIGHT
+  MEASUREMENTS
+  PHOTOS
+}
+
+// Danışan bağlantısı. Hizmet almanın kanıtı budur (yorum yazma hakkı buna bağlı).
+model ClientRelationship {
+  id             String           @id @default(uuid())
+  professionalId String
+  clientId       String
+  status         ClientStatus     @default(OFFERED)
+  sharedData     SharedDataType[] // Kullanıcının paylaşmaya izin verdiği veriler
+  offeredAt      DateTime         @default(now())
+  acceptedAt     DateTime?
+  endedAt        DateTime? // Doldurulduğu an profesyonel verilere erişimi kaybeder
+
+  professional ProfessionalProfile @relation("professional", fields: [professionalId], references: [userId], onDelete: Cascade)
+  client       User                @relation("client", fields: [clientId], references: [id], onDelete: Cascade)
+
+  @@index([professionalId, status])
+  @@index([clientId, status])
+}
+
+// Sadece danışan bağlantısı kurulmuş (acceptedAt dolu) kullanıcılar yazabilir
+model Review {
+  id             String    @id @default(uuid())
+  professionalId String
+  authorId       String
+  rating         Int // 1–5
+  comment        String?
+  reply          String? // Profesyonelin tek cevabı
+  repliedAt      DateTime?
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+
+  professional ProfessionalProfile @relation(fields: [professionalId], references: [userId], onDelete: Cascade)
+  author       User                @relation(fields: [authorId], references: [id], onDelete: Cascade)
+
+  @@unique([professionalId, authorId]) // Kişi başı bir yorum
+}
+
+// ═══════════════════════════════════════════════════════════════
+// MESAJLAŞMA — docs/features/messaging.md
+// ═══════════════════════════════════════════════════════════════
+
+enum ConversationStatus {
+  REQUESTED // Normal kullanıcıya giden ilk mesaj, kabul bekliyor
+  OPEN
+  DECLINED
+}
+
+model Conversation {
+  id            String             @id @default(uuid())
+  status        ConversationStatus @default(OPEN)
+  initiatorId   String
+  createdAt     DateTime           @default(now())
+  lastMessageAt DateTime           @default(now())
+
+  participants ConversationParticipant[]
+  messages     Message[]
+}
+
+model ConversationParticipant {
+  conversationId String
+  userId         String
+  lastReadAt     DateTime? // Okundu bilgisi
+
+  conversation Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  user         User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@id([conversationId, userId])
+  @@index([userId])
+}
+
+model Message {
+  id             String    @id @default(uuid())
+  conversationId String
+  senderId       String
+  body           String?
+  fileId         String? // Fotoğraf gönderildiyse
+  createdAt      DateTime  @default(now())
+  deletedAt      DateTime? // Silinen mesaj iz bırakır (şikayet incelemesi için)
+
+  conversation Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  sender       User         @relation(fields: [senderId], references: [id], onDelete: Cascade)
+
+  @@index([conversationId, createdAt])
+}
+
+// ═══════════════════════════════════════════════════════════════
+// DİĞER
+// ═══════════════════════════════════════════════════════════════
+
+model Notification {
+  id        String    @id @default(uuid())
+  userId    String
+  type      String // "new_message", "follow_request", "client_offer"...
+  data      Json
+  readAt    DateTime?
+  createdAt DateTime  @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, readAt])
+}
+
+// Yüklenen dosyalar (fotoğraf, belge, video). Dosyanın kendisi depolama servisinde durur.
+model File {
+  id         String   @id @default(uuid())
+  ownerId    String?
+  storageKey String   @unique // Depolama servisindeki yolu
+  mimeType   String
+  sizeBytes  Int
+  isPrivate  Boolean  @default(true)
+  createdAt  DateTime @default(now())
+
+  owner                 User?                  @relation(fields: [ownerId], references: [id], onDelete: SetNull)
+  progressPhotos        ProgressPhoto[]
+  professionalDocuments ProfessionalDocument[]
 }

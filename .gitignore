@@ -9,6 +9,9 @@ dist/
 build/
 *.tsbuildinfo
 
+# Prisma'nın şemadan otomatik ürettiği kod (her kurulumda yeniden üretilir)
+apps/api/src/generated/
+
 # Mobil (Expo) — otomatik üretilen dosyalar
 expo-env.d.ts
 .metro-health-check*

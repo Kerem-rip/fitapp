@@ -23,7 +23,7 @@ Fotoğraf, tanıtım, uzmanlık alanları, sertifikalar, hizmet şekli, fiyat ar
 
 ## Danışan bağlantısı
 ```
-Kullanıcı "İletişime geç" → mesaj isteği → profesyonel kabul eder → sohbet
+Kullanıcı profesyonele doğrudan mesaj atar → sohbet
   → profesyonel "Danışanım yap" teklifi → kullanıcı kabul eder + veri paylaşım izni verir
 ```
 - Kullanıcı hangi verilerin paylaşılacağını seçer (öğün kayıtları, kilo, ölçüler, fotoğraflar).
@@ -43,5 +43,11 @@ Danışan ilişkisi biterse profesyonel, danışanın verilerine **erişimi heme
 Kullanıcının verisi kullanıcınındır.
 
 ## Yorumlar
-🟡 **Onay bekliyor:** Herkes yorum yazabilir; danışanı olmuş kullanıcıların yorumlarında
-"Danışan" rozeti görünür. Sahte yorumlar şikayet üzerine admin tarafından incelenir.
+- Sadece o profesyonelden **hizmet almış** kullanıcılar yorum yazabilir.
+  "Hizmet almış" = uygulamada danışan bağlantısı kurulmuş (profesyonel teklif etmiş, kullanıcı kabul etmiş).
+  Ücretler uygulama dışında ödendiği için hizmeti kanıtlamanın tek yolu budur.
+- Bağlantı bittikten sonra da yorum yazılabilir / düzenlenebilir.
+- Her yorumda **"Danışan" rozeti** ve danışanlık süresi görünür (ör. "Danışan · 3 ay").
+- Bir kullanıcı bir profesyonele bir yorum yazar (sonradan düzenleyebilir).
+- Puan (1–5 yıldız) + yazılı yorum. Profesyonel yoruma bir kez cevap yazabilir.
+- Uygunsuz yorumlar şikayet üzerine admin tarafından incelenir.

@@ -25,5 +25,10 @@ Uygulamanın beyni. Web ve mobil buraya istek atar; veritabanıyla sadece buras�
 | `pnpm dev` | Sunucuyu geliştirme modunda başlatır (http://localhost:3000/api) |
 | `pnpm build` | Derler |
 | `pnpm test:e2e` | Uçtan uca testleri çalıştırır |
+| `pnpm db:migrate` | Şemadaki değişiklikleri veritabanına uygular (Docker'da veritabanı çalışıyor olmalı) |
+| `pnpm db:studio` | Veritabanını tarayıcıda tablo tablo görüntüler |
 
-> Durum: NestJS kurulu, `GET /api/health` çalışıyor. Veritabanı (Prisma) tasarım onayından sonra bağlanacak.
+İlk kurulumda `.env.example` dosyasını kopyalayıp adını `.env` yapın.
+
+> Durum: NestJS kurulu, `GET /api/health` çalışıyor. Veritabanı şeması hazır ve doğrulandı;
+> veritabanına henüz uygulanmadı (Docker gerekli).
