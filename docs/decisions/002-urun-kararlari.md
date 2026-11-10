@@ -27,4 +27,5 @@
 - Profesyoneller programlarını admin onayıyla herkese açık yayınlayabilir.
 - Egzersiz videoları dikey (9:16).
 - Kayıt öncesi soru taslağı onaylandı.
-- 18 yaş altı uygulamayı kullanabilir; "genç modu" kuralları onay bekliyor (bkz. features/accounts-and-profiles.md).
+- 13 yaş altı kayıt olamaz. 13–17 yaş "genç modu" ile kullanır (bkz. features/accounts-and-profiles.md).
+  Yayın öncesi hukukçuya doğrulatılacak.

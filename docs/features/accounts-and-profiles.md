@@ -9,7 +9,7 @@
 - Kullanıcı hesabını ve tüm verilerini silebilir (KVKK).
 
 ## Yaş kuralları
-🟡 **Onay bekliyor** — 18 yaş altı da kullanabilir, ama "genç modu" ile:
+18 yaş altı da kullanabilir, ama "genç modu" ile:
 
 | Yaş | Durum |
 |---|---|
