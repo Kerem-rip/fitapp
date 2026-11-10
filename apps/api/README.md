@@ -30,5 +30,6 @@ Uygulamanın beyni. Web ve mobil buraya istek atar; veritabanıyla sadece buras�
 
 İlk kurulumda `.env.example` dosyasını kopyalayıp adını `.env` yapın.
 
-> Durum: NestJS kurulu, `GET /api/health` çalışıyor. Veritabanı şeması hazır ve doğrulandı;
-> veritabanına henüz uygulanmadı (Docker gerekli).
+Testler gerçek veritabanına karşı çalışır; önce proje kökünde `pnpm db:up` ile veritabanını başlatın.
+
+> Durum: Çalışan modüller: `health`, `auth`, `users`, `consents`. Diğer modüllerin yeri ayrıldı.

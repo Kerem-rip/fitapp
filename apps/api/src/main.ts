@@ -1,11 +1,12 @@
 // Sunucunun başladığı yer.
 import { NestFactory } from '@nestjs/core';
 import { AppModule } from './app.module.js';
+import { configureApp } from './app.setup.js';
+import { env } from './config/env.js';
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
-  // Tüm adresler /api ile başlar (ör. /api/health)
-  app.setGlobalPrefix('api');
-  await app.listen(process.env.PORT ?? 3000);
+  configureApp(app);
+  await app.listen(env.port);
 }
 await bootstrap();
