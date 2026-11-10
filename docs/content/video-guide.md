@@ -10,7 +10,7 @@ Her egzersizin bir **kodu** vardır (egzersiz listesinde yazar). Video bu kodla 
 | Özellik | Değer |
 |---|---|
 | Dosya türü | MP4 |
-| Oran | 🟡 Dikey (9:16) **veya** kare (1:1) — biri seçilip hep o kullanılacak |
+| Oran | **Dikey (9:16)** — tüm videolarda aynı |
 | Süre | 5–20 saniye, başı ve sonu birleşince akıcı dönen döngü |
 | Ses | Yok (açıklama yazılı olarak sayfada) |
 | Arka plan | Sade ve tüm videolarda aynı |

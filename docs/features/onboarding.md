@@ -16,8 +16,8 @@ Uygulama açılır → Sorular (kayıtsız, cevaplar telefonda tutulur)
 ```
 Sağlık verisi sayılan cevaplar (kilo, boy, sağlık durumu) rıza alınmadan sunucuya gönderilmez.
 
-## Soru taslağı
-🟡 **Onay bekliyor** — sorular ve seçenekler birlikte son haline getirilecek.
+## Sorular
+Onaylandı. Doğum tarihi sorusu yaş kurallarına göre akışı belirler (bkz. [accounts-and-profiles.md](accounts-and-profiles.md)).
 
 1. **Hedefin ne?** (birden fazla seçilebilir)
    Kilo vermek · Kas yapmak / kilo almak · Formda kalmak · Duruşumu düzeltmek · Sağlıklı beslenmek · Yüz bakımı ve rahatlama
@@ -26,7 +26,7 @@ Sağlık verisi sayılan cevaplar (kilo, boy, sağlık durumu) rıza alınmadan 
 4. **Haftada kaç gün, kaç dakika ayırabilirsin?**
 5. **Bir uzmandan destek almak ister misin?** Evet, diyetisyen · Evet, eğitmen · Şimdilik kendim yaparım
 6. **Beslenme tercihi:** Fark etmez · Vejetaryen · Vegan · Glutensiz · Diğer
-7. **Temel bilgiler:** Yaş, cinsiyet, boy, kilo, hedef kilo *(rızadan sonra kaydedilir)*
+7. **Temel bilgiler:** Doğum tarihi, cinsiyet, boy, kilo, hedef kilo *(rızadan sonra kaydedilir)*
 
 ## Ana sayfa kişiselleştirme
 Ana sayfa modüllerden oluşur. Cevaplara göre modüllerin **sırası ve görünürlüğü** değişir:

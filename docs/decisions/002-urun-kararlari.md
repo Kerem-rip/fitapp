@@ -23,3 +23,8 @@
 - İlk mesaj **istek** olarak gider; kabul edilirse sohbet açılır.
 - Ücretsiz kullanıcılar da profesyonellere ulaşabilir.
 - Kullanıcı–profesyonel arası ücretler platformu ilgilendirmez.
+- Normal kullanıcı profilleri varsayılan gizli hesap.
+- Profesyoneller programlarını admin onayıyla herkese açık yayınlayabilir.
+- Egzersiz videoları dikey (9:16).
+- Kayıt öncesi soru taslağı onaylandı.
+- 18 yaş altı uygulamayı kullanabilir; "genç modu" kuralları onay bekliyor (bkz. features/accounts-and-profiles.md).

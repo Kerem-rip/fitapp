@@ -13,8 +13,8 @@ Kullanıcı programa başlar, tamamladığı günler işaretlenir.
 
 ## Profesyonel programları
 - Diyetisyen ve eğitmenler kendi programlarını hazırlayıp **danışanlarına atayabilir**.
-- 🟡 **Onay bekliyor:** Profesyoneller programlarını herkese açık yayınlayabilsin mi?
-  (Profesyonele görünürlük sağlar, uygulamaya içerik kazandırır; admin onayı gerekir.)
+- Profesyoneller programlarını **herkese açık yayınlayabilir** (admin onayından sonra görünür).
+  Profesyonele görünürlük sağlar, uygulamaya içerik kazandırır.
 
 ## Diyet türleri rehberi
 Akdeniz, keto, aralıklı oruç, vejetaryen, yüksek protein vb. için bilgilendirici sayfalar:

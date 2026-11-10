@@ -8,9 +8,25 @@
   Örneğin bir diyetisyen aynı zamanda normal kullanıcı olarak kendi takibini yapabilir.
 - Kullanıcı hesabını ve tüm verilerini silebilir (KVKK).
 
-## Yaş sınırı
-- 🟡 **Onay bekliyor:** Kayıt için en az **18 yaş**.
-  Neden: Diyet ve kalori içeriği reşit olmayanlarda yeme bozukluğu riski taşır.
+## Yaş kuralları
+🟡 **Onay bekliyor** — 18 yaş altı da kullanabilir, ama "genç modu" ile:
+
+| Yaş | Durum |
+|---|---|
+| 13 altı | Kayıt olamaz |
+| 13–17 | **Genç modu** (aşağıda) |
+| 18+ | Tüm özellikler |
+
+**Genç modu:**
+- ✅ Açık: egzersizler, duruş, yüz masajı, programlar, sağlıklı beslenme rehberi, öğün kaydı, su takibi
+- ❌ Kapalı: kalori açığı / kilo verme hedefi, kalori sayısının ön planda gösterimi
+- Profil her zaman gizli, keşfette ve aramada görünmez
+- Yetişkin kullanıcılarla mesajlaşma kapalı
+- Doğrulanmış profesyonellere ulaşma ve danışan olma **veli onayı** ile
+- Sağlık verisi için açık rıza **veliden** alınır
+
+> Yayın öncesi bir hukukçuya doğrulatılacak: 18 yaş altı için KVKK rızası, veli onayı yöntemi,
+> profesyonelle hizmet ilişkisi.
 
 ## Profil
 Her kullanıcının bir profili vardır.
@@ -22,7 +38,7 @@ Her kullanıcının bir profili vardır.
 | Kilo, ölçüler, yemek kayıtları, sağlık bilgileri | **Her zaman gizli.** Sadece kullanıcının izin verdiği profesyonel görür. |
 
 - Profesyonellerin profilleri her zaman herkese açıktır (keşfedilebilmeleri için).
-- 🟡 **Onay bekliyor:** Normal kullanıcı profilleri varsayılan olarak **gizli hesap** olsun:
+- Normal kullanıcı profilleri varsayılan olarak **gizli hesaptır**:
   takip etmek için onay gerekir. Kullanıcı isterse açık hesaba çevirir.
 
 ## Takip
