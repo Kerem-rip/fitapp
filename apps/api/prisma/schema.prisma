@@ -1,0 +1,57 @@
+// Veritabanı şeması. Tüm tablolar burada tanımlanır.
+// Şimdilik sadece temel hesap yapısı var; özellikler netleştikçe tablolar eklenecek.
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// Bir hesap birden fazla role sahip olabilir (ör. diyetisyen aynı zamanda kullanıcı)
+enum RoleType {
+  USER
+  DIETITIAN
+  TRAINER
+  GYM_MANAGER
+  ADMIN
+}
+
+model User {
+  id           String    @id @default(uuid())
+  email        String    @unique
+  passwordHash String
+  firstName    String?
+  lastName     String?
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+  deletedAt    DateTime? // Hesap silme (KVKK)
+
+  roles    UserRole[]
+  consents Consent[]
+}
+
+model UserRole {
+  id        String   @id @default(uuid())
+  userId    String
+  role      RoleType
+  createdAt DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id])
+
+  @@unique([userId, role])
+}
+
+// KVKK rızaları: kim, neye, hangi metin sürümüyle, ne zaman izin verdi / geri çekti
+model Consent {
+  id          String    @id @default(uuid())
+  userId      String
+  type        String // ör. "health_data", "marketing"
+  textVersion String
+  grantedAt   DateTime  @default(now())
+  revokedAt   DateTime?
+
+  user User @relation(fields: [userId], references: [id])
+}

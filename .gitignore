@@ -1,0 +1,21 @@
+# Bağımlılıklar
+node_modules/
+
+# Derleme çıktıları
+dist/
+.next/
+.expo/
+.turbo/
+build/
+
+# Gizli ayarlar (ASLA GitHub'a gitmez)
+.env
+.env.*
+!.env.example
+
+# Sistem / editör
+.DS_Store
+Thumbs.db
+.vscode/*
+!.vscode/extensions.json
+*.log
