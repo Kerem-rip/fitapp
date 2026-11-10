@@ -29,3 +29,9 @@
 - Kayıt öncesi soru taslağı onaylandı.
 - 13 yaş altı kayıt olamaz. 13–17 yaş "genç modu" ile kullanır (bkz. features/accounts-and-profiles.md).
   Yayın öncesi hukukçuya doğrulatılacak.
+
+## Veritabanı tasarımı kararları (2026-11-10)
+- Kayıtta kullanıcı adı (@kullaniciadi) seçilir.
+- Hesap silme uygulama ve web'den yapılabilir; 30 gün geri dönüş, sonra kalıcı silme.
+- Danışan bağlantısı bitince profesyonel verilere erişimi hemen kaybeder.
+- Profesyonellere yorum: herkes yazabilir, sahte yorumlar şikayetle incelenir ("Danışan" rozeti onay bekliyor).

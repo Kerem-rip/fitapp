@@ -37,3 +37,11 @@ Kullanıcı "İletişime geç" → mesaj isteği → profesyonel kabul eder → 
 
 ## Ücretsiz kullanıcılar
 Ücretsiz kullanıcılar da profesyonelleri bulabilir ve iletişime geçebilir. Amaç profesyonellere iş bağlamaktır.
+
+## Bağlantı sona erince
+Danışan ilişkisi biterse profesyonel, danışanın verilerine **erişimi hemen kaybeder**.
+Kullanıcının verisi kullanıcınındır.
+
+## Yorumlar
+🟡 **Onay bekliyor:** Herkes yorum yazabilir; danışanı olmuş kullanıcıların yorumlarında
+"Danışan" rozeti görünür. Sahte yorumlar şikayet üzerine admin tarafından incelenir.

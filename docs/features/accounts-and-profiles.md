@@ -6,7 +6,13 @@
 - E-posta + şifre ile kayıt. Telefonla ve Google/Apple ile giriş sonra eklenebilir.
 - Tek hesap, birden fazla rol olabilir: `USER`, `DIETITIAN`, `TRAINER`, `GYM_MANAGER`, `ADMIN`.
   Örneğin bir diyetisyen aynı zamanda normal kullanıcı olarak kendi takibini yapabilir.
-- Kullanıcı hesabını ve tüm verilerini silebilir (KVKK).
+- Kayıt sırasında **kullanıcı adı** (@kullaniciadi) seçilir. Benzersizdir, sonradan değiştirilebilir.
+
+## Hesap silme
+- Silme **hem uygulama içinden hem web sitesinden** yapılabilir (Apple ve Google şartı).
+- Silme talebinden sonra **30 gün** geri dönüş süresi vardır; kullanıcı giriş yaparsa silme iptal olur.
+- 30 gün sonunda hesap ve tüm veriler kalıcı olarak silinir.
+- Kullanıcıya silme öncesi ne olacağı açıkça anlatılır (30 gün, sonra kalıcı).
 
 ## Yaş kuralları
 18 yaş altı da kullanabilir, ama "genç modu" ile:
