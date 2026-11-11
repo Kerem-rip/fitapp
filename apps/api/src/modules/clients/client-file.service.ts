@@ -19,6 +19,8 @@ import { MeasurementsService } from './measurements.service.js';
 // Aynı uzmanın kısa sürede tekrar bakması denetim kaydını şişirmesin
 const VIEW_DEDUPE_MINUTES = 10;
 
+const ALL_CATEGORIES = ['MEALS', 'WATER', 'WEIGHT', 'MEASUREMENTS', 'PHOTOS', 'ANAMNESIS', 'WORKOUTS'] as const;
+
 const nameOf = (p: { firstName: string | null; lastName: string | null; username: string }) =>
   [p.firstName, p.lastName].filter(Boolean).join(' ') || p.username;
 
@@ -65,7 +67,8 @@ export class ClientFileService {
 
     return {
       client: { name: nameOf(client), username: client.username },
-      sharing: { sharedData: acc.sharedData, sharedUntil: acc.sharedUntil, visible: [...acc.allowed] },
+      // Hangi kategorilere şu an erişilebildiği (dosyanın diğer sekmeleri için); veri içermez, kayıt yazılmaz
+      sharing: { sharedData: acc.sharedData, sharedUntil: acc.sharedUntil, visible: [...(await this.access.peek(professionalId, clientId, ALL_CATEGORIES)).allowed] },
       // Yaş ve cinsiyet sağlık öyküsü kategorisine bağlıdır
       profile: withAnamnesis ? { ageYears: ageOn(client.birthDate), gender: client.gender } : null,
       measurements: latest,

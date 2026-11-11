@@ -123,7 +123,7 @@ export interface AdminApplicationDetail {
 
 // ───────────── Danışanlık ve paylaşım ─────────────
 
-export type SharedDataType = 'MEALS' | 'WATER' | 'WEIGHT' | 'MEASUREMENTS' | 'PHOTOS' | 'ANAMNESIS';
+export type SharedDataType = 'MEALS' | 'WATER' | 'WEIGHT' | 'MEASUREMENTS' | 'PHOTOS' | 'ANAMNESIS' | 'WORKOUTS';
 export type RelationshipStatus = 'OFFERED' | 'ACTIVE' | 'ENDED';
 
 export interface RelationshipBase {
@@ -560,4 +560,105 @@ export interface AppNotificationItem {
   text: string;
   read: boolean;
   createdAt: string;
+}
+
+// ───────────── Egzersiz programı ve antrenman kayıtları ─────────────
+
+export interface ProgramExercise {
+  id?: string;
+  name: string;
+  sets: number;
+  // "8-10", "30 sn"
+  reps: string;
+  // "20 kg", "vücut ağırlığı"
+  load?: string;
+  restSec?: number;
+  notes?: string;
+  catalogId?: string;
+}
+
+export interface ProgramDay {
+  id?: string;
+  name: string;
+  focus?: string;
+  exercises: ProgramExercise[];
+}
+
+export interface ProgramContent {
+  title?: string;
+  goal?: string;
+  notes?: string;
+  weeks?: number;
+  days: ProgramDay[];
+}
+
+export interface ProgramOverview {
+  programId: string | null;
+  published: { number: number; approvedAt: string | null; approvedBy: string | null; changeNote: string | null; content: ProgramContent } | null;
+  draft: { content: ProgramContent; changeNote: string | null; basedOnNumber: number | null; updatedAt: string } | null;
+  versions: PlanVersionInfo[];
+}
+
+export interface ProgramCheck {
+  canApprove: boolean;
+  blockers: { code: 'EMPTY_PROGRAM' | 'DAY_WITHOUT_EXERCISES' | 'HEALTH_INFO_MISSING'; message: string; dayId?: string }[];
+  warnings: { ruleCode: string; level: FindingLevel; title: string }[];
+}
+
+export interface MyProgramListItem {
+  programId: string;
+  professional: { name: string; title: string | null };
+  number: number;
+  approvedAt: string | null;
+  title: string | null;
+  dayCount: number;
+}
+
+export interface MyProgramView extends ProgramContent {
+  programId: string;
+  professional: { name: string; title: string | null };
+  version: { number: number; approvedAt: string | null };
+}
+
+export interface WorkoutSet {
+  reps: number;
+  loadKg?: number;
+}
+
+export interface WorkoutEntry {
+  exerciseId?: string;
+  name: string;
+  sets: WorkoutSet[];
+}
+
+export interface WorkoutLogInput {
+  // YYYY-AA-GG
+  date: string;
+  dayId?: string;
+  entries: WorkoutEntry[];
+  // Algılanan efor 1–10
+  rpe?: number;
+  pain?: boolean;
+  painNote?: string;
+  note?: string;
+}
+
+export interface WorkoutLogItem {
+  id: string;
+  programId: string | null;
+  dayId: string | null;
+  date: string;
+  entries: WorkoutEntry[];
+  rpe: number | null;
+  pain: boolean;
+  painNote: string | null;
+  note: string | null;
+  source: DataSource;
+  createdAt: string;
+}
+
+export interface ExercisePerformance {
+  key: string;
+  name: string;
+  sessions: { date: string; bestLoadKg: number | null; totalReps: number; volumeKg: number }[];
 }

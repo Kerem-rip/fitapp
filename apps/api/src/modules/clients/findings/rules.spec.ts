@@ -140,6 +140,41 @@ describe('inceleme kuralları', () => {
     });
   });
 
+  describe('antrenman', () => {
+    const log = (over: Partial<import('./rules.js').WorkoutPoint> = {}) => ({ id: 'l1', date: daysAgo(2).toISOString().slice(0, 10), pain: false, painNote: null, rpe: 6, ...over });
+
+    it('ağrı bildirimi kırmızı madde olur; eski bildirim ve paylaşılmayan kayıtlar madde üretmez', () => {
+      const base = input();
+      const r = find({ ...base, workouts: { logs: [log({ pain: true, painNote: 'Dizimde ağrı' })], programApprovedAt: null } }, 'R-PAIN-REPORTED');
+      expect(r).toHaveLength(1);
+      expect(r[0]).toMatchObject({ level: 'RED', categories: ['WORKOUTS'] });
+      expect(r[0]!.detail).toContain('Dizimde ağrı');
+      const old = log({ pain: true, date: daysAgo(40).toISOString().slice(0, 10) });
+      expect(find({ ...base, workouts: { logs: [old], programApprovedAt: null } }, 'R-PAIN-REPORTED')).toHaveLength(0);
+      expect(find({ ...base, workouts: null }, 'R-PAIN-REPORTED')).toHaveLength(0);
+    });
+
+    it('program yayında ve son 14 günde kayıt yoksa sorulacakları önerir; yeni yayınlanmış programda bekler', () => {
+      const base = input();
+      const stale = { logs: [log({ date: daysAgo(20).toISOString().slice(0, 10) })], programApprovedAt: daysAgo(30) };
+      const r = find({ ...base, workouts: stale }, 'Y-NO-WORKOUT-LOGS');
+      expect(r).toHaveLength(1);
+      expect(r[0]!.detail).toContain('Programı değiştirmeden önce');
+      expect(find({ ...base, workouts: { logs: [log()], programApprovedAt: daysAgo(30) } }, 'Y-NO-WORKOUT-LOGS')).toHaveLength(0);
+      expect(find({ ...base, workouts: { logs: [], programApprovedAt: daysAgo(3) } }, 'Y-NO-WORKOUT-LOGS')).toHaveLength(0);
+      expect(find({ ...base, workouts: { logs: [], programApprovedAt: null } }, 'Y-NO-WORKOUT-LOGS')).toHaveLength(0);
+    });
+  });
+
+  it('beslenmeye özel maddeler antrenöre çıkmaz, diyetisyene çıkar', () => {
+    const i = input({ answers: { ...IMPORTANT, 'std.allergies': { value: ['egg'] }, 'std.diet_preference': { value: 'vegan' } } });
+    expect(codes({ ...i, professionalType: 'TRAINER' })).not.toContain('G-ALLERGY-FILTER');
+    expect(codes({ ...i, professionalType: 'TRAINER' })).not.toContain('G-DIET-PREFERENCE');
+    expect(codes({ ...i, professionalType: 'DIETITIAN' })).toContain('G-ALLERGY-FILTER');
+    // Sağlık beyanları herkese çıkar
+    expect(codes({ ...input({ answers: { ...IMPORTANT, 'std.pregnancy': { value: 'pregnant' } } }), professionalType: 'TRAINER' })).toContain('Y-PREGNANCY');
+  });
+
   it('kırmızı madde en başta sıralanır', () => {
     const result = evaluate(input({ answers: { ...IMPORTANT, 'std.eating_disorder_history': { value: 'yes' } } }));
     expect(result[0]!.level).toBe('RED');

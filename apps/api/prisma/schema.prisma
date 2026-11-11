@@ -108,6 +108,10 @@ model User {
   goalsAbout        ClientGoal[]     @relation("goalSubject")
   remindersOwned    ClientReminder[] @relation("reminderOwner")
   remindersAbout    ClientReminder[] @relation("reminderSubject")
+
+  programsOwned TrainingProgram[] @relation("programOwner")
+  programsAbout TrainingProgram[] @relation("programSubject")
+  workoutLogs   WorkoutLog[]      @relation("workoutSubject")
 }
 
 model UserRole {
@@ -617,6 +621,7 @@ enum SharedDataType {
   MEASUREMENTS
   PHOTOS
   ANAMNESIS // Sağlık öyküsü, alerji, hastalık, yaşam tarzı yanıtları
+  WORKOUTS // Antrenman kayıtları (setler, efor, ağrı bildirimi)
 }
 
 // Danışan bağlantısı. Hizmet almanın kanıtı budur (yorum yazma hakkı buna bağlı).
@@ -1011,6 +1016,87 @@ model ClientReminder {
 
   @@index([remindAt, sentAt])
   @@index([professionalId, clientId])
+}
+
+// ═══════════════════════════════════════════════════════════════
+// EGZERSİZ PROGRAMI VE ANTRENMAN KAYITLARI — kişisel antrenör iş akışı
+// Program, beslenme planıyla aynı kurallarla çalışır: uzman onaylamadan danışana gitmez, onaylanan sürüm değişmez.
+// Egzersiz, set, tekrar ve yük bilgileri uzmanındır; sistem tıbbi/sportif doğruluk iddia etmez.
+// ═══════════════════════════════════════════════════════════════
+
+model TrainingProgram {
+  id             String   @id @default(uuid())
+  professionalId String
+  clientId       String
+  createdAt      DateTime @default(now())
+
+  professional User                     @relation("programOwner", fields: [professionalId], references: [id], onDelete: Cascade)
+  client       User                     @relation("programSubject", fields: [clientId], references: [id], onDelete: Cascade)
+  versions     TrainingProgramVersion[]
+  events       ProgramEvent[]
+  logs         WorkoutLog[]
+
+  @@unique([professionalId, clientId])
+}
+
+model TrainingProgramVersion {
+  id            String            @id @default(uuid())
+  programId     String
+  number        Int?
+  status        PlanVersionStatus @default(DRAFT)
+  content       Json // Günler ve egzersizler (set, tekrar, yük, dinlenme, not)
+  changeNote    String?
+  basedOnNumber Int?
+  createdById   String
+  approvedById  String?
+  approvedAt    DateTime?
+  acknowledged  Json?
+  createdAt     DateTime          @default(now())
+  updatedAt     DateTime          @updatedAt
+
+  program TrainingProgram @relation(fields: [programId], references: [id], onDelete: Cascade)
+
+  @@unique([programId, number])
+  @@index([programId, status])
+}
+
+model ProgramEvent {
+  id        String   @id @default(uuid())
+  programId String
+  versionId String?
+  kind      String // DRAFT_CREATED | DRAFT_DISCARDED | APPROVED | SUPERSEDED
+  text      String?
+  byId      String?
+  createdAt DateTime @default(now())
+
+  program TrainingProgram @relation(fields: [programId], references: [id], onDelete: Cascade)
+
+  @@index([programId, createdAt])
+}
+
+// Antrenman kaydı: danışanın (ya da yüz yüze seansta uzmanın) girdiği gerçekleşen antrenman.
+// `entries`: [{ exerciseId?, name, sets: [{ reps, loadKg? }] }]. Ağrı bildirimi uzmana kırmızı madde olarak düşer.
+model WorkoutLog {
+  id          String     @id @default(uuid())
+  userId      String
+  programId   String?
+  versionId   String?
+  dayId       String?
+  date        String // YYYY-AA-GG
+  entries     Json
+  rpe         Int? // Algılanan efor 1–10
+  pain        Boolean    @default(false)
+  painNote    String?
+  note        String?
+  source      DataSource
+  enteredById String?
+  createdAt   DateTime   @default(now())
+
+  user    User             @relation("workoutSubject", fields: [userId], references: [id], onDelete: Cascade)
+  program TrainingProgram? @relation(fields: [programId], references: [id], onDelete: SetNull)
+
+  @@index([userId, date])
+  @@index([programId, date])
 }
 
 // Denetim kaydı: bir kişinin sağlık verisine kim, ne zaman, ne yaptı. Sadece eklenir; değiştirilmez.

@@ -15,15 +15,24 @@ import { changeText, formatFullDate, formatShortDate, formatValue, KIND_LABELS, 
 import { FollowTab } from '@/features/agenda/FollowTab';
 import { MODE_LABELS, STATUS_TAGS } from '@/features/agenda/helpers';
 import { PlanTab } from '@/features/plans/PlanTab';
+import { ProgramTab } from '@/features/programs/ProgramTab';
+import { WorkoutsTab } from '@/features/programs/WorkoutsTab';
+import { useAccount } from '@/demo/hooks';
 import { ReviewTab } from '@/features/review/ReviewTab';
 import { formatDateTime, SHARED_DATA_LABELS, SHARED_DATA_ORDER } from '@/features/sharing/labels';
 
-type Tab = 'review' | 'summary' | 'plan' | 'follow' | 'measurements' | 'anamnesis' | 'notes' | 'timeline';
+type Tab = 'review' | 'summary' | 'plan' | 'program' | 'workouts' | 'follow' | 'measurements' | 'anamnesis' | 'notes' | 'timeline';
 
-const TABS: { key: Tab; label: string }[] = [
+// Diyetisyen beslenme planı, antrenör egzersiz programı ve antrenman kayıtları sekmelerini görür
+const tabsFor = (trainer: boolean): { key: Tab; label: string }[] => [
   { key: 'review', label: 'İnceleme' },
   { key: 'summary', label: 'Özet' },
-  { key: 'plan', label: 'Plan' },
+  ...(trainer
+    ? [
+        { key: 'program' as const, label: 'Program' },
+        { key: 'workouts' as const, label: 'Antrenmanlar' },
+      ]
+    : [{ key: 'plan' as const, label: 'Plan' }]),
   { key: 'follow', label: 'Takip' },
   { key: 'measurements', label: 'Ölçümler' },
   { key: 'anamnesis', label: 'Anamnez' },
@@ -41,6 +50,7 @@ const QUESTION_TYPES: { key: IntakeQuestionType; label: string }[] = [
 export default function ClientFileScreen() {
   const router = useRouter();
   const { clientId } = useLocalSearchParams<{ clientId: string }>();
+  const account = useAccount();
   const [tab, setTab] = useState<Tab>('review');
   const [summary, setSummary] = useState<ClientFileSummary | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -68,7 +78,7 @@ export default function ClientFileScreen() {
       <ScreenHeader title={summary?.client.name ?? 'Danışan'} subtitle={summary ? `@${summary.client.username}` : undefined} onBack={() => router.back()} />
       {error ? <Notice kind="danger" text={error} /> : null}
 
-      <ChipRow options={TABS} selected={[tab]} onToggle={setTab} />
+      <ChipRow options={tabsFor(account?.roleKey === 'trainer')} selected={[tab]} onToggle={setTab} />
 
       {summary && hidden.length > 0 ? (
         <Notice
@@ -83,6 +93,8 @@ export default function ClientFileScreen() {
           {tab === 'review' ? <ReviewTab clientId={clientId} onChanged={loadSummary} /> : null}
           {tab === 'summary' ? <SummaryTab summary={summary} onGo={setTab} /> : null}
           {tab === 'plan' ? <PlanTab clientId={clientId} mealsVisible={visible.includes('MEALS')} /> : null}
+          {tab === 'program' ? <ProgramTab clientId={clientId} /> : null}
+          {tab === 'workouts' ? <WorkoutsTab clientId={clientId} visible={visible.includes('WORKOUTS')} /> : null}
           {tab === 'follow' ? <FollowTab clientId={clientId} onChanged={loadSummary} /> : null}
           {tab === 'measurements' ? <MeasurementsTab clientId={clientId} visible={visible} onChanged={loadSummary} /> : null}
           {tab === 'anamnesis' ? <AnamnesisTab clientId={clientId} canView={visible.includes('ANAMNESIS')} onChanged={loadSummary} /> : null}

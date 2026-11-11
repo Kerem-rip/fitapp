@@ -26,6 +26,8 @@ function describe(type: string, d: Data, name: (id: unknown) => string): { title
       return { title: 'Başvurun onaylanmadı', text: typeof d.reason === 'string' ? d.reason : 'Ayrıntılar başvuru ekranında.' };
     case 'plan_published':
       return { title: 'Beslenme planın güncellendi', text: `Diyetisyenin planının ${d.number}. sürümünü yayınladı.` };
+    case 'program_published':
+      return { title: 'Antrenman programın güncellendi', text: `Antrenörün programının ${d.number}. sürümünü yayınladı.` };
     case 'appointment_created':
       return { title: 'Yeni randevu', text: `${name(d.professionalId)} ile ${when(d.startsAt)}.` };
     case 'appointment_updated':

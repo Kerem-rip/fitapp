@@ -118,6 +118,14 @@ describe('Danışan dosyası: ölçümler, anamnez, notlar (e2e)', () => {
       expect(res.body.anamnesis).toBeNull();
     });
 
+    it('görünür kategoriler listesi öğün ve antrenman kayıtlarını da kapsar (diğer sekmeler için)', async () => {
+      const { pro, client } = await createActiveRelationship(app, { sharedData: ['MEALS', 'WORKOUTS'] });
+      const res = await summary(pro.accessToken, client.user.id).expect(200);
+      expect([...(res.body.sharing.visible as string[])].sort((a, b) => a.localeCompare(b))).toEqual(['MEALS', 'WORKOUTS']);
+      // Sadece görünürlük bilgisi; bu kategoriler için okuma kaydı yazılmaz
+      expect(await prisma.auditLog.count({ where: { targetUserId: client.user.id, action: 'DATA_VIEWED', category: { in: ['MEALS', 'WORKOUTS'] } } })).toBe(0);
+    });
+
     it('anamnez paylaşılınca yaş, cinsiyet ve eksik sorular görünür', async () => {
       const { pro, client } = await createActiveRelationship(app);
       const res = await summary(pro.accessToken, client.user.id).expect(200);

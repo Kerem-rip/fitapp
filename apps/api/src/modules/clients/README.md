@@ -109,5 +109,23 @@ Uzman taslak hazırlar → kontrol eder → **onaylar**; onaylanmadan danışana
 - Ayrıca: hedeften sonra 14 gün ölçüm yoksa, hedef tarihi geçtiyse sarı; hedef değere ulaşıldıysa yeşil madde çıkar.
 - Ölçüm listelerinde her değer bir önceki aynı tür ölçümle karşılaştırılır; yöntem farklıysa belirtilir.
 
+## Egzersiz programı ve antrenman kayıtları (Aşama 2) — `programs/`
+| Adres | Kim | Ne yapar |
+|---|---|---|
+| `GET /api/clients/:clientId/program` | Antrenör | Yayındaki program, taslak, sürüm geçmişi |
+| `POST/PUT/DELETE .../program/draft`, `GET .../program/draft/check`, `POST .../program/draft/approve` | Onaylı antrenör | Taslak → kontrol → onay (beslenme planıyla aynı akış) |
+| `GET/POST .../workouts`, `GET .../performance` | Antrenör | Antrenman kayıtları / yüz yüze seansı danışan adına kaydet / egzersiz başına performans |
+| `GET /api/me/programs`, `GET /api/me/programs/:id`, `POST /api/me/programs/:id/logs` | Danışan | Programlarım, program günü kaydı |
+| `GET/POST /api/me/workouts` | Danışan | Kayıtlarım / programsız serbest kayıt |
+
+### Kurallar
+- Program içeriği (egzersiz, set, tekrar, yük, dinlenme) antrenöründür; sistem uygunluğunu değerlendirmez.
+- **Onay engeli:** danışanın sağlık durumu ve hamilelik/emzirme sorusu yanıtsızsa ya da sağlık öyküsü paylaşılmıyorsa program onaylanamaz.
+- **Uyarılar** (açık onay gerekir): ağrı bildirimi, sağlık durumu, ilaç, hamilelik, yeme bozukluğu öyküsü, eksik önemli sorular.
+- Antrenman kayıtları danışanın verisidir: yeni paylaşım türü `WORKOUTS` ("Antrenman kayıtlarım"). Kayıt için sağlık verisi rızası gerekir; en fazla 30 gün geriye, geleceğe kayıt yok.
+- **Ağrı bildirimi** (`R-PAIN-REPORTED`, kırmızı): danışan kayıtta ağrı işaretlerse antrenörün paneline hemen düşer; madde danışanla konuşmayı ve gerekirse bir sağlık profesyoneline başvurmayı önerir.
+- **Kayıt yok** (`Y-NO-WORKOUT-LOGS`, sarı): program yayınlanalı 7 günden fazla olduğu hâlde son 14 günde kayıt yoksa programı değiştirmeden önce sorulacakları önerir.
+- Performans yalnızca girilen değerlerin özetidir (en yüksek yük, toplam tekrar, hacim); yorum ya da öneri içermez.
+
 ## Henüz yok (sonraki aşamalar)
 Bildirim tercihleri (sıklık, kapatma), uzman–danışan mesajlaşmasının sunucuya taşınması, telefona anlık bildirim (push), ölçüm cihazı entegrasyonu, uzmana özel değerlendirme soruları ve kişiye uygun hesaplama araçları (5. madde), danışanın günlük kayıtlarının (öğün, su, kilo) demo depodan sunucuya taşınması.

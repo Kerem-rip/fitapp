@@ -35,6 +35,11 @@ export const RULE_PARAMS = {
   goalMeasurementGapDays: 14,
   // Plan uygulama özeti için bakılan gün sayısı
   adherenceWindowDays: 14,
+  // Ağrı bildirimlerine bakılan süre
+  painLookbackDays: 30,
+  // Program yayınlandıktan bu kadar gün sonra kontrol başlar; bu pencerede kayıt yoksa uyarır
+  workoutGraceDays: 7,
+  workoutWindowDays: 14,
 } as const;
 
 export interface BasisRef {
@@ -77,6 +82,18 @@ export interface RuleInput {
   goals?: readonly GoalPoint[];
   // Plan seçimlerinin özeti (öğün kayıtları paylaşılıyor ve plan yayındaysa); yoksa null
   adherence?: { daysWithChoices: number; windowDays: number } | null;
+  // Antrenman kayıtları "Antrenman kayıtlarım" paylaşılıyorsa; yoksa null
+  workouts?: { logs: readonly WorkoutPoint[]; programApprovedAt: Date | null } | null;
+  // Maddeleri görecek uzmanın türü; beslenmeye özel kurallar sadece diyetisyene çıkar
+  professionalType?: 'DIETITIAN' | 'TRAINER' | 'GYM' | null;
+}
+
+export interface WorkoutPoint {
+  id: string;
+  date: string;
+  pain: boolean;
+  painNote: string | null;
+  rpe: number | null;
 }
 
 export interface GoalPoint {
@@ -95,6 +112,8 @@ export interface RuleDef {
   kind: 'MECHANICAL' | 'CLINICAL';
   // CLINICAL kurallar uzman onayı olmadan çalışmaz
   reviewed: boolean;
+  // Sadece bu türdeki uzmana çıkar (boşsa herkese)
+  audience?: 'DIETITIAN';
   description: string;
   run(input: RuleInput): Candidate[];
 }
@@ -192,6 +211,7 @@ export const RULES: readonly RuleDef[] = [
 
   {
     code: 'R-PLAN-ALLERGEN',
+    audience: 'DIETITIAN',
     level: 'RED',
     kind: 'MECHANICAL',
     reviewed: false,
@@ -212,6 +232,29 @@ export const RULES: readonly RuleDef[] = [
         ],
         key: `${input.plan!.versionNumber}:${c.mealId}:${c.optionId}:${c.kind}:${[...c.allergens].sort().join(',')}`,
       }));
+    },
+  },
+
+  {
+    code: 'R-PAIN-REPORTED',
+    level: 'RED',
+    kind: 'MECHANICAL',
+    reviewed: false,
+    description: 'Danışan bir antrenman kaydında ağrı/rahatsızlık bildirdiyse antrenörü uyarır (kendi beyanını yansıtır).',
+    run(input) {
+      if (!input.workouts) return [];
+      const since = new Date(input.now.getTime() - RULE_PARAMS.painLookbackDays * DAY_MS).toISOString().slice(0, 10);
+      return input.workouts.logs
+        .filter((l) => l.pain && l.date >= since)
+        .map<Candidate>((l) => ({
+          ruleCode: this.code,
+          level: 'RED',
+          title: 'Antrenmanda ağrı bildirildi',
+          detail: `Danışan ${l.date} tarihli antrenmanda ağrı veya rahatsızlık bildirdi${l.painNote ? `: "${l.painNote}"` : ''}. Programı sürdürmeden önce danışanla konuş; gerekirse bir sağlık profesyoneline başvurmasını öner.`,
+          categories: ['WORKOUTS'],
+          basis: [{ type: 'ANSWER', label: `Antrenman kaydı · ${l.date}`, display: l.painNote ? `Ağrı: ${l.painNote}` : 'Ağrı bildirildi', at: null }],
+          key: l.id,
+        }));
     },
   },
 
@@ -618,6 +661,42 @@ export const RULES: readonly RuleDef[] = [
     },
   },
 
+  {
+    code: 'Y-NO-WORKOUT-LOGS',
+    level: 'YELLOW',
+    kind: 'MECHANICAL',
+    reviewed: false,
+    description: 'Program yayında olduğu hâlde son günlerde hiç antrenman kaydı yoksa yeni program dayatmadan sorulacakları önerir.',
+    run(input) {
+      const w = input.workouts;
+      if (!w || !w.programApprovedAt) return [];
+      if (daysBetween(input.now, w.programApprovedAt) < RULE_PARAMS.workoutGraceDays) return [];
+      const since = new Date(input.now.getTime() - RULE_PARAMS.workoutWindowDays * DAY_MS).toISOString().slice(0, 10);
+      if (w.logs.some((l) => l.date >= since)) return [];
+      const last = [...w.logs].sort((a, b) => b.date.localeCompare(a.date))[0];
+      return [
+        {
+          ruleCode: this.code,
+          level: 'YELLOW',
+          title: `Son ${RULE_PARAMS.workoutWindowDays} günde antrenman kaydı yok`,
+          detail: [
+            `Program yayında ama son ${RULE_PARAMS.workoutWindowDays} günde kayıt girilmemiş${last ? ` (son kayıt ${last.date})` : ''}.`,
+            'Programı değiştirmeden önce danışana sor:',
+            '• Antrenmanları yapabiliyor mu, kaydetmeyi mi unutuyor?',
+            '• Zaman, ekipman ya da yer sorunu var mı?',
+            '• Program zorluğu ve sıklığı ona uygun mu?',
+          ].join('\n'),
+          categories: ['WORKOUTS'],
+          basis: [
+            { type: 'PLAN', label: 'Program yayın tarihi', display: w.programApprovedAt.toISOString().slice(0, 10), at: w.programApprovedAt.toISOString() },
+            last ? { type: 'ANSWER', label: 'Son antrenman kaydı', display: last.date, at: null } : { type: 'MISSING', label: 'Antrenman kaydı', display: 'Hiç kayıt yok', at: null },
+          ],
+          key: `${w.programApprovedAt.toISOString().slice(0, 10)}:${last?.id ?? 'none'}`,
+        },
+      ];
+    },
+  },
+
   // ── YEŞİL: değerlendirilebilecek öneriler ──
   {
     code: 'G-GOAL-REACHED',
@@ -651,6 +730,7 @@ export const RULES: readonly RuleDef[] = [
   // ── YEŞİL: değerlendirilebilecek öneriler ──
   {
     code: 'G-ALLERGY-FILTER',
+    audience: 'DIETITIAN',
     level: 'GREEN',
     kind: 'MECHANICAL',
     reviewed: false,
@@ -675,6 +755,7 @@ export const RULES: readonly RuleDef[] = [
   },
   {
     code: 'G-DIET-PREFERENCE',
+    audience: 'DIETITIAN',
     level: 'GREEN',
     kind: 'MECHANICAL',
     reviewed: false,
@@ -697,6 +778,7 @@ export const RULES: readonly RuleDef[] = [
   },
   {
     code: 'G-DISLIKES',
+    audience: 'DIETITIAN',
     level: 'GREEN',
     kind: 'MECHANICAL',
     reviewed: false,
@@ -719,6 +801,7 @@ export const RULES: readonly RuleDef[] = [
   },
   {
     code: 'G-BASICS-READY',
+    audience: 'DIETITIAN',
     level: 'GREEN',
     kind: 'MECHANICAL',
     reviewed: false,
@@ -752,6 +835,7 @@ export const activeRules = () => RULES.filter((r) => r.kind === 'MECHANICAL' || 
 
 export function evaluate(input: RuleInput): Candidate[] {
   return activeRules()
+    .filter((rule) => !rule.audience || !input.professionalType || rule.audience === input.professionalType)
     .flatMap((rule) => rule.run(input))
     .sort((a, b) => ORDER[a.level] - ORDER[b.level] || a.title.localeCompare(b.title, 'tr'));
 }

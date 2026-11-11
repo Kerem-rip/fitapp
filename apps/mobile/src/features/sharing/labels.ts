@@ -1,7 +1,7 @@
 // Paylaşım kategorilerinin ve denetim kaydının Türkçe karşılıkları.
 import type { AuditEntry, SharedDataType } from '@fitapp/api-client';
 
-export const SHARED_DATA_ORDER: SharedDataType[] = ['MEALS', 'WATER', 'WEIGHT', 'MEASUREMENTS', 'PHOTOS', 'ANAMNESIS'];
+export const SHARED_DATA_ORDER: SharedDataType[] = ['MEALS', 'WATER', 'WEIGHT', 'MEASUREMENTS', 'PHOTOS', 'ANAMNESIS', 'WORKOUTS'];
 
 export const SHARED_DATA_LABELS: Record<SharedDataType, string> = {
   MEALS: 'Öğün kayıtlarım',
@@ -10,10 +10,12 @@ export const SHARED_DATA_LABELS: Record<SharedDataType, string> = {
   MEASUREMENTS: 'Vücut ölçülerim',
   PHOTOS: 'İlerleme fotoğraflarım',
   ANAMNESIS: 'Sağlık öyküm',
+  WORKOUTS: 'Antrenman kayıtlarım',
 };
 
 export const SHARED_DATA_HINTS: Partial<Record<SharedDataType, string>> = {
   ANAMNESIS: 'Yaş, cinsiyet, alerji, hastalık ve yaşam tarzı bilgilerin',
+  WORKOUTS: 'Setler, yükler, efor ve ağrı bildirimlerin',
 };
 
 // Cümle içinde kullanım: "kilo verine baktı"
@@ -24,6 +26,7 @@ const SHARED_DATA_IN_SENTENCE: Record<SharedDataType, string> = {
   MEASUREMENTS: 'vücut ölçülerine',
   PHOTOS: 'ilerleme fotoğraflarına',
   ANAMNESIS: 'sağlık öyküne',
+  WORKOUTS: 'antrenman kayıtlarına',
 };
 
 export const SHARE_PERIODS = [

@@ -8,7 +8,7 @@ import type { ClientStatus, SharedDataType } from '../../generated/prisma/enums.
 import { ConsentsService } from '../consents/consents.service.js';
 import { AuditService } from './audit.service.js';
 
-export const SHARED_DATA_TYPES = ['MEALS', 'WATER', 'WEIGHT', 'MEASUREMENTS', 'PHOTOS', 'ANAMNESIS'] as const;
+export const SHARED_DATA_TYPES = ['MEALS', 'WATER', 'WEIGHT', 'MEASUREMENTS', 'PHOTOS', 'ANAMNESIS', 'WORKOUTS'] as const;
 
 const MAX_PENDING_OFFERS = 20;
 const MAX_SHARE_DAYS = 730;

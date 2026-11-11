@@ -21,7 +21,7 @@ export const FINDING_DECISIONS = ['EVALUATED', 'NOT_APPLICABLE', 'CLIENT_INFORME
 export type FindingDecision = (typeof FINDING_DECISIONS)[number];
 
 // Kuralların baktığı kategoriler (MEALS: plan seçimlerinin özeti için)
-export const REVIEW_CATEGORIES: readonly SharedDataType[] = ['WEIGHT', 'MEASUREMENTS', 'ANAMNESIS', 'MEALS'];
+export const REVIEW_CATEGORIES: readonly SharedDataType[] = ['WEIGHT', 'MEASUREMENTS', 'ANAMNESIS', 'MEALS', 'WORKOUTS'];
 
 const fingerprintOf = (c: Candidate) => createHash('sha1').update(`${c.ruleCode}|${c.key}`).digest('hex');
 const covered = (categories: readonly string[], allowed: ReadonlySet<SharedDataType>) => categories.every((c) => allowed.has(c as SharedDataType));
@@ -75,7 +75,21 @@ export class FindingsService {
         select: { id: true, title: true, measurementKind: true, startValue: true, targetValue: true, startDate: true, targetDate: true },
       }),
       adherence: await this.adherence(professionalId, clientId, ctx),
+      workouts: await this.workouts(professionalId, clientId, ctx),
+      professionalType:
+        (await this.prisma.professionalProfile.findUnique({ where: { userId: professionalId }, select: { type: true } }))?.type ?? null,
     };
+  }
+
+  // Antrenman kayıtları (son 60 gün) ve bu antrenörün yayındaki programının onay tarihi
+  private async workouts(professionalId: string, clientId: string, ctx: Context) {
+    if (!ctx.allowed.has('WORKOUTS')) return null;
+    const from = new Date(Date.now() - 60 * 86_400_000).toISOString().slice(0, 10);
+    const [logs, published] = await Promise.all([
+      this.prisma.workoutLog.findMany({ where: { userId: clientId, date: { gte: from } }, select: { id: true, date: true, pain: true, painNote: true, rpe: true } }),
+      this.prisma.trainingProgramVersion.findFirst({ where: { status: 'APPROVED', program: { professionalId, clientId } }, select: { approvedAt: true } }),
+    ]);
+    return { logs, programApprovedAt: published?.approvedAt ?? null };
   }
 
   // Son günlerde kaç gün plan seçimi yapılmış (sadece öğün kayıtları paylaşılıyor ve plan yayındaysa)

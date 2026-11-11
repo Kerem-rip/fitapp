@@ -17,6 +17,7 @@ import type {
   AuthResult,
   ClientRelationshipItem,
   DocumentKind,
+  ExercisePerformance,
   FindingDecision,
   FindingItem,
   FindingsResponse,
@@ -29,12 +30,17 @@ import type {
   MyAppointment,
   MyGoal,
   MyPlanListItem,
+  MyProgramListItem,
+  MyProgramView,
   MyPlanView,
   NoteItem,
   PlanCheck,
   PlanContent,
   PlanOverview,
   ProAppointment,
+  ProgramCheck,
+  ProgramContent,
+  ProgramOverview,
   ReminderItem,
   ReviewOverviewItem,
   ReviewTask,
@@ -47,6 +53,8 @@ import type {
   RelationshipStatus,
   SharedDataType,
   TimelineItem,
+  WorkoutLogInput,
+  WorkoutLogItem,
   Tokens,
   UploadFile,
 } from './types';
@@ -386,6 +394,26 @@ export function createApiClient(config: ApiClientConfig) {
     // ───────────── Bildirimler ─────────────
     notifications: (limit = 50) => request<{ unread: number; items: AppNotificationItem[] }>('/notifications', { auth: true, query: { limit: String(limit) } }),
     markNotificationsRead: (ids?: string[]) => request<{ updated: number }>('/notifications/read', { method: 'POST', body: ids ? { ids } : {}, auth: true }),
+
+    // ───────────── Egzersiz programı ve antrenman kayıtları ─────────────
+    clientProgram: (clientId: string) => request<ProgramOverview>(`/clients/${clientId}/program`, { auth: true }),
+    createProgramDraft: (clientId: string, input: { content?: ProgramContent; fromPublished?: boolean } = {}) =>
+      request<{ content: ProgramContent; basedOnNumber: number | null; updatedAt: string }>(`/clients/${clientId}/program/draft`, { method: 'POST', body: input, auth: true }),
+    saveProgramDraft: (clientId: string, content: ProgramContent, changeNote?: string) =>
+      request<{ content: ProgramContent; changeNote: string | null; updatedAt: string }>(`/clients/${clientId}/program/draft`, { method: 'PUT', body: { content, changeNote }, auth: true }),
+    discardProgramDraft: (clientId: string) => request<{ discarded: true }>(`/clients/${clientId}/program/draft`, { method: 'DELETE', auth: true }),
+    checkProgramDraft: (clientId: string) => request<ProgramCheck>(`/clients/${clientId}/program/draft/check`, { auth: true }),
+    approveProgramDraft: (clientId: string, input: { changeNote?: string; confirmWarnings: boolean }) =>
+      request<{ number: number; approvedAt: string; summary: string[] }>(`/clients/${clientId}/program/draft/approve`, { method: 'POST', body: input, auth: true }),
+    clientWorkouts: (clientId: string) => request<WorkoutLogItem[]>(`/clients/${clientId}/workouts`, { auth: true }),
+    addClientWorkout: (clientId: string, input: WorkoutLogInput) =>
+      request<WorkoutLogItem>(`/clients/${clientId}/workouts`, { method: 'POST', body: input, auth: true }),
+    clientPerformance: (clientId: string) => request<ExercisePerformance[]>(`/clients/${clientId}/performance`, { auth: true }),
+    myPrograms: () => request<MyProgramListItem[]>('/me/programs', { auth: true }),
+    myProgram: (programId: string) => request<MyProgramView>(`/me/programs/${programId}`, { auth: true }),
+    logProgramDay: (programId: string, input: WorkoutLogInput) =>
+      request<WorkoutLogItem>(`/me/programs/${programId}/logs`, { method: 'POST', body: input, auth: true }),
+    myWorkouts: () => request<WorkoutLogItem[]>('/me/workouts', { auth: true }),
 
     // ───────────── Yönetici ─────────────
     adminApplications: (status: ApplicationStatus) =>
