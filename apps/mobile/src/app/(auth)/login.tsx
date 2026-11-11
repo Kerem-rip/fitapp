@@ -1,36 +1,38 @@
-// Giriş. Demo sürümde hazır hesaplara tek dokunuşla girilebilir.
-import {
-  Button,
-  Card,
-  ListRow,
-  Notice,
-  Screen,
-  ScreenHeader,
-  SectionHeader,
-  showToast,
-  Tag,
-  TextField,
-} from '@fitapp/ui-mobile';
+// Giriş. Demo sürümde hazır test hesaplarına tek dokunuşla girilebilir (sunucuda gerçek hesaplardır).
+import { Button, Card, Icon, ListRow, Notice, Screen, ScreenHeader, showToast, Tag, Text, TextField, useTheme } from '@fitapp/ui-mobile';
 import { useRouter } from 'expo-router';
 import { useState } from 'react';
-import { login, quickLogin } from '@/demo/actions';
+import { Pressable, View } from 'react-native';
+import { errorText, signIn } from '@/auth/actions';
 import { ROLE_LABELS } from '@/demo/labels';
 import { fullName } from '@/demo/selectors';
-import { SEED_ACCOUNTS } from '@/demo/seed';
+import { DEMO_PASSWORD, SEED_ACCOUNTS } from '@/demo/seed';
 
 export default function LoginScreen() {
   const router = useRouter();
+  const { c } = useTheme();
   const [identifier, setIdentifier] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState<string | null>(null);
+  const [busy, setBusy] = useState(false);
+  const [demoOpen, setDemoOpen] = useState(false);
 
-  const afterLogin = (result: ReturnType<typeof login>) => {
-    if (!result.ok) {
-      setError(result.error);
+  const submit = async (id: string, pw: string) => {
+    if (busy) return;
+    if (!id.trim() || !pw) {
+      setError('E-posta veya kullanıcı adını ve şifreni yaz.');
       return;
     }
+    setBusy(true);
     setError(null);
-    if (result.deletionCancelled) showToast('Hesap silme talebin iptal edildi. Tekrar hoş geldin!', 'info');
+    try {
+      const result = await signIn(id, pw);
+      if (result.deletionCancelled) showToast('Hesap silme talebin iptal edildi. Tekrar hoş geldin!', 'info');
+    } catch (e) {
+      setError(errorText(e));
+    } finally {
+      setBusy(false);
+    }
   };
 
   return (
@@ -52,28 +54,45 @@ export default function LoginScreen() {
         onChangeText={setPassword}
         icon="lock-closed-outline"
         secure
-        onSubmitEditing={() => afterLogin(login(identifier, password))}
+        onSubmitEditing={() => submit(identifier, password)}
       />
-      <Button label="Giriş yap" size="lg" block onPress={() => afterLogin(login(identifier, password))} />
+      <Button label={busy ? 'Giriş yapılıyor...' : 'Giriş yap'} size="lg" block disabled={busy} onPress={() => submit(identifier, password)} />
 
-      <SectionHeader title="Demo hesaplar" />
-      <Notice
-        kind="info"
-        text="Bu bir demo sürümüdür. Aşağıdaki hesaplardan birine dokunarak o hesabın panelini görebilirsin. Veriler sadece bu telefonda saklanır."
-      />
-      <Card padded={false} style={{ paddingHorizontal: 16 }}>
-        {SEED_ACCOUNTS.map((account, i) => (
-          <ListRow
-            key={account.id}
-            avatar={fullName(account)}
-            title={fullName(account)}
-            subtitle={`@${account.username}`}
-            trailing={<Tag label={ROLE_LABELS[account.roleKey]} kind="accent" />}
-            onPress={() => afterLogin(quickLogin(account.id))}
-            last={i === SEED_ACCOUNTS.length - 1}
-          />
-        ))}
-      </Card>
+      <View style={{ flexDirection: 'row', justifyContent: 'center', gap: 6, marginTop: 18 }}>
+        <Text variant="body" tone="secondary">
+          Hesabın yok mu?
+        </Text>
+        <Pressable onPress={() => router.push('/register-type')} hitSlop={8}>
+          <Text variant="bodyStrong" tone="accent">
+            Kayıt ol
+          </Text>
+        </Pressable>
+      </View>
+
+      <Pressable onPress={() => setDemoOpen((o) => !o)} style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6, marginTop: 28, marginBottom: 12 }}>
+        <Icon name={demoOpen ? 'chevron-up' : 'chevron-down'} size={16} color={c.textMuted} />
+        <Text variant="caption" tone="muted" style={{ fontWeight: '600' }}>
+          Test hesapları
+        </Text>
+      </Pressable>
+      {demoOpen ? (
+        <>
+          <Notice kind="info" text="Bunlar sunucuya yüklenmiş test hesaplarıdır. Dokununca doğrudan girilir. Sunucunun çalışıyor olması gerekir." />
+          <Card padded={false} style={{ paddingHorizontal: 16 }}>
+            {SEED_ACCOUNTS.map((account, i) => (
+              <ListRow
+                key={account.id}
+                avatar={fullName(account)}
+                title={fullName(account)}
+                subtitle={`@${account.username}`}
+                trailing={<Tag label={ROLE_LABELS[account.roleKey]} kind="accent" />}
+                onPress={() => submit(account.username, DEMO_PASSWORD)}
+                last={i === SEED_ACCOUNTS.length - 1}
+              />
+            ))}
+          </Card>
+        </>
+      ) : null}
     </Screen>
   );
 }

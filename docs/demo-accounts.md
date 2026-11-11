@@ -1,8 +1,11 @@
 # Demo hesaplar
 
-Bu hesaplar **sadece demo APK / geliştirme içindir**; gerçek yayında bulunmaz. Hepsinin şifresi aynıdır: `Demo1234!`
+Bu hesaplar **sadece demo / geliştirme içindir**; gerçek yayında bulunmaz. Hepsinin şifresi aynıdır: `Demo1234!`
 
-Giriş ekranında "Demo hesaplar" listesine dokunarak şifre yazmadan da girilebilir.
+Hesaplar artık **sunucuda** durur (gerçek giriş). Kullanmak için API ve veritabanı çalışıyor olmalı; hesaplar `pnpm --filter api db:seed` ile yüklenir.
+Giriş ekranında "Test hesapları" listesine dokunarak şifre yazmadan da girilebilir.
+
+Ek olarak bir **yönetici hesabı** vardır (`yonetici` / `yonetici@demo.test`). Normal girişten giremez; karşılama ekranında logoya uzun basıp "Yönetici girişi" seçilir.
 
 | Hesap | Kullanıcı adı | E-posta | Ne görürsün |
 |---|---|---|---|
@@ -21,4 +24,6 @@ Giriş ekranında "Demo hesaplar" listesine dokunarak şifre yazmadan da girileb
 5. **Genç modu:** Mert ile gir → Beslenme sekmesinde kalori yok; öğün kaydı için sağlık verisi (veli) izni gerekir → Profil → "Demo: velim onayladı".
 6. **Salon:** Selim → Görev → "Görev ata" (Deniz'e). Deniz ile gir: görev bildirimi ve görev listesi.
 7. **Hesap silme:** Profil → Hesabımı sil (şifreyle). 30 gün içinde giriş yapınca silme iptal olur.
-8. **Sıfırlama:** Profil → Demo verilerini sıfırla.
+8. **Standart kayıt:** Kayıt ol → Standart kullanıcı → formu doldur → e-posta kodu ekranında "TEST MODU" kutusundaki kodun üstüne dokun → Doğrula. Test modunda kod ekranda görünür; gerçek e-posta servisi bağlanınca görünmez.
+9. **Profesyonel başvuru:** Kayıt ol → Profesyonel hesap → alan seç → formu ve belgeyi (PDF/JPG/PNG) ekle → kodu doğrula → "Başvurun onay sürecine alındı" ekranı. Buradan "Normal kullanıcı olarak devam et" ile uygulama kullanılabilir; Profil → "Profesyonel başvurum" ile geri dönülür.
+10. **Başvuru onayı:** Yönetici girişi → Başvurular → başvuruyu aç → belgeyi incele → Onayla veya Reddet (neden zorunlu). Reddedilen kişi nedeni görür ve en fazla 3 kez yeniden gönderebilir. Küçük/tekrar eden dosyalar "Şüpheli" işaretlenir; karar yine yöneticiye aittir.

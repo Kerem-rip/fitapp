@@ -4,7 +4,7 @@
 export type ColorScheme = 'light' | 'dark';
 
 // Her hesap türünün kendi vurgu rengi vardır, böylece hangi panelde olunduğu hemen anlaşılır
-export type RoleTheme = 'user' | 'teen' | 'dietitian' | 'trainer' | 'gymManager' | 'gymStaff';
+export type RoleTheme = 'user' | 'teen' | 'dietitian' | 'trainer' | 'gymManager' | 'gymStaff' | 'admin';
 
 const light = {
   background: '#F4F5FA',
@@ -60,6 +60,7 @@ export const roleThemes: Record<RoleTheme, RoleThemeColors> = {
   trainer: { gradient: ['#FF7A45', '#FF3D77'], solid: '#F2562F', soft: { light: '#FFE6DC', dark: '#4A2216' } },
   gymManager: { gradient: ['#2F6BFF', '#7A4DFF'], solid: '#3A63F0', soft: { light: '#DFE8FF', dark: '#1B2754' } },
   gymStaff: { gradient: ['#FFB020', '#FF6B3D'], solid: '#F59A0B', soft: { light: '#FFEFCF', dark: '#473010' } },
+  admin: { gradient: ['#475569', '#1E293B'], solid: '#334155', soft: { light: '#E2E8F0', dark: '#1E293B' } },
 };
 
 export const spacing = { xs: 4, sm: 8, md: 12, lg: 16, xl: 24, xxl: 32 } as const;

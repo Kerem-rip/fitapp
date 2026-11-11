@@ -6,7 +6,7 @@ import { AccountPurgeService } from '../src/modules/users/account-purge.service.
 import {
   bearer,
   birthDateForAge,
-  cleanupTestUsers,
+  cleanupTestData,
   createTestApp,
   registerUser,
   TEST_PASSWORD,
@@ -25,7 +25,7 @@ describe('Profil, rızalar ve hesap silme (e2e)', () => {
   });
 
   afterAll(async () => {
-    await cleanupTestUsers(app);
+    await cleanupTestData(app);
     await app.close();
   });
 
@@ -144,7 +144,7 @@ describe('Profil, rızalar ve hesap silme (e2e)', () => {
 
       const login = await http()
         .post('/api/auth/login')
-        .send({ email: body.email, password: TEST_PASSWORD })
+        .send({ identifier: body.email, password: TEST_PASSWORD })
         .expect(200);
       expect(login.body.deletionCancelled).toBe(true);
       await http().get('/api/users/me').set(bearer(login.body.accessToken)).expect(200);
@@ -180,7 +180,7 @@ describe('Profil, rızalar ve hesap silme (e2e)', () => {
 
       await http()
         .post('/api/auth/login')
-        .send({ email: body.email, password: TEST_PASSWORD })
+        .send({ identifier: body.email, password: TEST_PASSWORD })
         .expect(401);
     });
   });

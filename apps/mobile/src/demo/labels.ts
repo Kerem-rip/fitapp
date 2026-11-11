@@ -9,6 +9,7 @@ export const ROLE_LABELS: Record<RoleKey, string> = {
   trainer: 'Bağımsız eğitmen',
   gymManager: 'Salon yöneticisi',
   gymStaff: 'Salon eğitmeni',
+  admin: 'Yönetici',
 };
 
 export const GOAL_LABELS: Record<Goal, string> = {

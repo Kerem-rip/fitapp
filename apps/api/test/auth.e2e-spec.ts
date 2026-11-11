@@ -1,17 +1,9 @@
 import { INestApplication } from '@nestjs/common';
 import request from 'supertest';
 import { App } from 'supertest/types.js';
-import {
-  bearer,
-  birthDateForAge,
-  cleanupTestUsers,
-  createTestApp,
-  registerBody,
-  registerUser,
-  TEST_PASSWORD,
-} from './helpers.js';
+import { bearer, cleanupTestData, createAdminAndLogin, createTestApp, registerUser, TEST_PASSWORD } from './helpers.js';
 
-describe('Kayıt ve giriş (e2e)', () => {
+describe('Giriş ve oturum (e2e)', () => {
   let app: INestApplication<App>;
   const http = () => request(app.getHttpServer());
 
@@ -20,91 +12,39 @@ describe('Kayıt ve giriş (e2e)', () => {
   });
 
   afterAll(async () => {
-    await cleanupTestUsers(app);
+    await cleanupTestData(app);
     await app.close();
   });
 
-  describe('kayıt', () => {
-    it('yetişkin kullanıcı kayıt olur; şifre özeti cevapta yer almaz', async () => {
-      const body = registerBody({ email: '  Buyuk.Harf@E2E.test ', username: 'Buyuk_Harf' });
-      const res = await http().post('/api/auth/register').send(body).expect(201);
-
-      expect(res.body.accessToken).toEqual(expect.any(String));
-      expect(res.body.refreshToken).toEqual(expect.any(String));
-      expect(res.body.user).toMatchObject({
-        email: 'buyuk.harf@e2e.test',
-        username: 'buyuk_harf',
-        ageGroup: 'ADULT',
-        roles: ['USER'],
-        isPrivate: true,
-      });
-      expect(JSON.stringify(res.body)).not.toContain('passwordHash');
-    });
-
-    it('13 yaşından küçük kayıt olamaz', async () => {
-      const res = await http()
-        .post('/api/auth/register')
-        .send(registerBody({ birthDate: birthDateForAge(12) }))
-        .expect(403);
-      expect(res.body.code).toBe('AGE_RESTRICTED');
-    });
-
-    it('13-17 yaş genç modunda kayıt olur', async () => {
-      const { user } = await registerUser(app, { birthDate: birthDateForAge(15) });
-      expect(user.ageGroup).toBe('TEEN');
-    });
-
-    it('aynı e-posta veya kullanıcı adı ikinci kez kullanılamaz', async () => {
-      const { body } = await registerUser(app);
-
-      const emailRes = await http()
-        .post('/api/auth/register')
-        .send(registerBody({ email: body.email }))
-        .expect(409);
-      expect(emailRes.body.code).toBe('EMAIL_TAKEN');
-
-      const usernameRes = await http()
-        .post('/api/auth/register')
-        .send(registerBody({ username: body.username }))
-        .expect(409);
-      expect(usernameRes.body.code).toBe('USERNAME_TAKEN');
-    });
-
-    it.each([
-      ['kısa şifre', { password: '1234567' }],
-      ['geçersiz e-posta', { email: 'eposta-degil' }],
-      ['geçersiz kullanıcı adı', { username: 'a b' }],
-      ['yasaklı kullanıcı adı', { username: 'admin' }],
-      ['koşullar kabul edilmemiş', { acceptTerms: false }],
-      ['gelecekte doğum tarihi', { birthDate: '2999-01-01' }],
-    ])('geçersiz veri reddedilir: %s', async (_name, overrides) => {
-      await http().post('/api/auth/register').send(registerBody(overrides)).expect(400);
-    });
-  });
-
   describe('giriş', () => {
-    it('doğru şifreyle giriş yapılır, yanlış şifre reddedilir', async () => {
+    it('e-posta veya kullanıcı adıyla giriş yapılır; yanlış şifre reddedilir', async () => {
       const { body } = await registerUser(app);
 
-      const ok = await http()
-        .post('/api/auth/login')
-        .send({ email: body.email, password: TEST_PASSWORD })
-        .expect(200);
-      expect(ok.body.user.email).toBe(body.email);
+      const byEmail = await http().post('/api/auth/login').send({ identifier: body.email, password: TEST_PASSWORD }).expect(200);
+      expect(byEmail.body.user.email).toBe(body.email);
+      expect(JSON.stringify(byEmail.body)).not.toContain('passwordHash');
 
-      const wrong = await http()
-        .post('/api/auth/login')
-        .send({ email: body.email, password: 'yanlis-sifre' })
-        .expect(401);
+      await http().post('/api/auth/login').send({ identifier: body.username, password: TEST_PASSWORD }).expect(200);
+      await http().post('/api/auth/login').send({ identifier: body.email.toUpperCase(), password: TEST_PASSWORD }).expect(200);
+
+      const wrong = await http().post('/api/auth/login').send({ identifier: body.email, password: 'yanlis-sifre' }).expect(401);
       expect(wrong.body.code).toBe('INVALID_CREDENTIALS');
     });
 
-    it('kayıtlı olmayan e-posta, yanlış şifreyle aynı cevabı alır', async () => {
-      const res = await http()
-        .post('/api/auth/login')
-        .send({ email: 'yok@e2e.test', password: TEST_PASSWORD })
-        .expect(401);
+    it('kayıtlı olmayan hesap, yanlış şifreyle aynı cevabı alır', async () => {
+      const res = await http().post('/api/auth/login').send({ identifier: 'yok@e2e.test', password: TEST_PASSWORD }).expect(401);
       expect(res.body.code).toBe('INVALID_CREDENTIALS');
+    });
+
+    it('yönetici hesabı normal girişten giremez, yönetici girişinden girer', async () => {
+      const { email } = await createAdminAndLogin(app);
+      const res = await http().post('/api/auth/login').send({ identifier: email, password: TEST_PASSWORD }).expect(401);
+      expect(res.body.code).toBe('INVALID_CREDENTIALS');
+    });
+
+    it('normal kullanıcı yönetici girişinden giremez', async () => {
+      const { body } = await registerUser(app);
+      await http().post('/api/auth/admin/login').send({ identifier: body.email, password: TEST_PASSWORD }).expect(401);
     });
   });
 
@@ -130,10 +70,7 @@ describe('Kayıt ve giriş (e2e)', () => {
       await http().post('/api/auth/refresh').send({ refreshToken }).expect(401);
 
       await http().get('/api/users/me').set(bearer(rotated.body.accessToken)).expect(401);
-      await http()
-        .post('/api/auth/refresh')
-        .send({ refreshToken: rotated.body.refreshToken })
-        .expect(401);
+      await http().post('/api/auth/refresh').send({ refreshToken: rotated.body.refreshToken }).expect(401);
     });
 
     it('çıkış yapınca erişim anahtarı geçersiz olur', async () => {

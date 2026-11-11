@@ -1,16 +1,8 @@
-// Demo verisini değiştiren tüm işlemler. Gerçek sunucu bağlanınca bunlar API çağrılarına dönüşecek.
-import {
-  ageGroupOf,
-  parseTrDate,
-  validateEmail,
-  validatePassword,
-  validateUsername,
-  type MealSlot,
-  type Sex,
-} from '@fitapp/shared';
+﻿// Demo verisini değiştiren işlemler (öğün, randevu, mesaj, görev...). Giriş/kayıt/hesap işlemleri sunucudadır.
+// Sunucuya taşındıkça bunlar API çağrılarına dönüşecek.
+import type { MealSlot } from '@fitapp/shared';
 import { dateKey, isoNow, newId } from './dates';
 import { findExercise } from './content';
-import { toGoal } from './labels';
 import { accountById, activeLinkBetween } from './selectors';
 import { newUserData } from './seed';
 import { getState, resetDemo, setState } from './store';
@@ -28,8 +20,6 @@ import type {
   SharedState,
   UserData,
 } from './types';
-
-const DELETION_GRACE_DAYS = 30;
 
 // ───────────── Küçük yardımcılar ─────────────
 
@@ -53,176 +43,41 @@ function notify(toAccountId: string, title: string, text: string) {
 }
 
 // ───────────── Hesap ─────────────
-
-export type LoginResult =
-  | { ok: true; account: DemoAccount; deletionCancelled: boolean }
-  | { ok: false; error: string };
-
-export function login(identifier: string, password: string): LoginResult {
-  const id = identifier.trim().toLowerCase();
-  const s = getState();
-  const account = s.accounts.find((a) => a.email.toLowerCase() === id || a.username.toLowerCase() === id);
-  if (!account || account.password !== password) {
-    return { ok: false, error: 'E-posta veya şifre hatalı.' };
-  }
-
-  // Silme sürecindeki hesapta giriş, silmeyi iptal eder
-  let deletionCancelled = false;
-  const data = s.userData[account.id];
-  if (data?.deletionRequestedAt) {
-    const expired = Date.now() - new Date(data.deletionRequestedAt).getTime() >= DELETION_GRACE_DAYS * 86400000;
-    if (expired) return { ok: false, error: 'E-posta veya şifre hatalı.' };
-    patchUser(account.id, (u) => ({ ...u, deletionRequestedAt: null }));
-    deletionCancelled = true;
-  }
-
-  setState((cur) => ({ ...cur, session: { accountId: account.id } }));
-  return { ok: true, account, deletionCancelled };
-}
-
-export function quickLogin(accountId: string): LoginResult {
-  const account = getState().accounts.find((a) => a.id === accountId);
-  if (!account) return { ok: false, error: 'Hesap bulunamadı.' };
-  return login(account.email, account.password);
-}
+// Giriş, kayıt, çıkış ve hesap silme artık sunucuyla yapılır (bkz. src/auth/actions.ts).
+// Buradakiler sadece sunucudan gelen hesabı yerel depoya yansıtır ve yerel oturumu kapatır.
 
 export function logout() {
   setState((s) => ({ ...s, session: null }));
 }
 
-export interface RegisterInput {
-  email: string;
-  password: string;
-  username: string;
-  firstName: string;
-  lastName: string;
-  // GG.AA.YYYY
-  birthDate: string;
-  sex: Sex;
-  acceptTerms: boolean;
-  healthConsent: boolean;
-}
-
-export type RegisterErrors = Partial<
-  Record<'email' | 'password' | 'username' | 'birthDate' | 'firstName' | 'acceptTerms' | 'general', string>
->;
-
-export type RegisterResult = { ok: true; account: DemoAccount } | { ok: false; errors: RegisterErrors };
-
-export function register(input: RegisterInput): RegisterResult {
-  const s = getState();
-  const errors: RegisterErrors = {};
-
-  const email = input.email.trim().toLowerCase();
-  const username = input.username.trim().toLowerCase();
-  const birth = parseTrDate(input.birthDate);
-
-  const emailError = validateEmail(email);
-  if (emailError) errors.email = emailError;
-  else if (s.accounts.some((a) => a.email.toLowerCase() === email)) errors.email = 'Bu e-posta adresi zaten kayıtlı.';
-
-  const usernameError = validateUsername(username);
-  if (usernameError) errors.username = usernameError;
-  else if (s.accounts.some((a) => a.username.toLowerCase() === username)) errors.username = 'Bu kullanıcı adı alınmış.';
-
-  const passwordError = validatePassword(input.password);
-  if (passwordError) errors.password = passwordError;
-
-  if (!input.firstName.trim()) errors.firstName = 'Adını yaz';
-  if (!input.acceptTerms) errors.acceptTerms = 'Kullanım koşullarını kabul etmelisin';
-
-  let group: ReturnType<typeof ageGroupOf> = 'ADULT';
-  if (!birth) {
-    errors.birthDate = 'Doğum tarihini GG.AA.YYYY biçiminde yaz';
-  } else {
-    group = ageGroupOf(birth);
-    if (group === 'CHILD') errors.general = '13 yaşından küçükler kayıt olamaz.';
-  }
-
-  if (Object.keys(errors).length > 0 || !birth) return { ok: false, errors };
-
-  const account: DemoAccount = {
-    id: newId('acc'),
-    roleKey: group === 'TEEN' ? 'teen' : 'user',
-    email,
-    username,
-    password: input.password,
-    firstName: input.firstName.trim(),
-    lastName: input.lastName.trim(),
-    birthDate: birth.toISOString().slice(0, 10),
-    sex: input.sex,
-    bio: '',
-    isSeed: false,
-  };
-
-  const onboarding = s.ui.onboarding;
-  const goal = group === 'TEEN' ? 'maintain' : toGoal(onboarding?.goals[0]);
-  const data = newUserData({
-    goal,
-    activity: onboarding?.level === 'advanced' ? 'active' : onboarding?.level === 'intermediate' ? 'moderate' : 'light',
-    // 18 yaş altı sağlık verisi rızasını kendisi veremez; veli onayı gerekir
-    consents: { health_data: group === 'ADULT' && input.healthConsent, marketing: false },
-    parentalApproval: group === 'TEEN' ? 'requested' : 'none',
-  });
-
-  setState((cur) => ({
-    ...cur,
-    accounts: [...cur.accounts, account],
-    userData: { ...cur.userData, [account.id]: data },
-    session: { accountId: account.id },
-  }));
-  return { ok: true, account };
-}
-
-export function requestDeletion(accountId: string, password: string): { ok: boolean; error?: string } {
-  const account = accountById(getState(), accountId);
-  if (!account || account.password !== password) return { ok: false, error: 'Şifre hatalı.' };
-  // Uzman ve personel hesaplarının kişisel verisi olmayabilir; silme bilgisi için boş kayıt açılır
+// Sunucudaki hesabı yerel depoya yansıtır ve oturumu açar.
+// Kişisel veriler (öğün, kilo...) şimdilik telefonda tutulur; rızalar ve gizlilik ayarı sunucudan gelir.
+export function mirrorServerAccount(
+  account: DemoAccount,
+  server: { consents: { health_data: boolean; marketing: boolean }; isPrivate: boolean },
+) {
   setState((s) => ({
     ...s,
-    userData: { ...s.userData, [accountId]: { ...(s.userData[accountId] ?? newUserData()), deletionRequestedAt: isoNow() } },
+    accounts: [...s.accounts.filter((a) => a.id !== account.id), account],
+    userData: {
+      ...s.userData,
+      [account.id]: {
+        ...(s.userData[account.id] ?? newUserData()),
+        consents: server.consents,
+        isPrivate: server.isPrivate,
+        deletionRequestedAt: null,
+      },
+    },
+    session: { accountId: account.id },
   }));
-  logout();
-  return { ok: true };
 }
 
-export function updateProfile(
-  accountId: string,
-  patch: { firstName?: string; lastName?: string; bio?: string; username?: string },
-): { ok: boolean; error?: string } {
-  const s = getState();
-  if (patch.username !== undefined) {
-    const username = patch.username.trim().toLowerCase();
-    const error = validateUsername(username);
-    if (error) return { ok: false, error };
-    if (s.accounts.some((a) => a.id !== accountId && a.username.toLowerCase() === username)) {
-      return { ok: false, error: 'Bu kullanıcı adı alınmış.' };
-    }
-    patch = { ...patch, username };
-  }
+// Sunucudaki bilgilerin (ad, kullanıcı adı, tanıtım) yerel kopyasını günceller
+export function patchLocalAccount(accountId: string, patch: Partial<Pick<DemoAccount, 'firstName' | 'lastName' | 'username' | 'bio'>>) {
   setState((cur) => ({
     ...cur,
     accounts: cur.accounts.map((a) => (a.id === accountId ? { ...a, ...patch } : a)),
   }));
-  return { ok: true };
-}
-
-export function setPrivate(accountId: string, isPrivate: boolean): { ok: boolean; error?: string } {
-  const account = accountById(getState(), accountId);
-  if (account?.roleKey === 'teen' && !isPrivate) {
-    return { ok: false, error: '18 yaşından küçüklerin profili gizli kalır.' };
-  }
-  patchUser(accountId, (u) => ({ ...u, isPrivate }));
-  return { ok: true };
-}
-
-export function setConsent(accountId: string, key: 'health_data' | 'marketing', value: boolean): { ok: boolean; error?: string } {
-  const account = accountById(getState(), accountId);
-  if (key === 'health_data' && value && account?.roleKey === 'teen') {
-    return { ok: false, error: '18 yaşından küçükler için sağlık verisi rızası veli tarafından verilmelidir.' };
-  }
-  patchUser(accountId, (u) => ({ ...u, consents: { ...u.consents, [key]: value } }));
-  return { ok: true };
 }
 
 export function setSharing(accountId: string, key: keyof UserData['sharing'], value: boolean) {

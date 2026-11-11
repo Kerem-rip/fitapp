@@ -1,5 +1,9 @@
 {
   "name": "@fitapp/api-client",
   "version": "0.0.0",
-  "private": true
+  "private": true,
+  "main": "src/index.ts",
+  "devDependencies": {
+    "typescript": "~6.0.3"
+  }
 }

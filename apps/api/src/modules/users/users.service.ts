@@ -28,10 +28,18 @@ export class UsersService {
         lastName: true,
         birthDate: true,
         createdAt: true,
+        gender: true,
         roles: { select: { role: true } },
         profile: { select: { bio: true, isPrivate: true } },
+        // Son profesyonel başvurusu (varsa)
+        professionalApplications: {
+          orderBy: { submittedAt: 'desc' },
+          take: 1,
+          select: { id: true, field: true, status: true, rejectionReason: true, submittedAt: true, attemptNumber: true },
+        },
       },
     });
+    const application = user.professionalApplications[0] ?? null;
     return {
       id: user.id,
       email: user.email,
@@ -41,7 +49,15 @@ export class UsersService {
       birthDate: user.birthDate.toISOString().slice(0, 10),
       // TEEN ise uygulama genç modunda açılır
       ageGroup: ageGroupOf(user.birthDate),
+      gender: user.gender,
       roles: user.roles.map((r) => r.role),
+      // Başvuru onaylanana kadar kişi sadece standart kullanıcıdır; durum bilgisi ekranda "onay sürecinde" için kullanılır
+      application: application
+        ? {
+            ...application,
+            canResubmit: application.status === 'REJECTED' && application.attemptNumber < env.maxApplicationAttempts,
+          }
+        : null,
       bio: user.profile?.bio ?? null,
       isPrivate: user.profile?.isPrivate ?? true,
       createdAt: user.createdAt,

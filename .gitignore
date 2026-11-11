@@ -35,3 +35,7 @@ Thumbs.db
 .vscode/*
 !.vscode/extensions.json
 *.log
+
+# Yüklenen başvuru belgeleri (kişisel veri, GitHub'a gitmez)
+storage/
+storage-test/

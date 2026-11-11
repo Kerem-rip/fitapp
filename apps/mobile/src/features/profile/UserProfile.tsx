@@ -28,15 +28,8 @@ import { View } from 'react-native';
 import { AccountSection } from '@/components/AccountSection';
 import { ChipRow } from '@/components/ChipRow';
 import { ConfirmSheet } from '@/components/ConfirmSheet';
-import {
-  endClientLink,
-  setConsent,
-  setPrivate,
-  setSharing,
-  simulateParentalApproval,
-  updateHealth,
-  updateProfile,
-} from '@/demo/actions';
+import { errorText, saveProfile, setConsentRemote, setPrivateRemote } from '@/auth/actions';
+import { endClientLink, setSharing, simulateParentalApproval, updateHealth } from '@/demo/actions';
 import { useAccount, useDemoState, useUserData } from '@/demo/hooks';
 import { ACTIVITY_LABELS, DIET_LABELS, ROLE_LABELS } from '@/demo/labels';
 import { fullName, proByAccount } from '@/demo/selectors';
@@ -78,14 +71,14 @@ export function UserProfile() {
     setEditOpen(true);
   };
 
-  const saveEdit = () => {
-    const result = updateProfile(account.id, { firstName, lastName, username, bio });
-    if (!result.ok) {
-      setEditError(result.error);
-      return;
+  const saveEdit = async () => {
+    try {
+      await saveProfile({ firstName: firstName.trim(), lastName: lastName.trim(), username: username.trim().toLowerCase(), bio: bio.trim() });
+      setEditOpen(false);
+      showToast('Profilin güncellendi');
+    } catch (e) {
+      setEditError(errorText(e));
     }
-    setEditOpen(false);
-    showToast('Profilin güncellendi');
   };
 
   const openHealth = () => {
@@ -119,14 +112,15 @@ export function UserProfile() {
   );
 
   const privacyToggle = (value: boolean) => {
-    const result = setPrivate(account.id, value);
-    if (!result.ok) showToast(result.error ?? 'Değiştirilemedi', 'warning');
+    setPrivateRemote(value).catch((e) => showToast(errorText(e), 'warning'));
   };
 
   const consentToggle = (key: 'health_data' | 'marketing', value: boolean) => {
-    const result = setConsent(account.id, key, value);
-    if (!result.ok) showToast(result.error ?? 'Değiştirilemedi', 'warning');
-    else if (key === 'health_data') showToast(value ? 'Sağlık verisi izni verildi' : 'Sağlık verisi izni geri çekildi', 'info');
+    setConsentRemote(key, value)
+      .then(() => {
+        if (key === 'health_data') showToast(value ? 'Sağlık verisi izni verildi' : 'Sağlık verisi izni geri çekildi', 'info');
+      })
+      .catch((e) => showToast(errorText(e), 'warning'));
   };
 
   const endLink = links.find((l) => l.id === endTarget);

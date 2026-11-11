@@ -1,7 +1,7 @@
 // Demo verisinin tipleri. Gerçek sunucu bağlanınca bu tipler api-client'tan gelecek.
 import type { ActivityLevel, Allergen, DietPreference, Goal, MealSlot, Sex } from '@fitapp/shared';
 
-export type RoleKey = 'user' | 'teen' | 'dietitian' | 'trainer' | 'gymManager' | 'gymStaff';
+export type RoleKey = 'user' | 'teen' | 'dietitian' | 'trainer' | 'gymManager' | 'gymStaff' | 'admin';
 
 export interface DemoAccount {
   id: string;

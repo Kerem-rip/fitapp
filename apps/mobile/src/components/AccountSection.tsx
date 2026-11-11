@@ -1,12 +1,13 @@
 // Tüm hesap türlerinde ortak: görünüm, bildirimler, çıkış, hesap silme ve demo sıfırlama.
 // Hesap silme: şifreyle onaylanır, 30 gün geri dönüş süresi vardır (uygulama içinden yapılabilir).
-import { BottomSheet, Button, Card, ListRow, Notice, Segmented, showToast, TextField, Text, SectionHeader } from '@fitapp/ui-mobile';
+import { BottomSheet, Button, Card, ListRow, Notice, Segmented, showToast, TextField, SectionHeader } from '@fitapp/ui-mobile';
 import { useRouter } from 'expo-router';
 import { useState } from 'react';
 import { View } from 'react-native';
-import { logout, requestDeletion, resetDemo, setTheme } from '@/demo/actions';
+import { deleteAccount, errorText, showApplicationStatus, signOut } from '@/auth/actions';
+import { useAuth } from '@/auth/auth-store';
+import { setTheme } from '@/demo/actions';
 import { useAccount, useDemoState } from '@/demo/hooks';
-import { ConfirmSheet } from './ConfirmSheet';
 
 type ThemePref = 'system' | 'light' | 'dark';
 
@@ -14,22 +15,25 @@ export function AccountSection() {
   const router = useRouter();
   const account = useAccount();
   const state = useDemoState();
+  const applicationStatus = useAuth().me?.application?.status;
   const [deleteOpen, setDeleteOpen] = useState(false);
-  const [resetOpen, setResetOpen] = useState(false);
   const [password, setPassword] = useState('');
   const [error, setError] = useState<string | null>(null);
+  const [busy, setBusy] = useState(false);
 
   if (!account) return null;
 
-  const confirmDelete = () => {
-    const result = requestDeletion(account.id, password);
-    if (!result.ok) {
-      setError(result.error ?? 'Şifre hatalı.');
-      return;
+  const confirmDelete = async () => {
+    if (busy) return;
+    setBusy(true);
+    try {
+      await deleteAccount(password);
+      showToast('Hesap silme talebin alındı. 30 gün içinde giriş yaparsan iptal olur.', 'info');
+    } catch (e) {
+      setError(errorText(e));
+    } finally {
+      setBusy(false);
     }
-    setDeleteOpen(false);
-    setPassword('');
-    showToast('Hesap silme talebin alındı. 30 gün içinde giriş yaparsan iptal olur.', 'info');
   };
 
   return (
@@ -48,8 +52,15 @@ export function AccountSection() {
       <SectionHeader title="Hesap" />
       <Card padded={false} style={{ paddingHorizontal: 16 }}>
         <ListRow icon="notifications-outline" title="Bildirimler" onPress={() => router.push('/notifications')} />
-        <ListRow icon="log-out-outline" title="Çıkış yap" subtitle={`@${account.username}`} onPress={logout} />
-        <ListRow icon="refresh-outline" title="Demo verilerini sıfırla" subtitle="Tüm hesaplar ve kayıtlar ilk haline döner" onPress={() => setResetOpen(true)} />
+        {applicationStatus === 'PENDING' || applicationStatus === 'REJECTED' ? (
+          <ListRow
+            icon="ribbon-outline"
+            title="Profesyonel başvurum"
+            subtitle={applicationStatus === 'PENDING' ? 'İnceleniyor' : 'Reddedildi, yeniden gönderebilirsin'}
+            onPress={showApplicationStatus}
+          />
+        ) : null}
+        <ListRow icon="log-out-outline" title="Çıkış yap" subtitle={`@${account.username}`} onPress={() => void signOut()} />
         <ListRow icon="trash-outline" title="Hesabımı sil" subtitle="30 gün geri dönüş süresi vardır" onPress={() => setDeleteOpen(true)} last />
       </Card>
 
@@ -60,26 +71,10 @@ export function AccountSection() {
         />
         <TextField label="Şifren" value={password} onChangeText={(t) => { setPassword(t); setError(null); }} secure error={error ?? undefined} />
         <View style={{ gap: 10, marginBottom: 8 }}>
-          <Button label="Hesabımı sil" variant="danger" size="lg" block onPress={confirmDelete} />
+          <Button label={busy ? 'İşleniyor...' : 'Hesabımı sil'} variant="danger" size="lg" block disabled={busy} onPress={confirmDelete} />
           <Button label="Vazgeç" variant="ghost" block onPress={() => setDeleteOpen(false)} />
         </View>
-        <Text variant="micro" tone="muted">
-          Demo hesapların şifresi giriş ekranındaki demo hesap bilgisinde yazar.
-        </Text>
       </BottomSheet>
-
-      <ConfirmSheet
-        visible={resetOpen}
-        title="Demo verilerini sıfırla"
-        text="Bu telefondaki tüm demo verileri (kayıt olan hesaplar, öğünler, mesajlar, randevular) silinir ve uygulama ilk haline döner."
-        confirmLabel="Sıfırla"
-        danger
-        onConfirm={() => {
-          resetDemo();
-          showToast('Demo verileri sıfırlandı', 'info');
-        }}
-        onClose={() => setResetOpen(false)}
-      />
     </View>
   );
 }

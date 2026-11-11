@@ -45,6 +45,9 @@ export function roleTheme(roleKey: DemoAccount['roleKey'] | undefined): RoleThem
   return roleKey ?? 'user';
 }
 
+// Giriş yapmış ama onaylanmamış profesyonel başvurusu olan kişi de vurgu rengi olarak profesyonel alanını değil,
+// standart rengini görür (profesyonel alanın nasıl göründüğü onaydan önce bilinmez).
+
 // Rol → ana sayfa adresi
 export function homeRouteFor(roleKey: DemoAccount['roleKey']): string {
   switch (roleKey) {
@@ -56,6 +59,8 @@ export function homeRouteFor(roleKey: DemoAccount['roleKey']): string {
       return '/(gym-manager)';
     case 'gymStaff':
       return '/(gym-staff)';
+    case 'admin':
+      return '/(admin)';
     default:
       return '/(user)';
   }

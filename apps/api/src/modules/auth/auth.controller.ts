@@ -1,44 +1,32 @@
-import {
-  Body,
-  Controller,
-  HttpCode,
-  Inject,
-  Post,
-  UseGuards,
-} from '@nestjs/common';
+import { Body, Controller, HttpCode, Inject, Post, UseGuards } from '@nestjs/common';
 import { Throttle } from '@nestjs/throttler';
 import { env } from '../../config/env.js';
 import { AuthGuard, CurrentUser, type AuthUser } from './auth.guard.js';
 import { AuthService } from './auth.service.js';
-import {
-  loginSchema,
-  refreshSchema,
-  registerSchema,
-  type LoginDto,
-  type RefreshDto,
-  type RegisterDto,
-} from './dto/auth.schemas.js';
+import { loginSchema, refreshSchema, type LoginDto, type RefreshDto } from './dto/auth.schemas.js';
 
 // Şifre deneme saldırılarına karşı: bu adreslere dakikada sınırlı istek atılabilir
-const authLimit = { default: { limit: env.authRateLimitPerMinute, ttl: 60_000 } };
+export const authLimit = { default: { limit: env.authRateLimitPerMinute, ttl: 60_000 } };
 
+// Kayıt (e-posta kodu ile) için bkz. modules/registration
 @Controller('auth')
 export class AuthController {
   constructor(@Inject(AuthService) private readonly auth: AuthService) {}
-
-  // POST /api/auth/register
-  @Post('register')
-  @Throttle(authLimit)
-  register(@Body({ schema: registerSchema }) dto: RegisterDto) {
-    return this.auth.register(dto);
-  }
 
   // POST /api/auth/login
   @Post('login')
   @HttpCode(200)
   @Throttle(authLimit)
   login(@Body({ schema: loginSchema }) dto: LoginDto) {
-    return this.auth.login(dto);
+    return this.auth.login(dto, 'user');
+  }
+
+  // POST /api/auth/admin/login → sadece yönetici ve moderatör hesapları (normal girişten ayrı)
+  @Post('admin/login')
+  @HttpCode(200)
+  @Throttle(authLimit)
+  adminLogin(@Body({ schema: loginSchema }) dto: LoginDto) {
+    return this.auth.login(dto, 'admin');
   }
 
   // POST /api/auth/refresh → yeni erişim + yenileme anahtarı

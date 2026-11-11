@@ -36,6 +36,24 @@
           "image": "./assets/images/splash-icon.png",
           "imageWidth": 76
         }
+      ],
+      "expo-secure-store",
+      [
+        "expo-build-properties",
+        {
+          "android": {
+            "usesCleartextTraffic": true
+          }
+        }
+      ],
+      "expo-sharing",
+      "expo-document-picker",
+      [
+        "expo-image-picker",
+        {
+          "photosPermission": "Başvuru belgenizi seçebilmeniz için fotoğraflarınıza erişim gerekir.",
+          "cameraPermission": "Başvuru belgenizi çekebilmeniz için kameraya erişim gerekir."
+        }
       ]
     ],
     "experiments": {

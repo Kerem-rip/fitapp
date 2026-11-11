@@ -19,7 +19,8 @@ import { useRouter } from 'expo-router';
 import { useMemo, useState } from 'react';
 import { View } from 'react-native';
 import { AccountSection } from '@/components/AccountSection';
-import { replyToReview, updateProfile } from '@/demo/actions';
+import { errorText, saveProfile } from '@/auth/actions';
+import { replyToReview } from '@/demo/actions';
 import { useAccount, useShared } from '@/demo/hooks';
 import { MODE_LABELS, ROLE_LABELS } from '@/demo/labels';
 import { fullName, proByAccount } from '@/demo/selectors';
@@ -45,9 +46,12 @@ export function ProProfile() {
   const rating = reviews.length ? reviews.reduce((s, r) => s + r.rating, 0) / reviews.length : pro.rating;
 
   const saveBio = () => {
-    updateProfile(account.id, { bio });
-    setBioOpen(false);
-    showToast('Tanıtım yazın güncellendi');
+    saveProfile({ bio: bio.trim() })
+      .then(() => {
+        setBioOpen(false);
+        showToast('Tanıtım yazın güncellendi');
+      })
+      .catch((e) => showToast(errorText(e), 'warning'));
   };
 
   const sendReply = () => {

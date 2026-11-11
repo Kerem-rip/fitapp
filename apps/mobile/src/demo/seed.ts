@@ -5,6 +5,7 @@ import { dateKey, isoNow } from './dates';
 import { PLATFORM_PROGRAMS, TRAINER_PROGRAMS } from './content';
 
 export const DEMO_STATE_VERSION = 1;
+// Test hesaplarının şifresi (sunucudaki tohum betiğiyle aynıdır). Sadece demo/geliştirme içindir.
 export const DEMO_PASSWORD = 'Demo1234!';
 
 const account = (a: Omit<DemoAccount, 'password' | 'isSeed'>): DemoAccount => ({ ...a, password: DEMO_PASSWORD, isSeed: true });

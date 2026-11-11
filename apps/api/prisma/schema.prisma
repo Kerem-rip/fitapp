@@ -20,6 +20,8 @@ enum RoleType {
   DIETITIAN
   TRAINER
   GYM_MANAGER
+  GYM_STAFF
+  MODERATOR
   ADMIN
 }
 
@@ -70,9 +72,10 @@ model User {
   programsAuthored Program[]
   enrollments      ProgramEnrollment[]
 
-  professionalProfile ProfessionalProfile?
-  clientOf            ClientRelationship[] @relation("client")
-  reviewsWritten      Review[]
+  professionalProfile      ProfessionalProfile?
+  professionalApplications ProfessionalApplication[]
+  clientOf                 ClientRelationship[]      @relation("client")
+  reviewsWritten           Review[]
 
   conversations ConversationParticipant[]
   messagesSent  Message[]
@@ -702,4 +705,119 @@ model File {
   owner                 User?                  @relation(fields: [ownerId], references: [id], onDelete: SetNull)
   progressPhotos        ProgressPhoto[]
   professionalDocuments ProfessionalDocument[]
+}
+
+// ═══════════════════════════════════════════════════════════════
+// KAYIT VE PROFESYONEL BAŞVURU — docs/features/registration.md
+// ═══════════════════════════════════════════════════════════════
+
+enum AccountType {
+  USER
+  PROFESSIONAL
+}
+
+// Profesyonel olarak açılmak istenen alan (hesap açılırken seçilir)
+enum ProfessionalField {
+  DIETITIAN
+  TRAINER
+  GYM_OWNER
+}
+
+enum ApplicationStatus {
+  PENDING
+  APPROVED
+  REJECTED
+}
+
+// E-posta doğrulama kodu girilene kadar hesap OLUŞMAZ; kayıt bilgileri burada geçici tutulur.
+// Kullanıcı adı ve e-posta bu sürede (kısa süre) rezerve sayılır.
+model PendingRegistration {
+  id            String      @id @default(uuid())
+  email         String
+  username      String
+  passwordHash  String
+  accountType   AccountType
+  // Ad, doğum tarihi, rızalar, profesyonel alan ve alana özel bilgiler
+  payload       Json
+  codeHash      String // Doğrulama kodunun özeti (kodun kendisi saklanmaz)
+  codeExpiresAt DateTime
+  attempts      Int         @default(0)
+  sendCount     Int         @default(1)
+  lastSentAt    DateTime    @default(now())
+  expiresAt     DateTime
+  ipAddress     String?
+  createdAt     DateTime    @default(now())
+
+  documents PendingDocument[]
+
+  @@index([email])
+  @@index([username])
+  @@index([expiresAt])
+}
+
+model PendingDocument {
+  id             String   @id @default(uuid())
+  registrationId String
+  kind           String // "diploma", "certificate", "business_license"...
+  originalName   String
+  mimeType       String
+  sizeBytes      Int
+  sha256         String
+  storageKey     String   @unique
+  // Otomatik işaretler: DUPLICATE_DOCUMENT, EDITING_SOFTWARE_TRACE...
+  flags          String[]
+  createdAt      DateTime @default(now())
+
+  registration PendingRegistration @relation(fields: [registrationId], references: [id], onDelete: Cascade)
+}
+
+// Profesyonel hesap başvurusu. Onaylanana kadar kişi sadece standart kullanıcıdır.
+model ProfessionalApplication {
+  id              String            @id @default(uuid())
+  userId          String
+  field           ProfessionalField
+  status          ApplicationStatus @default(PENDING)
+  // Şehir, uzmanlık alanları, salon adı/adresi gibi alana özel bilgiler
+  details         Json
+  rejectionReason String?
+  reviewedById    String?
+  reviewedAt      DateTime?
+  attemptNumber   Int               @default(1)
+  submittedAt     DateTime          @default(now())
+
+  user      User                  @relation(fields: [userId], references: [id], onDelete: Cascade)
+  documents ApplicationDocument[]
+
+  @@index([status, submittedAt])
+  @@index([userId])
+}
+
+model ApplicationDocument {
+  id            String   @id @default(uuid())
+  applicationId String
+  kind          String
+  originalName  String
+  mimeType      String
+  sizeBytes     Int
+  sha256        String
+  storageKey    String   @unique
+  flags         String[]
+  createdAt     DateTime @default(now())
+
+  application ProfessionalApplication @relation(fields: [applicationId], references: [id], onDelete: Cascade)
+  accessLogs  DocumentAccessLog[]
+
+  @@index([sha256])
+}
+
+// Belgeleri kim, ne zaman açtı (kişisel veri olduğu için kayıt altındadır)
+model DocumentAccessLog {
+  id         String   @id @default(uuid())
+  documentId String
+  adminId    String
+  at         DateTime @default(now())
+
+  document ApplicationDocument @relation(fields: [documentId], references: [id], onDelete: Cascade)
+
+  @@index([documentId])
 }
