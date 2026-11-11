@@ -4,11 +4,17 @@ import type {
   AdminApplicationItem,
   ApplicationStatus,
   ApplicationSummary,
+  AuditEntry,
   AuthResult,
+  ClientRelationshipItem,
   DocumentKind,
   Me,
+  ProfessionalRelationshipItem,
   RegisterStartInput,
   RegisterStartResult,
+  RelationshipBase,
+  RelationshipStatus,
+  SharedDataType,
   Tokens,
   UploadFile,
 } from './types';
@@ -219,6 +225,28 @@ export function createApiClient(config: ApiClientConfig) {
         timeoutMs: UPLOAD_TIMEOUT_MS,
       });
     },
+
+    // ───────────── Danışanlık ve paylaşım ─────────────
+    // Profesyonel: kullanıcı adıyla danışan teklifi gönderir
+    offerClient: (username: string) =>
+      request<ProfessionalRelationshipItem>('/relationships/offer', { method: 'POST', body: { username }, auth: true }),
+    relationshipsAsProfessional: (status: RelationshipStatus = 'ACTIVE') =>
+      request<ProfessionalRelationshipItem[]>('/relationships/as-professional', { auth: true, query: { status } }),
+    // Danışan: bana gelen teklifler ve aktif danışanlıklarım
+    relationshipsAsClient: () => request<ClientRelationshipItem[]>('/relationships/as-client', { auth: true }),
+    acceptOffer: (id: string, input: { sharedData: SharedDataType[]; sharedUntil: string | null }) =>
+      request<RelationshipBase>(`/relationships/${id}/accept`, { method: 'POST', body: input, auth: true }),
+    declineOffer: (id: string) => request<{ id: string; status: 'ENDED' }>(`/relationships/${id}/decline`, { method: 'POST', auth: true }),
+    updateSharing: (id: string, input: { sharedData?: SharedDataType[]; sharedUntil?: string | null }) =>
+      request<RelationshipBase>(`/relationships/${id}/sharing`, { method: 'PATCH', body: input, auth: true }),
+    // Danışan da profesyonel de bitirebilir; bittiği an profesyonelin erişimi kapanır
+    endRelationship: (id: string) => request<{ id: string; status: 'ENDED' }>(`/relationships/${id}/end`, { method: 'POST', auth: true }),
+    // Verime kim ne yaptı (en yeniden eskiye)
+    auditLog: (options: { limit?: number; before?: string } = {}) =>
+      request<AuditEntry[]>('/relationships/audit', {
+        auth: true,
+        query: { ...(options.limit ? { limit: String(options.limit) } : {}), ...(options.before ? { before: options.before } : {}) },
+      }),
 
     // ───────────── Yönetici ─────────────
     adminApplications: (status: ApplicationStatus) =>

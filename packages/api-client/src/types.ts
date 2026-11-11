@@ -120,3 +120,58 @@ export interface AdminApplicationDetail {
   previousAttempts: { id: string; status: ApplicationStatus; rejectionReason: string | null; submittedAt: string; attemptNumber: number }[];
   checklist: string[];
 }
+
+// ───────────── Danışanlık ve paylaşım ─────────────
+
+export type SharedDataType = 'MEALS' | 'WATER' | 'WEIGHT' | 'MEASUREMENTS' | 'PHOTOS' | 'ANAMNESIS';
+export type RelationshipStatus = 'OFFERED' | 'ACTIVE' | 'ENDED';
+
+export interface RelationshipBase {
+  id: string;
+  status: RelationshipStatus;
+  sharedData: SharedDataType[];
+  // Boşsa danışanlık bitene kadar paylaşılır
+  sharedUntil: string | null;
+  // Süre dolduysa danışanlık sürer ama profesyonel hiçbir veriyi göremez
+  sharingExpired: boolean;
+  offeredAt: string;
+  acceptedAt: string | null;
+}
+
+// Danışanın gördüğü: bana teklif gönderen / benimle çalışan profesyonel
+export interface ClientRelationshipItem extends RelationshipBase {
+  professional: {
+    type: 'DIETITIAN' | 'TRAINER' | 'GYM';
+    title: string | null;
+    city: string | null;
+    firstName: string | null;
+    lastName: string | null;
+    username: string;
+  };
+}
+
+// Profesyonelin gördüğü: danışanın sadece adı; sağlık verisi bu listede gelmez
+export interface ProfessionalRelationshipItem extends RelationshipBase {
+  client: { id: string; firstName: string | null; lastName: string | null; username: string };
+}
+
+export type AuditAction =
+  | 'OFFER_SENT'
+  | 'OFFER_ACCEPTED'
+  | 'OFFER_DECLINED'
+  | 'SHARING_CHANGED'
+  | 'RELATIONSHIP_ENDED'
+  | 'DATA_VIEWED'
+  | 'DATA_CHANGED'
+  | 'ACCESS_DENIED';
+
+export interface AuditEntry {
+  id: string;
+  action: AuditAction;
+  category: SharedDataType | null;
+  relationshipId: string | null;
+  meta: Record<string, unknown> | null;
+  createdAt: string;
+  // Hesabı silinmiş kişi için null
+  actor: { firstName: string | null; lastName: string | null; username: string } | null;
+}

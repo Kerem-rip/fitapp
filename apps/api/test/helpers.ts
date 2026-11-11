@@ -122,6 +122,17 @@ export async function registerProfessional(
   };
 }
 
+// Yöneticinin onayladığı profesyonel (onaydan sonra hesabın rolleri değiştiği için yeniden giriş yapılır)
+export async function registerApprovedProfessional(app: INestApplication<App>, field: keyof typeof PRO_DETAILS = 'DIETITIAN') {
+  const pro = await registerProfessional(app, field);
+  const admin = await createAdminAndLogin(app);
+  await request(app.getHttpServer())
+    .post(`/api/admin/applications/${pro.user.application!.id}/approve`)
+    .set(bearer(admin.accessToken))
+    .expect(200);
+  return { ...pro, adminToken: admin.accessToken };
+}
+
 // Yönetici hesabı (veritabanında doğrudan oluşturulur; kayıtla açılamaz) ve girişi
 export async function createAdminAndLogin(app: INestApplication<App>) {
   const prisma = app.get(PrismaService);

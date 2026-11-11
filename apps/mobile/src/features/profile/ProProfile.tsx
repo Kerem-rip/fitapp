@@ -21,10 +21,29 @@ import { View } from 'react-native';
 import { AccountSection } from '@/components/AccountSection';
 import { errorText, saveProfile } from '@/auth/actions';
 import { replyToReview } from '@/demo/actions';
+import type { DemoAccount, ProProfile as ProProfileData } from '@/demo/types';
 import { useAccount, useShared } from '@/demo/hooks';
 import { MODE_LABELS, ROLE_LABELS } from '@/demo/labels';
 import { fullName, proByAccount } from '@/demo/selectors';
 import { useClients } from '@/features/pro/useClients';
+
+function fallbackPro(account: DemoAccount): ProProfileData {
+  return {
+    id: account.id,
+    kind: account.roleKey === 'trainer' ? 'trainer' : 'dietitian',
+    accountId: account.id,
+    name: fullName(account),
+    title: ROLE_LABELS[account.roleKey],
+    city: account.city ?? '',
+    mode: 'both',
+    specialties: [],
+    rating: 0,
+    clientCount: 0,
+    followers: 0,
+    bio: '',
+    priceRange: 'Belirtilmedi',
+  };
+}
 
 export function ProProfile() {
   const router = useRouter();
@@ -36,7 +55,9 @@ export function ProProfile() {
   const [replyId, setReplyId] = useState<string | null>(null);
   const [reply, setReply] = useState('');
 
-  const pro = account ? proByAccount(account.id) : undefined;
+  // Yeni onaylanan gerçek uzmanın demo profil kaydı yoktur; hesabından geçici bir profil kurulur
+  const seededPro = account ? proByAccount(account.id) : undefined;
+  const pro = account ? (seededPro ?? fallbackPro(account)) : undefined;
   const reviews = useMemo(
     () => shared.reviews.filter((r) => r.proId === pro?.id).sort((a, b) => b.createdAt.localeCompare(a.createdAt)),
     [shared.reviews, pro?.id],
@@ -106,14 +127,24 @@ export function ProProfile() {
             <Button label="Düzenle" variant="secondary" block icon="create-outline" onPress={() => { setBio(account.bio || pro.bio); setBioOpen(true); }} />
           </View>
           <View style={{ flex: 1 }}>
-            <Button label="Müşteriler nasıl görür" variant="ghost" block onPress={() => router.push(`/professional/${pro.id}`)} />
+            {seededPro ? <Button label="Müşteriler nasıl görür" variant="ghost" block onPress={() => router.push(`/professional/${pro.id}`)} /> : null}
           </View>
         </View>
       </Card>
 
+      <Card padded={false} style={{ paddingHorizontal: 16, marginTop: 12 }}>
+        <ListRow
+          icon="person-add-outline"
+          title="Danışan teklifleri"
+          subtitle="Kullanıcı adıyla teklif gönder, yanıtları gör"
+          onPress={() => router.push('/my-clients')}
+          last
+        />
+      </Card>
+
       <SectionHeader title="Hizmet bilgileri" />
       <Card padded={false} style={{ paddingHorizontal: 16 }}>
-        <ListRow icon="location-outline" title="Şehir" trailing={<Text variant="bodyStrong">{pro.city}</Text>} />
+        <ListRow icon="location-outline" title="Şehir" trailing={<Text variant="bodyStrong">{pro.city || 'Belirtilmedi'}</Text>} />
         <ListRow icon="videocam-outline" title="Hizmet şekli" trailing={<Text variant="bodyStrong">{MODE_LABELS[pro.mode]}</Text>} />
         <ListRow icon="cash-outline" title="Fiyat aralığı" trailing={<Text variant="bodyStrong">{pro.priceRange}</Text>} />
         <ListRow icon="ribbon-outline" title="Diploma ve sertifikalar" trailing={<Tag label="Onaylandı" kind="success" />} last />

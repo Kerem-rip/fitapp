@@ -13,6 +13,7 @@ import { EmailModule } from './modules/email/email.module.js';
 import { FilesModule } from './modules/files/files.module.js';
 import { HealthModule } from './modules/health/health.module.js';
 import { RegistrationModule } from './modules/registration/registration.module.js';
+import { RelationshipsModule } from './modules/relationships/relationships.module.js';
 import { UsersModule } from './modules/users/users.module.js';
 
 @Module({
@@ -31,6 +32,7 @@ import { UsersModule } from './modules/users/users.module.js';
     AdminModule,
     UsersModule,
     ConsentsModule,
+    RelationshipsModule,
   ],
   providers: [{ provide: APP_GUARD, useClass: ThrottlerGuard }],
 })

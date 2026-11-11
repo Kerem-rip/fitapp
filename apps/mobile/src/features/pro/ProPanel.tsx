@@ -4,6 +4,7 @@ import { useRouter } from 'expo-router';
 import { useMemo } from 'react';
 import { View } from 'react-native';
 import { AppHeader } from '@/components/AppHeader';
+import { DEMO_TOOLS } from '@/config/features';
 import { formatLong } from '@/demo/dates';
 import { useAccount, useDemoState, useToday } from '@/demo/hooks';
 import { unreadTotal } from '@/demo/selectors';
@@ -134,7 +135,19 @@ export function ProPanel() {
         <Notice kind="success" text="Her şey yolunda, bekleyen hatırlatıcı yok." />
       )}
 
-      <Notice kind="info" text="Danışanlar, bir kullanıcıyla mesajlaşırken 'Danışan olarak ekle' ile eklenir. Danışan, hangi verilerini paylaşacağını kendisi seçer." />
+      <SectionHeader title="Danışan teklifleri" />
+      <Card padded={false} style={{ paddingHorizontal: 16 }}>
+        <ListRow
+          icon="person-add-outline"
+          title="Danışan ekle"
+          subtitle="Kullanıcı adıyla teklif gönder. Danışan hangi bilgilerini paylaşacağını kendisi seçer."
+          onPress={() => router.push('/my-clients')}
+          last
+        />
+      </Card>
+      {DEMO_TOOLS ? (
+        <Notice kind="info" text="Demo: aşağıdaki danışanlar örnek verilerdir. Gerçek danışanlar yukarıdaki teklif akışıyla eklenir." />
+      ) : null}
     </Screen>
   );
 }

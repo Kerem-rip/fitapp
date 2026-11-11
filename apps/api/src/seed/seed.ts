@@ -48,6 +48,10 @@ const USERS: SeedUser[] = [
 const prisma = new PrismaClient({ adapter: new PrismaPg({ connectionString: env.databaseUrl }) });
 
 async function main() {
+  // Herkesçe bilinen şifreli hesaplar gerçek bir sunucuya hiç yüklenmemeli
+  if (env.nodeEnv === 'production') {
+    throw new Error('Demo hesapları yayın ortamına yüklenmez (NODE_ENV=production).');
+  }
   const passwordHash = await hashPassword(DEMO_PASSWORD);
 
   for (const u of USERS) {
@@ -73,6 +77,11 @@ async function main() {
       await prisma.consent.createMany({
         data: ['terms', 'privacy_notice'].map((type) => ({ userId: u.id, type, textVersion: '2026-11-taslak' })),
       });
+    }
+
+    // Ayşe demo danışandır: paylaşım akışını denemek için sağlık verisi izni baştan verilmiştir
+    if (u.id === 'acc-ayse' && !(await prisma.consent.findFirst({ where: { userId: u.id, type: 'health_data', revokedAt: null } }))) {
+      await prisma.consent.create({ data: { userId: u.id, type: 'health_data', textVersion: '2026-11-taslak' } });
     }
 
     if (u.professional) {

@@ -81,6 +81,9 @@ model User {
   messagesSent  Message[]
   notifications Notification[]
   files         File[]
+
+  auditActed    AuditLog[] @relation("auditActor")
+  auditTargeted AuditLog[] @relation("auditTarget")
 }
 
 model UserRole {
@@ -589,6 +592,7 @@ enum SharedDataType {
   WEIGHT
   MEASUREMENTS
   PHOTOS
+  ANAMNESIS // Sağlık öyküsü, alerji, hastalık, yaşam tarzı yanıtları
 }
 
 // Danışan bağlantısı. Hizmet almanın kanıtı budur (yorum yazma hakkı buna bağlı).
@@ -598,15 +602,38 @@ model ClientRelationship {
   clientId       String
   status         ClientStatus     @default(OFFERED)
   sharedData     SharedDataType[] // Kullanıcının paylaşmaya izin verdiği veriler
+  sharedUntil    DateTime? // Boşsa danışanlık bitene kadar; dolunca profesyonel verilere erişimi kaybeder
   offeredAt      DateTime         @default(now())
-  acceptedAt     DateTime?
+  acceptedAt     DateTime? // Boş kalıp endedAt doluysa teklif reddedilmiş/geri çekilmiştir
   endedAt        DateTime? // Doldurulduğu an profesyonel verilere erişimi kaybeder
+  endedById      String? // Danışanlığı kim sonlandırdı (danışan veya profesyonel)
 
   professional ProfessionalProfile @relation("professional", fields: [professionalId], references: [userId], onDelete: Cascade)
   client       User                @relation("client", fields: [clientId], references: [id], onDelete: Cascade)
 
   @@index([professionalId, status])
   @@index([clientId, status])
+}
+
+// Denetim kaydı: bir kişinin sağlık verisine kim, ne zaman, ne yaptı. Sadece eklenir; değiştirilmez.
+// Kaydın konusu olan kullanıcı (targetUser) neyin kimle paylaşıldığını ve kimin baktığını buradan görür.
+// targetUser silinince kayıtları da silinir; actor silinirse kayıt kalır, actorId boşalır.
+model AuditLog {
+  id             String   @id @default(uuid())
+  actorId        String?
+  targetUserId   String
+  // OFFER_SENT, OFFER_ACCEPTED, OFFER_DECLINED, SHARING_CHANGED, RELATIONSHIP_ENDED, DATA_VIEWED, ACCESS_DENIED ...
+  action         String
+  category       String? // SharedDataType değeri
+  relationshipId String?
+  meta           Json?
+  createdAt      DateTime @default(now())
+
+  actor      User? @relation("auditActor", fields: [actorId], references: [id], onDelete: SetNull)
+  targetUser User  @relation("auditTarget", fields: [targetUserId], references: [id], onDelete: Cascade)
+
+  @@index([targetUserId, createdAt])
+  @@index([actorId, createdAt])
 }
 
 // Sadece danışan bağlantısı kurulmuş (acceptedAt dolu) kullanıcılar yazabilir

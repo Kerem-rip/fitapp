@@ -29,6 +29,7 @@ import { AccountSection } from '@/components/AccountSection';
 import { ChipRow } from '@/components/ChipRow';
 import { ConfirmSheet } from '@/components/ConfirmSheet';
 import { errorText, saveProfile, setConsentRemote, setPrivateRemote } from '@/auth/actions';
+import { DEMO_TOOLS } from '@/config/features';
 import { endClientLink, setSharing, simulateParentalApproval, updateHealth } from '@/demo/actions';
 import { useAccount, useDemoState, useUserData } from '@/demo/hooks';
 import { ACTIVITY_LABELS, DIET_LABELS, ROLE_LABELS } from '@/demo/labels';
@@ -169,7 +170,7 @@ export function UserProfile() {
                 ? 'Veli onayı bekleniyor. Onay gelene kadar öğün kaydı ve uzmanlara mesaj kapalı.'
                 : 'Henüz veli onayı istenmedi.'}
           </Text>
-          {data.parentalApproval !== 'approved' ? (
+          {DEMO_TOOLS && data.parentalApproval !== 'approved' ? (
             <Button
               label="Demo: velim onayladı"
               variant="secondary"
@@ -231,9 +232,20 @@ export function UserProfile() {
         />
       </Card>
 
-      {links.length > 0 ? (
+      <SectionHeader title="Paylaşım ve erişim" />
+      <Card padded={false} style={{ paddingHorizontal: 16 }}>
+        <ListRow
+          icon="shield-checkmark-outline"
+          title="Uzmanlara ne paylaştığım"
+          subtitle="Gelen teklifler, paylaşım ayarları ve verine kimin baktığı"
+          onPress={() => router.push('/sharing')}
+          last
+        />
+      </Card>
+
+      {DEMO_TOOLS && links.length > 0 ? (
         <>
-          <SectionHeader title="Uzmanıma paylaştıklarım" />
+          <SectionHeader title="Uzmanıma paylaştıklarım (demo)" />
           <Notice kind="info" text="Danışanı olduğun uzman sadece burada açtığın verileri görür. İstediğin zaman kapatabilirsin." />
           <Card padded={false} style={{ paddingHorizontal: 16 }}>
             <SwitchRow title="Öğün kayıtlarım" value={data.sharing.meals} onChange={(v) => setSharing(account.id, 'meals', v)} />

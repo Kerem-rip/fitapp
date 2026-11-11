@@ -4,6 +4,7 @@ import { useRouter } from 'expo-router';
 import { useState } from 'react';
 import { Pressable, View } from 'react-native';
 import { errorText, signIn } from '@/auth/actions';
+import { DEMO_TOOLS } from '@/config/features';
 import { ROLE_LABELS } from '@/demo/labels';
 import { fullName } from '@/demo/selectors';
 import { DEMO_PASSWORD, SEED_ACCOUNTS } from '@/demo/seed';
@@ -69,13 +70,15 @@ export default function LoginScreen() {
         </Pressable>
       </View>
 
-      <Pressable onPress={() => setDemoOpen((o) => !o)} style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6, marginTop: 28, marginBottom: 12 }}>
-        <Icon name={demoOpen ? 'chevron-up' : 'chevron-down'} size={16} color={c.textMuted} />
-        <Text variant="caption" tone="muted" style={{ fontWeight: '600' }}>
-          Test hesapları
-        </Text>
-      </Pressable>
-      {demoOpen ? (
+      {DEMO_TOOLS ? (
+        <Pressable onPress={() => setDemoOpen((o) => !o)} style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6, marginTop: 28, marginBottom: 12 }}>
+          <Icon name={demoOpen ? 'chevron-up' : 'chevron-down'} size={16} color={c.textMuted} />
+          <Text variant="caption" tone="muted" style={{ fontWeight: '600' }}>
+            Test hesapları
+          </Text>
+        </Pressable>
+      ) : null}
+      {DEMO_TOOLS && demoOpen ? (
         <>
           <Notice kind="info" text="Bunlar sunucuya yüklenmiş test hesaplarıdır. Dokununca doğrudan girilir. Sunucunun çalışıyor olması gerekir." />
           <Card padded={false} style={{ paddingHorizontal: 16 }}>
