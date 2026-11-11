@@ -17,6 +17,8 @@ import {
   type AnswerValue,
 } from '../intake-template.js';
 import { MEASUREMENT_SPECS } from '../measurement-rules.js';
+import type { PlanContent } from '../plans/plan-content.js';
+import { conflictText, findConflicts } from '../plans/plan-rules.js';
 
 export type Level = 'RED' | 'YELLOW' | 'GREEN';
 
@@ -30,7 +32,7 @@ export const RULE_PARAMS = {
 } as const;
 
 export interface BasisRef {
-  type: 'ANSWER' | 'MEASUREMENT' | 'MISSING' | 'SHARING';
+  type: 'ANSWER' | 'MEASUREMENT' | 'MISSING' | 'SHARING' | 'PLAN';
   label: string;
   display: string;
   at: string | null;
@@ -63,6 +65,8 @@ export interface RuleInput {
   answers: ReadonlyMap<string, { value: AnswerValue; answeredAt: Date }>;
   // Sadece geçerli (geçersiz sayılmamış) ve paylaşılan türler; en yeniden eskiye
   measurements: readonly MeasurementPoint[];
+  // Danışana yayında olan plan sürümü (varsa)
+  plan?: { versionNumber: number; content: PlanContent } | null;
 }
 
 export interface RuleDef {
@@ -163,6 +167,31 @@ export const RULES: readonly RuleDef[] = [
           key: 'yes',
         },
       ];
+    },
+  },
+
+  {
+    code: 'R-PLAN-ALLERGEN',
+    level: 'RED',
+    kind: 'MECHANICAL',
+    reviewed: false,
+    description: 'Yayındaki planda danışanın (sonradan değişmiş olabilecek) alerjisiyle çakışan seçenek varsa uzmanı uyarır.',
+    run(input) {
+      const a = input.answers.get('std.allergies');
+      if (!hasAnamnesis(input) || !input.plan || !a || !Array.isArray(a.value)) return [];
+      const allergens = a.value.filter((v) => v !== 'none');
+      return findConflicts(input.plan.content, { known: true, allergens }).map<Candidate>((c) => ({
+        ruleCode: this.code,
+        level: 'RED',
+        title: 'Yayındaki planda alerjenle çakışan seçenek var',
+        detail: `${conflictText(c)} Bu seçenek danışana şimdilik seçilemez gösteriliyor; planı gözden geçirip yeni bir sürüm yayınla.`,
+        categories: ['ANAMNESIS'],
+        basis: [
+          ...answerBasis(input, 'std.allergies'),
+          { type: 'PLAN', label: `Plan sürüm ${input.plan!.versionNumber} › ${c.mealName}`, display: c.optionName, at: null },
+        ],
+        key: `${input.plan!.versionNumber}:${c.mealId}:${c.optionId}:${c.kind}:${[...c.allergens].sort().join(',')}`,
+      }));
     },
   },
 

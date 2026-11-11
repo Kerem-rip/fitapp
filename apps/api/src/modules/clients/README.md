@@ -66,5 +66,27 @@ Bunlar klinik eşik değil, veri kalitesi ayarlarıdır; yine de bir diyetisyenl
 - Madde metinlerinin dili (tanı/tedavi dili geçmemeli; birim testi bazı ifadeleri yasaklar)
 - "İlaç/ek alerji" serbest metninde "yok", "hayır" gibi yanıtların madde üretmemesi (basit metin eşleşmesi)
 
+## Beslenme planı (1C) — `plans/`
+Uzman taslak hazırlar → kontrol eder → **onaylar**; onaylanmadan danışana gitmez. Onaylanan sürüm değişmez; düzenleme yeni taslakla yapılır, her onay yeni sürüm numarası alır.
+
+| Adres | Kim | Ne yapar |
+|---|---|---|
+| `GET /api/clients/:clientId/plan` | Uzman | Yayındaki sürüm, açık taslak, sürüm geçmişi (her sürümde "ne değişti") |
+| `POST/PUT/DELETE .../plan/draft` | Uzman (onaylı diyetisyen) | Taslak aç (boş / yayındakinden / verilen içerikle), kaydet, sil |
+| `GET .../plan/draft/check` | Uzman | Engeller ve uyarılar |
+| `POST .../plan/draft/approve` `{ changeNote?, confirmWarnings }` | Uzman | Onayla ve danışana yayınla |
+| `GET .../plan/versions/:number` | Uzman | Bir sürümün içeriği ve önceki sürüme göre farkı |
+| `GET .../plan/choices?from=&to=` | Uzman | Danışanın seçimleri (öğün kayıtları paylaşılıyorsa) |
+| `GET /api/me/plans`, `GET /api/me/plans/:planId?date=` | Danışan | Yayındaki planlarım, o günkü seçimlerim |
+| `PUT /api/me/plans/:planId/choices` `{ date, mealId, optionIds }` | Danışan | İzinli alternatiflerden seçim (en fazla `pick` tane, ±7 gün) |
+
+### Kurallar
+- İçerik: öğünler; her öğünde uzmanın tanımladığı **alternatifler** (ad, porsiyon, isteğe bağlı kalori, alerjenler, not), danışanın kaç seçeneği seçeceği (`pick`) ve serbest metin **değiştirme kuralı**. Değerler uzmanındır; sistem tıbbi doğruluk iddia etmez, kalori hesaplamaz.
+- **Onay engelleri:** boş plan, seçeneksiz öğün, seçenekten fazla `pick`, danışanın **alerji bilgisi yoksa/paylaşılmıyorsa**, danışanın alerjenini içeren seçenek, danışanın alerjisi varken **alerjeni belirtilmemiş** seçenek.
+- **Uyarılar:** yeme bozukluğu öyküsü, hamilelik/emzirme, sağlık durumu, ilaç beyanı, eksik önemli sorular açık madde olarak duruyorsa uzman `confirmWarnings: true` ile açıkça onaylamalı; geçtiği uyarılar sürüme kaydedilir.
+- **Alerji değişince yeniden inceleme:** danışan yayından sonra yeni alerji beyan ederse çakışan seçenekler danışana **seçilemez** gösterilir ve uzmana kırmızı `R-PLAN-ALLERGEN` maddesi düşer. Uzman yeni sürüm yayınlayınca madde kendiliğinden kapanır.
+- Danışanlık bitince danışan planı göremez; uzman kendi plan geçmişini okumaya devam eder (saklama süresi hukuki karar bekliyor).
+- Plan yalnızca onaylı **diyetisyen** tarafından hazırlanır (eğitmen programları Aşama 2).
+
 ## Henüz yok (sonraki aşamalar)
-Plan–alerji çakışması ve "alerji değişince planı yeniden incelemeye gönder" (plan Aşama 1C'de gelecek), "beklenen değişim yok" kontrolü (randevu ve hedef takibiyle, 1D), beslenme planı ve sürümleri, randevu ve hatırlatma, ölçüm cihazı entegrasyonu, danışanın kendi ölçümlerinin demo uygulamayla birleştirilmesi.
+"Beklenen değişim yok" kontrolü (randevu ve hedef takibiyle, 1D), beslenme planı ve sürümleri, randevu ve hatırlatma, ölçüm cihazı entegrasyonu, danışanın kendi ölçümlerinin demo uygulamayla birleştirilmesi.

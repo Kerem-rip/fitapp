@@ -97,6 +97,10 @@ model User {
   findingsAbout ReviewFinding[] @relation("findingSubject")
   tasksOwned    FollowUpTask[]  @relation("taskOwner")
   tasksAbout    FollowUpTask[]  @relation("taskSubject")
+
+  plansOwned  NutritionPlan[] @relation("planOwner")
+  plansAbout  NutritionPlan[] @relation("planSubject")
+  planChoices PlanChoice[]
 }
 
 model UserRole {
@@ -825,6 +829,90 @@ model FollowUpTask {
 
   @@index([professionalId, status, dueAt])
   @@index([professionalId, clientId])
+}
+
+// ═══════════════════════════════════════════════════════════════
+// BESLENME PLANI — uzman onaylı, sürümlü, alternatifli
+// Plan, uzman onaylamadan danışana GİTMEZ. Onaylanmış sürümler değiştirilmez; düzenleme yeni taslakla yapılır.
+// İçerikteki yiyecek, porsiyon ve alerjen bilgileri uzmanındır; sistem tıbbi doğruluk iddia etmez.
+// ═══════════════════════════════════════════════════════════════
+
+enum PlanVersionStatus {
+  DRAFT // Uzmanın çalışma kopyası (danışan görmez)
+  APPROVED // Uzman onayladı; danışana yayında olan sürüm
+  SUPERSEDED // Daha yeni bir sürüm yayınlandı
+}
+
+// Bir uzman–danışan çifti için tek plan; sürümler geçmişi oluşturur.
+model NutritionPlan {
+  id             String   @id @default(uuid())
+  professionalId String
+  clientId       String
+  createdAt      DateTime @default(now())
+
+  professional User          @relation("planOwner", fields: [professionalId], references: [id], onDelete: Cascade)
+  client       User          @relation("planSubject", fields: [clientId], references: [id], onDelete: Cascade)
+  versions     PlanVersion[]
+  events       PlanEvent[]
+  choices      PlanChoice[]
+
+  @@unique([professionalId, clientId])
+}
+
+// `number` onaylanınca verilir (taslakta boş). `content`: öğünler, alternatifler, porsiyonlar, değiştirme kuralları (JSON).
+model PlanVersion {
+  id            String            @id @default(uuid())
+  planId        String
+  number        Int?
+  status        PlanVersionStatus @default(DRAFT)
+  content       Json
+  changeNote    String?
+  basedOnNumber Int? // Hangi sürümden türetildi
+  createdById   String
+  approvedById  String?
+  approvedAt    DateTime?
+  // Onay anında uzmanın bilerek geçtiği uyarılar (kayıt için)
+  acknowledged  Json?
+  createdAt     DateTime          @default(now())
+  updatedAt     DateTime          @updatedAt
+
+  plan NutritionPlan @relation(fields: [planId], references: [id], onDelete: Cascade)
+
+  @@unique([planId, number])
+  @@index([planId, status])
+}
+
+// Plan geçmişi: kim, ne zaman, ne yaptı. Sadece eklenir.
+model PlanEvent {
+  id        String   @id @default(uuid())
+  planId    String
+  versionId String?
+  kind      String // DRAFT_CREATED | DRAFT_EDITED | DRAFT_DISCARDED | APPROVED | SUPERSEDED
+  text      String?
+  byId      String?
+  createdAt DateTime @default(now())
+
+  plan NutritionPlan @relation(fields: [planId], references: [id], onDelete: Cascade)
+
+  @@index([planId, createdAt])
+}
+
+// Danışanın bir gün için bir öğünde seçtiği alternatif(ler). Sadece o sürümde izinli seçenekler seçilebilir.
+model PlanChoice {
+  id        String   @id @default(uuid())
+  userId    String
+  planId    String
+  versionId String
+  date      String // YYYY-AA-GG
+  mealId    String
+  optionIds String[]
+  updatedAt DateTime @updatedAt
+
+  user User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  plan NutritionPlan @relation(fields: [planId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, planId, date, mealId])
+  @@index([planId, date])
 }
 
 // Denetim kaydı: bir kişinin sağlık verisine kim, ne zaman, ne yaptı. Sadece eklenir; değiştirilmez.

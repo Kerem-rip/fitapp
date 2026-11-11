@@ -8,6 +8,7 @@ import type {
   AnswerValue,
   AuditEntry,
   ClientFileSummary,
+  ClientPlanChoice,
   AuthResult,
   ClientRelationshipItem,
   DocumentKind,
@@ -18,7 +19,12 @@ import type {
   MeasurementInput,
   MeasurementItem,
   MeasurementKind,
+  MyPlanListItem,
+  MyPlanView,
   NoteItem,
+  PlanCheck,
+  PlanContent,
+  PlanOverview,
   ReviewOverviewItem,
   ReviewTask,
   TaskItem,
@@ -322,6 +328,25 @@ export function createApiClient(config: ApiClientConfig) {
     reviewOverview: () => request<ReviewOverviewItem[]>('/review/overview', { auth: true }),
     reviewTasks: (status: 'OPEN' | 'DONE' = 'OPEN') => request<ReviewTask[]>('/review/tasks', { auth: true, query: { status } }),
     completeTask: (taskId: string) => request<{ id: string; status: 'DONE' }>(`/review/tasks/${taskId}/done`, { method: 'POST', auth: true }),
+
+    // ───────────── Beslenme planı ─────────────
+    // Uzman: taslak → kontrol → onay (onaylanmadan danışana gitmez)
+    clientPlan: (clientId: string) => request<PlanOverview>(`/clients/${clientId}/plan`, { auth: true }),
+    createPlanDraft: (clientId: string, input: { content?: PlanContent; fromPublished?: boolean } = {}) =>
+      request<{ content: PlanContent; basedOnNumber: number | null; updatedAt: string }>(`/clients/${clientId}/plan/draft`, { method: 'POST', body: input, auth: true }),
+    savePlanDraft: (clientId: string, content: PlanContent, changeNote?: string) =>
+      request<{ content: PlanContent; changeNote: string | null; updatedAt: string }>(`/clients/${clientId}/plan/draft`, { method: 'PUT', body: { content, changeNote }, auth: true }),
+    discardPlanDraft: (clientId: string) => request<{ discarded: true }>(`/clients/${clientId}/plan/draft`, { method: 'DELETE', auth: true }),
+    checkPlanDraft: (clientId: string) => request<PlanCheck>(`/clients/${clientId}/plan/draft/check`, { auth: true }),
+    approvePlanDraft: (clientId: string, input: { changeNote?: string; confirmWarnings: boolean }) =>
+      request<{ number: number; approvedAt: string; summary: string[] }>(`/clients/${clientId}/plan/draft/approve`, { method: 'POST', body: input, auth: true }),
+    clientPlanChoices: (clientId: string, from: string, to: string) =>
+      request<ClientPlanChoice[]>(`/clients/${clientId}/plan/choices`, { auth: true, query: { from, to } }),
+    // Danışan: yayındaki plan ve seçimler
+    myPlans: () => request<MyPlanListItem[]>('/me/plans', { auth: true }),
+    myPlan: (planId: string, date: string) => request<MyPlanView>(`/me/plans/${planId}`, { auth: true, query: { date } }),
+    choosePlanOptions: (planId: string, input: { date: string; mealId: string; optionIds: string[] }) =>
+      request<{ date: string; mealId: string; optionIds: string[] }>(`/me/plans/${planId}/choices`, { method: 'PUT', body: input, auth: true }),
 
     // ───────────── Yönetici ─────────────
     adminApplications: (status: ApplicationStatus) =>

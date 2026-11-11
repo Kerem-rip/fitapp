@@ -235,6 +235,12 @@ export function UserProfile() {
       <SectionHeader title="Paylaşım ve erişim" />
       <Card padded={false} style={{ paddingHorizontal: 16 }}>
         <ListRow
+          icon="restaurant-outline"
+          title="Beslenme planım"
+          subtitle="Diyetisyenimin onayladığı plan ve seçimlerim"
+          onPress={() => router.push('/my-plans')}
+        />
+        <ListRow
           icon="clipboard-outline"
           title="Ölçümlerim ve sağlık öyküm"
           subtitle="Kilo, ölçüler, alerji ve yaşam tarzı bilgilerin"

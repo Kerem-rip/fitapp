@@ -14,6 +14,7 @@ import { AccessService } from '../../relationships/access.service.js';
 import { AnamnesisService } from '../anamnesis.service.js';
 import { STANDARD_QUESTIONS } from '../intake-template.js';
 import { kindsInCategory } from '../measurement-rules.js';
+import type { PlanContent } from '../plans/plan-content.js';
 import { evaluate, type BasisRef, type Candidate, type RuleInput } from './rules.js';
 
 export const FINDING_DECISIONS = ['EVALUATED', 'NOT_APPLICABLE', 'CLIENT_INFORMED', 'OTHER'] as const;
@@ -45,7 +46,13 @@ export class FindingsService {
 
   // ───────────── Üretim ─────────────
 
-  private async inputs(clientId: string, ctx: Context): Promise<RuleInput> {
+  private async inputs(professionalId: string, clientId: string, ctx: Context): Promise<RuleInput> {
+    const published = ctx.allowed.has('ANAMNESIS')
+      ? await this.prisma.planVersion.findFirst({
+          where: { status: 'APPROVED', plan: { professionalId, clientId } },
+          select: { number: true, content: true },
+        })
+      : null;
     const answers = ctx.allowed.has('ANAMNESIS') ? await this.anamnesis.currentAnswers(clientId, STANDARD_QUESTIONS.map((q) => q.key)) : new Map();
     const kinds = [...(ctx.allowed.has('WEIGHT') ? kindsInCategory('WEIGHT') : []), ...(ctx.allowed.has('MEASUREMENTS') ? kindsInCategory('MEASUREMENTS') : [])];
     const rows = kinds.length
@@ -62,12 +69,23 @@ export class FindingsService {
       sharedUntil: ctx.sharedUntil,
       answers: new Map([...answers.entries()].map(([key, a]) => [key, { value: a.value as never, answeredAt: a.answeredAt }])),
       measurements: rows,
+      plan: published ? { versionNumber: published.number ?? 0, content: published.content as unknown as PlanContent } : null,
     };
+  }
+
+  // Plan onayı öncesi uyarılar için: bu kurallara ait açık maddeler (yalnızca görülebilen kategorilerdekiler)
+  async openByRules(professionalId: string, clientId: string, allowed: ReadonlySet<SharedDataType>, codes: readonly string[]) {
+    const rows = await this.prisma.reviewFinding.findMany({
+      where: { professionalId, clientId, status: { in: ['OPEN', 'FOLLOW_UP'] }, ruleCode: { in: [...codes] } },
+      orderBy: [{ level: 'asc' }, { title: 'asc' }],
+      select: { ruleCode: true, level: true, title: true, categories: true },
+    });
+    return rows.filter((f) => covered(f.categories, allowed)).map(({ categories: _c, ...rest }) => rest);
   }
 
   // Kural sonuçlarını kayıtlı maddelerle eşitler
   async refresh(professionalId: string, clientId: string, ctx: Context): Promise<void> {
-    const candidates = evaluate(await this.inputs(clientId, ctx)).map((c) => ({ ...c, fingerprint: fingerprintOf(c) }));
+    const candidates = evaluate(await this.inputs(professionalId, clientId, ctx)).map((c) => ({ ...c, fingerprint: fingerprintOf(c) }));
     const existing = await this.prisma.reviewFinding.findMany({
       where: { professionalId, clientId },
       select: { id: true, fingerprint: true, status: true, categories: true },

@@ -12,14 +12,16 @@ import { ChipRow } from '@/components/ChipRow';
 import { ConfirmSheet } from '@/components/ConfirmSheet';
 import { MeasurementSheet } from '@/components/MeasurementSheet';
 import { formatFullDate, formatShortDate, formatValue, KIND_LABELS, KIND_ORDER, METHOD_LABELS, mixedMethods, SOURCE_LABELS } from '@/features/health/labels';
+import { PlanTab } from '@/features/plans/PlanTab';
 import { ReviewTab } from '@/features/review/ReviewTab';
 import { formatDateTime, SHARED_DATA_LABELS, SHARED_DATA_ORDER } from '@/features/sharing/labels';
 
-type Tab = 'review' | 'summary' | 'measurements' | 'anamnesis' | 'notes' | 'timeline';
+type Tab = 'review' | 'summary' | 'plan' | 'measurements' | 'anamnesis' | 'notes' | 'timeline';
 
 const TABS: { key: Tab; label: string }[] = [
   { key: 'review', label: 'İnceleme' },
   { key: 'summary', label: 'Özet' },
+  { key: 'plan', label: 'Plan' },
   { key: 'measurements', label: 'Ölçümler' },
   { key: 'anamnesis', label: 'Anamnez' },
   { key: 'notes', label: 'Notlar' },
@@ -77,6 +79,7 @@ export default function ClientFileScreen() {
         <>
           {tab === 'review' ? <ReviewTab clientId={clientId} onChanged={loadSummary} /> : null}
           {tab === 'summary' ? <SummaryTab summary={summary} onGo={setTab} /> : null}
+          {tab === 'plan' ? <PlanTab clientId={clientId} mealsVisible={visible.includes('MEALS')} /> : null}
           {tab === 'measurements' ? <MeasurementsTab clientId={clientId} visible={visible} onChanged={loadSummary} /> : null}
           {tab === 'anamnesis' ? <AnamnesisTab clientId={clientId} canView={visible.includes('ANAMNESIS')} onChanged={loadSummary} /> : null}
           {tab === 'notes' ? <NotesTab clientId={clientId} onChanged={loadSummary} /> : null}

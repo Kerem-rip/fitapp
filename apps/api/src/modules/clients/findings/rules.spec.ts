@@ -12,8 +12,10 @@ function input(overrides: {
   answers?: Record<string, { value: AnswerValue; daysAgo?: number }>;
   measurements?: Partial<MeasurementPoint>[];
   sharedUntil?: Date | null;
+  plan?: RuleInput['plan'];
 } = {}): RuleInput {
   return {
+    plan: overrides.plan ?? null,
     now: NOW,
     allowed: new Set(overrides.allowed ?? ALL),
     sharedUntil: overrides.sharedUntil ?? null,
@@ -64,6 +66,35 @@ describe('inceleme kuralları', () => {
     expect(find(input({ answers: IMPORTANT }), 'R-EATING-DISORDER')).toHaveLength(0);
     // Yanıt yoksa kırmızı değil, sarı "sorulmadı" maddesi çıkar
     expect(find(input({ answers: {} }), 'R-EATING-DISORDER')).toHaveLength(0);
+  });
+
+  it('kırmızı: yayındaki plan, danışanın (sonradan değişen) alerjisiyle çakışıyorsa; dayanakta plan ve alerji yanıtı vardır', () => {
+    const plan = {
+      versionNumber: 2,
+      content: {
+        meals: [
+          {
+            id: 'm1',
+            name: 'Kahvaltı',
+            pick: 1,
+            options: [
+              { id: 'o1', name: 'Omlet', portion: '2 adet', allergens: ['egg'] },
+              { id: 'o2', name: 'Meyve', portion: '1 porsiyon', allergens: [] },
+              { id: 'o3', name: 'Bilinmeyen', portion: '1', allergens: null },
+            ],
+          },
+        ],
+      },
+    };
+    const r = find(input({ answers: { ...IMPORTANT, 'std.allergies': { value: ['egg'] } }, plan }), 'R-PLAN-ALLERGEN');
+    expect(r.map((c) => c.key.split(':')[2]).sort((a, b) => a.localeCompare(b))).toEqual(['o1', 'o3']);
+    expect(r[0]).toMatchObject({ level: 'RED', categories: ['ANAMNESIS'] });
+    expect(r[0]!.detail).toContain('Yumurta');
+    expect(r[0]!.basis.map((b) => b.type)).toEqual(['ANSWER', 'PLAN']);
+
+    // Alerji yok ya da plan yoksa madde çıkmaz
+    expect(find(input({ answers: IMPORTANT, plan }), 'R-PLAN-ALLERGEN')).toHaveLength(0);
+    expect(find(input({ answers: { ...IMPORTANT, 'std.allergies': { value: ['egg'] } } }), 'R-PLAN-ALLERGEN')).toHaveLength(0);
   });
 
   it('kırmızı madde en başta sıralanır', () => {

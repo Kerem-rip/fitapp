@@ -299,7 +299,7 @@ export type FindingDecision = 'EVALUATED' | 'NOT_APPLICABLE' | 'CLIENT_INFORMED'
 
 // Maddenin hangi bilgiye dayandığı
 export interface FindingBasis {
-  type: 'ANSWER' | 'MEASUREMENT' | 'MISSING' | 'SHARING';
+  type: 'ANSWER' | 'MEASUREMENT' | 'MISSING' | 'SHARING' | 'PLAN';
   label: string;
   display: string;
   at: string | null;
@@ -359,4 +359,109 @@ export interface ReviewTask extends TaskItem {
   createdAt: string;
   findingId: string | null;
   client: { id: string; name: string; username: string };
+}
+
+// ───────────── Beslenme planı ─────────────
+
+export interface PlanOption {
+  id?: string;
+  name: string;
+  // Ev ölçüsü / porsiyon
+  portion: string;
+  kcal?: number;
+  // null: uzman alerjen bilgisini belirtmedi
+  allergens: string[] | null;
+  note?: string;
+}
+
+export interface PlanMeal {
+  id?: string;
+  name: string;
+  // "08:00"
+  time?: string;
+  // Danışan bu öğünde kaç alternatif seçer
+  pick: number;
+  rule?: string;
+  options: PlanOption[];
+}
+
+export interface PlanContent {
+  title?: string;
+  targetKcal?: number;
+  notes?: string;
+  meals: PlanMeal[];
+}
+
+export type PlanVersionStatus = 'DRAFT' | 'APPROVED' | 'SUPERSEDED';
+
+export interface PlanVersionInfo {
+  number: number;
+  status: PlanVersionStatus;
+  approvedAt: string | null;
+  approvedBy: string | null;
+  changeNote: string | null;
+  basedOnNumber: number | null;
+  // Bir önceki sürüme göre ne değişti
+  summary: string[];
+}
+
+export interface PlanOverview {
+  planId: string | null;
+  published: { number: number; approvedAt: string | null; approvedBy: string | null; changeNote: string | null; content: PlanContent } | null;
+  draft: { content: PlanContent; changeNote: string | null; basedOnNumber: number | null; updatedAt: string } | null;
+  versions: PlanVersionInfo[];
+  // Yayındaki planda alerjenle çakışan, henüz ele alınmamış madde sayısı
+  openPlanFindings: number;
+}
+
+export interface PlanBlocker {
+  code: 'EMPTY_PLAN' | 'MEAL_WITHOUT_OPTIONS' | 'PICK_TOO_HIGH' | 'ALLERGY_INFO_MISSING' | 'ALLERGEN_CONFLICT' | 'ALLERGEN_UNKNOWN';
+  message: string;
+  mealId?: string;
+  optionId?: string;
+}
+
+export interface PlanCheck {
+  canApprove: boolean;
+  // Çözülmeden plan onaylanamaz
+  blockers: PlanBlocker[];
+  // Uzmanın bilerek geçmesi gereken açık inceleme maddeleri
+  warnings: { ruleCode: string; level: FindingLevel; title: string }[];
+}
+
+export interface MyPlanListItem {
+  planId: string;
+  professional: { name: string; title: string | null };
+  number: number;
+  approvedAt: string | null;
+  title: string | null;
+  mealCount: number;
+}
+
+export interface MyPlanView {
+  planId: string;
+  professional: { name: string; title: string | null };
+  version: { number: number; approvedAt: string | null };
+  date: string;
+  title: string | null;
+  targetKcal: number | null;
+  notes: string | null;
+  anyBlocked: boolean;
+  meals: {
+    id: string;
+    name: string;
+    time: string | null;
+    pick: number;
+    rule: string | null;
+    options: { id: string; name: string; portion: string; kcal: number | null; allergens: string[] | null; note: string | null; blockedReason: string | null }[];
+    chosen: string[];
+  }[];
+}
+
+export interface ClientPlanChoice {
+  date: string;
+  mealId: string;
+  mealName: string;
+  versionNumber: number | null;
+  options: { id: string; name: string }[];
 }
