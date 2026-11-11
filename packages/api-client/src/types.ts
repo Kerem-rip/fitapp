@@ -276,6 +276,8 @@ export interface ClientFileSummary {
     }[];
   } | null;
   notesCount: number;
+  // Açık inceleme maddesi sayıları (içerik İnceleme sekmesindedir)
+  findings: FindingCounts;
 }
 
 export type TimelineItem =
@@ -287,4 +289,74 @@ export interface NoteItem {
   id: string;
   text: string;
   createdAt: string;
+}
+
+// ───────────── Uzman inceleme özeti ─────────────
+
+export type FindingLevel = 'RED' | 'YELLOW' | 'GREEN';
+export type FindingStatus = 'OPEN' | 'FOLLOW_UP' | 'CLOSED' | 'SUPERSEDED';
+export type FindingDecision = 'EVALUATED' | 'NOT_APPLICABLE' | 'CLIENT_INFORMED' | 'OTHER';
+
+// Maddenin hangi bilgiye dayandığı
+export interface FindingBasis {
+  type: 'ANSWER' | 'MEASUREMENT' | 'MISSING' | 'SHARING';
+  label: string;
+  display: string;
+  at: string | null;
+}
+
+export interface FindingEvent {
+  id: string;
+  kind: 'NOTE' | 'CLOSED' | 'REOPENED' | 'TASK_CREATED' | 'TASK_DONE' | 'SUPERSEDED';
+  text: string | null;
+  createdAt: string;
+}
+
+export interface TaskItem {
+  id: string;
+  title: string;
+  dueAt: string | null;
+  status: 'OPEN' | 'DONE';
+  doneAt: string | null;
+}
+
+export interface FindingItem {
+  id: string;
+  ruleCode: string;
+  level: FindingLevel;
+  title: string;
+  detail: string;
+  basis: FindingBasis[];
+  status: FindingStatus;
+  decision: FindingDecision | null;
+  closedReason: string | null;
+  closedAt: string | null;
+  firstSeenAt: string;
+  events: FindingEvent[];
+  tasks: TaskItem[];
+}
+
+export interface FindingCounts {
+  red: number;
+  yellow: number;
+  green: number;
+  followUp: number;
+}
+
+export interface FindingsResponse {
+  // Kural seti henüz uzman tarafından gözden geçirilmedi
+  rulesStatus: 'UNREVIEWED';
+  counts: FindingCounts;
+  items: FindingItem[];
+}
+
+export interface ReviewOverviewItem extends FindingCounts {
+  client: { id: string; firstName: string | null; lastName: string | null; username: string };
+  openTasks: number;
+}
+
+export interface ReviewTask extends TaskItem {
+  createdAt: string;
+  findingId: string | null;
+  client: { id: string; name: string; username: string };
 }

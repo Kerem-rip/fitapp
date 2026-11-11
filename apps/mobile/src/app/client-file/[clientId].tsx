@@ -12,11 +12,13 @@ import { ChipRow } from '@/components/ChipRow';
 import { ConfirmSheet } from '@/components/ConfirmSheet';
 import { MeasurementSheet } from '@/components/MeasurementSheet';
 import { formatFullDate, formatShortDate, formatValue, KIND_LABELS, KIND_ORDER, METHOD_LABELS, mixedMethods, SOURCE_LABELS } from '@/features/health/labels';
+import { ReviewTab } from '@/features/review/ReviewTab';
 import { formatDateTime, SHARED_DATA_LABELS, SHARED_DATA_ORDER } from '@/features/sharing/labels';
 
-type Tab = 'summary' | 'measurements' | 'anamnesis' | 'notes' | 'timeline';
+type Tab = 'review' | 'summary' | 'measurements' | 'anamnesis' | 'notes' | 'timeline';
 
 const TABS: { key: Tab; label: string }[] = [
+  { key: 'review', label: 'İnceleme' },
   { key: 'summary', label: 'Özet' },
   { key: 'measurements', label: 'Ölçümler' },
   { key: 'anamnesis', label: 'Anamnez' },
@@ -34,7 +36,7 @@ const QUESTION_TYPES: { key: IntakeQuestionType; label: string }[] = [
 export default function ClientFileScreen() {
   const router = useRouter();
   const { clientId } = useLocalSearchParams<{ clientId: string }>();
-  const [tab, setTab] = useState<Tab>('summary');
+  const [tab, setTab] = useState<Tab>('review');
   const [summary, setSummary] = useState<ClientFileSummary | null>(null);
   const [error, setError] = useState<string | null>(null);
 
@@ -73,6 +75,7 @@ export default function ClientFileScreen() {
 
       {summary ? (
         <>
+          {tab === 'review' ? <ReviewTab clientId={clientId} onChanged={loadSummary} /> : null}
           {tab === 'summary' ? <SummaryTab summary={summary} onGo={setTab} /> : null}
           {tab === 'measurements' ? <MeasurementsTab clientId={clientId} visible={visible} onChanged={loadSummary} /> : null}
           {tab === 'anamnesis' ? <AnamnesisTab clientId={clientId} canView={visible.includes('ANAMNESIS')} onChanged={loadSummary} /> : null}
@@ -88,8 +91,21 @@ export default function ClientFileScreen() {
 
 function SummaryTab({ summary, onGo }: { summary: ClientFileSummary; onGo: (tab: Tab) => void }) {
   const a = summary.anamnesis;
+  const f = summary.findings;
   return (
     <>
+      <Card onPress={() => onGo('review')}>
+        <Text variant="caption" tone="muted" style={{ fontWeight: '700', marginBottom: 6 }}>
+          İNCELEME
+        </Text>
+        <View style={{ flexDirection: 'row', gap: 6, flexWrap: 'wrap' }}>
+          <Tag label={`${f.red} incelenecek`} kind={f.red > 0 ? 'danger' : 'neutral'} />
+          <Tag label={`${f.yellow} doğrulanacak`} kind={f.yellow > 0 ? 'warning' : 'neutral'} />
+          <Tag label={`${f.green} öneri`} kind={f.green > 0 ? 'success' : 'neutral'} />
+          {f.followUp > 0 ? <Tag label={`${f.followUp} takipte`} kind="info" /> : null}
+        </View>
+      </Card>
+
       {summary.profile ? (
         <Card variant="soft">
           <Text variant="bodyStrong">

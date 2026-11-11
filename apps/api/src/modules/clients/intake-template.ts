@@ -159,6 +159,14 @@ export const isCustomKey = (key: string) => key.startsWith(CUSTOM_PREFIX);
 
 export type AnswerValue = string | number | string[];
 
+// Yanıtı okunur metne çevirir (seçenek etiketleri, birimli sayı)
+export function describeAnswer(def: { options?: readonly Choice[]; unit?: string }, value: AnswerValue): string {
+  const label = (v: string) => def.options?.find((o) => o.value === v)?.label ?? v;
+  if (Array.isArray(value)) return value.map(label).join(', ');
+  if (typeof value === 'number') return def.unit ? `${value} ${def.unit}` : String(value);
+  return label(value);
+}
+
 export class InvalidAnswerError extends Error {}
 
 // Yanıtı soru türüne göre doğrular; geçerliyse temizlenmiş halini döner

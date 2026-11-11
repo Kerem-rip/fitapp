@@ -7,6 +7,7 @@ import { AuthGuard, CurrentUser, type AuthUser } from '../auth/auth.guard.js';
 import { AccessService } from '../relationships/access.service.js';
 import { AnamnesisService } from './anamnesis.service.js';
 import { ClientFileService } from './client-file.service.js';
+import { FindingsService } from './findings/findings.service.js';
 import { TEMPLATE_STATUS } from './intake-template.js';
 import { kindsInCategory, MEASUREMENT_KINDS, MEASUREMENT_SPECS } from './measurement-rules.js';
 import { MeasurementsService } from './measurements.service.js';
@@ -63,6 +64,7 @@ export class ClientsController {
     @Inject(MeasurementsService) private readonly measurements: MeasurementsService,
     @Inject(AnamnesisService) private readonly anamnesis: AnamnesisService,
     @Inject(NotesService) private readonly notes: NotesService,
+    @Inject(FindingsService) private readonly findings: FindingsService,
   ) {}
 
   // GET /api/clients/:clientId/file → dosya özeti (sadece paylaşılan kategoriler dolu gelir)
@@ -99,7 +101,9 @@ export class ClientsController {
   @HttpCode(201)
   async addMeasurement(@CurrentUser() user: AuthUser, @Param('clientId') clientId: string, @Body({ schema: measurementSchema }) body: MeasurementBody) {
     await this.access.requireAccess(user.userId, clientId, MEASUREMENT_SPECS[body.kind].category, 'DATA_CHANGED', { kind: body.kind, action: 'add' });
-    return this.measurements.add(clientId, { id: user.userId, source: 'PROFESSIONAL' }, body);
+    const created = await this.measurements.add(clientId, { id: user.userId, source: 'PROFESSIONAL' }, body);
+    await this.findings.refreshForClient(clientId);
+    return created;
   }
 
   // POST /api/clients/:clientId/measurements/:id/void → uzmanın kendi girdiği yanlış ölçümü geçersiz kılar
@@ -113,7 +117,9 @@ export class ClientsController {
   ) {
     const found = await this.measurements.find(clientId, id);
     await this.access.requireAccess(user.userId, clientId, MEASUREMENT_SPECS[found.kind].category, 'DATA_CHANGED', { kind: found.kind, action: 'void' });
-    return this.measurements.void(clientId, id, user.userId, body.reason);
+    const voided = await this.measurements.void(clientId, id, user.userId, body.reason);
+    await this.findings.refreshForClient(clientId);
+    return voided;
   }
 
   // GET /api/clients/:clientId/anamnesis → standart sorular + bu uzmanın soruları ve güncel yanıtlar
@@ -132,7 +138,9 @@ export class ClientsController {
     @Body({ schema: answerSchema }) body: { value?: unknown },
   ) {
     await this.access.requireAccess(user.userId, clientId, 'ANAMNESIS', 'DATA_CHANGED', { questionKey });
-    return this.anamnesis.setAnswer(clientId, questionKey, body.value, { id: user.userId, source: 'PROFESSIONAL' });
+    const result = await this.anamnesis.setAnswer(clientId, questionKey, body.value, { id: user.userId, source: 'PROFESSIONAL' });
+    if (result.changed) await this.findings.refreshForClient(clientId);
+    return result;
   }
 
   // GET /api/clients/:clientId/notes → sadece yazan uzman görür

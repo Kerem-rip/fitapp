@@ -32,5 +32,39 @@ Kaydetmek için sağlık verisi rızası gerekir (18 yaş altı bu rızayı vere
 Uygulama yanıtlardan otomatik sağlık kararı üretmez, sadece uzmana gösterir ve eksikleri belirtir. API yanıtı `templateStatus: "DRAFT"` döner; arayüz bunu kullanıcıya belirtir.
 Alerjen anahtarları mobildeki `@fitapp/shared` listesiyle aynı tutulmalıdır (sunucu bu pakete bağlı değil).
 
+## Uzman inceleme özeti (1B) — `findings/`
+Kırmızı (uzmanın incelemesi gereken olası risk) / sarı (eksik, eski veya şüpheli bilgi, danışana sorulacak) / yeşil (değerlendirilebilecek öneri) maddeler.
+
+| Adres | Ne yapar |
+|---|---|
+| `GET /api/clients/:clientId/findings?view=open\|closed\|all` | Maddeler (dayanak, geçmiş, görevler). Bakış denetim kaydına yazılır |
+| `POST .../findings/:id/notes` `{ text }` | Maddeye not |
+| `POST .../findings/:id/close` `{ decision, reason }` | Kararı ve gerekçesiyle kapat (`EVALUATED`, `NOT_APPLICABLE`, `CLIENT_INFORMED`, `OTHER`) |
+| `POST .../findings/:id/reopen` | Kapatılmış maddeyi yeniden aç |
+| `POST .../findings/:id/task` `{ title, dueAt? }` | Maddeden takip görevi; madde "takipte" olur, görev bitince yeniden açılır |
+| `GET/POST .../tasks` | Danışana özel görevler |
+| `GET /api/review/overview` | Panel: danışan başına açık madde SAYILARI (içerik yok, denetim kaydı yazmaz) |
+| `GET /api/review/tasks`, `POST /api/review/tasks/:id/done` | Tüm görevlerim / tamamla |
+
+### İlkeler
+- Maddeler **otomatik tutarlılık kontrolleridir** (eksik/eski bilgi, danışanın kendi beyanı, ölçüm tutarsızlığı). Tanı koymaz, tedavi veya diyet kararı vermez.
+- **Eksik bilgi varsa kesin sonuç çıkmaz:** onun yerine "önce şu bilgiyi doğrula" maddesi çıkar. Yeşil "temel bilgiler tamam" maddesi ancak önemli sorular yanıtlı ve kilo/boy güncelse çıkar.
+- Her maddenin **dayanağı** (`basis`) gösterilir.
+- **Klinik kural şimdilik YOK.** Kurallar `rules.ts` içinde `kind: 'MECHANICAL' | 'CLINICAL'` ile işaretlidir; klinik kural, `reviewed: true` olmadan çalışmaz. Şu an hepsi mekanik ve `reviewed: false` (yani uzman gözden geçirmesi bekliyor). API yanıtı `rulesStatus: "UNREVIEWED"` döner, arayüz bunu belirtir.
+- **Madde yaşam döngüsü:** parmak izi = kural + dayanak değerleri. Dayanak değişirse yeni madde açılır; dayanak ortadan kalkarsa açık madde otomatik `SUPERSEDED` olur; kapatılmış madde aynı dayanakla yeniden açılmaz; `SUPERSEDED` madde dayanak geri gelirse yeniden `OPEN` olur.
+- Maddeler **uzmana özeldir**; danışan görmez, iki uzmanın maddeleri birbirinden bağımsızdır. Bir madde, gerektirdiği paylaşım kategorisi kapanırsa gizlenir (silinmez).
+- Danışanın verisi değişince (kendi yazması ya da uzmanın girişi) aktif uzmanlarının maddeleri arka planda tazelenir; böylece panel dosyayı açmadan güncel kalır.
+
+### Doğrulanacaklar (uzman gözden geçirmesi bekleyen ayarlar — `RULE_PARAMS`)
+Bunlar klinik eşik değil, veri kalitesi ayarlarıdır; yine de bir diyetisyenle gözden geçirilmeli:
+- Kilo ölçümü "eski" sayılma süresi: **30 gün**
+- Sağlık öyküsü "güncellenmedi" sayılma süresi: **180 gün**
+- Ani kilo farkı uyarısı: **14 gün içinde %10'dan fazla**
+- Farklı yöntem uyarısı penceresi: **120 gün**
+- Paylaşım bitiyor uyarısı: **7 gün**
+- Hangi anamnez soruları "önemli" sayılacak (alerji, sağlık durumu, ilaç, hamilelik/emzirme, yeme bozukluğu öyküsü)
+- Madde metinlerinin dili (tanı/tedavi dili geçmemeli; birim testi bazı ifadeleri yasaklar)
+- "İlaç/ek alerji" serbest metninde "yok", "hayır" gibi yanıtların madde üretmemesi (basit metin eşleşmesi)
+
 ## Henüz yok (sonraki aşamalar)
-Uzman inceleme özeti (kırmızı/sarı/yeşil), beslenme planı ve sürümleri, randevu ve hatırlatma, ölçüm cihazı entegrasyonu, danışanın kendi ölçümlerinin demo uygulamayla birleştirilmesi.
+Plan–alerji çakışması ve "alerji değişince planı yeniden incelemeye gönder" (plan Aşama 1C'de gelecek), "beklenen değişim yok" kontrolü (randevu ve hedef takibiyle, 1D), beslenme planı ve sürümleri, randevu ve hatırlatma, ölçüm cihazı entegrasyonu, danışanın kendi ölçümlerinin demo uygulamayla birleştirilmesi.

@@ -92,6 +92,11 @@ model User {
   intakeAnswersGiven IntakeAnswer[]     @relation("answerGivenBy")
   notesWritten       ProfessionalNote[] @relation("noteAuthor")
   notesAbout         ProfessionalNote[] @relation("noteSubject")
+
+  findingsOwned ReviewFinding[] @relation("findingOwner")
+  findingsAbout ReviewFinding[] @relation("findingSubject")
+  tasksOwned    FollowUpTask[]  @relation("taskOwner")
+  tasksAbout    FollowUpTask[]  @relation("taskSubject")
 }
 
 model UserRole {
@@ -733,6 +738,93 @@ model ProfessionalNote {
   client       User @relation("noteSubject", fields: [clientId], references: [id], onDelete: Cascade)
 
   @@index([professionalId, clientId, createdAt])
+}
+
+// ═══════════════════════════════════════════════════════════════
+// UZMAN İNCELEME ÖZETİ — kırmızı/sarı/yeşil maddeler ve takip görevleri
+// Maddeler otomatik TUTARLILIK kontrolleridir (eksik/eski bilgi, danışanın kendi beyanı); tanı ya da tedavi önerisi değildir.
+// Karar her zaman uzmandadır: not ekler, gerekçeyle kapatır ya da takip görevine çevirir.
+// ═══════════════════════════════════════════════════════════════
+
+enum FindingLevel {
+  RED // Uzman tarafından incelenmesi gereken olası risk
+  YELLOW // Eksik, eski veya şüpheli bilgi; danışana sorulacak soru
+  GREEN // Değerlendirilebilecek öneri / uygun seçenek
+}
+
+enum FindingStatus {
+  OPEN
+  FOLLOW_UP // Takip görevi açıldı, sonuç bekleniyor
+  CLOSED // Uzman gerekçesiyle kapattı
+  SUPERSEDED // Dayanak bilgi değişti, madde artık geçerli değil (otomatik)
+}
+
+// Bir madde, (uzman, danışan, parmak izi) başına bir kez oluşur. Parmak izi kural + dayanak değerlerinden türer:
+// dayanak değişirse yeni madde açılır; kapatılmış bir madde aynı dayanakla yeniden açılmaz.
+model ReviewFinding {
+  id             String           @id @default(uuid())
+  professionalId String
+  clientId       String
+  ruleCode       String
+  fingerprint    String
+  level          FindingLevel
+  title          String
+  detail         String
+  basis          Json // Hangi bilgiye dayandığı: [{ type, label, display, at }]
+  categories     SharedDataType[] // Bu maddeyi görmek için gereken paylaşım kategorileri
+  status         FindingStatus    @default(OPEN)
+  decision       String? // EVALUATED | NOT_APPLICABLE | CLIENT_INFORMED | OTHER
+  closedReason   String?
+  closedAt       DateTime?
+  firstSeenAt    DateTime         @default(now())
+  lastSeenAt     DateTime         @default(now())
+
+  professional User                 @relation("findingOwner", fields: [professionalId], references: [id], onDelete: Cascade)
+  client       User                 @relation("findingSubject", fields: [clientId], references: [id], onDelete: Cascade)
+  events       ReviewFindingEvent[]
+  tasks        FollowUpTask[]
+
+  @@unique([professionalId, clientId, fingerprint])
+  @@index([professionalId, clientId, status])
+}
+
+// Maddenin geçmişi: not, kapatma + gerekçe, yeniden açma, görev, otomatik geçersizleşme. Sadece eklenir.
+model ReviewFindingEvent {
+  id        String   @id @default(uuid())
+  findingId String
+  kind      String // NOTE | CLOSED | REOPENED | TASK_CREATED | TASK_DONE | SUPERSEDED
+  text      String?
+  byId      String?
+  createdAt DateTime @default(now())
+
+  finding ReviewFinding @relation(fields: [findingId], references: [id], onDelete: Cascade)
+
+  @@index([findingId, createdAt])
+}
+
+enum TaskStatus {
+  OPEN
+  DONE
+}
+
+// Uzmanın danışanla ilgili takip görevi (bir maddeden ya da kendiliğinden).
+model FollowUpTask {
+  id             String     @id @default(uuid())
+  professionalId String
+  clientId       String
+  findingId      String?
+  title          String
+  dueAt          DateTime?
+  status         TaskStatus @default(OPEN)
+  doneAt         DateTime?
+  createdAt      DateTime   @default(now())
+
+  professional User           @relation("taskOwner", fields: [professionalId], references: [id], onDelete: Cascade)
+  client       User           @relation("taskSubject", fields: [clientId], references: [id], onDelete: Cascade)
+  finding      ReviewFinding? @relation(fields: [findingId], references: [id], onDelete: SetNull)
+
+  @@index([professionalId, status, dueAt])
+  @@index([professionalId, clientId])
 }
 
 // Denetim kaydı: bir kişinin sağlık verisine kim, ne zaman, ne yaptı. Sadece eklenir; değiştirilmez.

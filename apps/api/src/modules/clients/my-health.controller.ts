@@ -12,6 +12,7 @@ import {
   type MeasurementBody,
   type MeasurementListQuery,
 } from './clients.controller.js';
+import { FindingsService } from './findings/findings.service.js';
 import { TEMPLATE_STATUS } from './intake-template.js';
 import { MeasurementsService } from './measurements.service.js';
 
@@ -22,6 +23,7 @@ export class MyHealthController {
     @Inject(PrismaService) private readonly prisma: PrismaService,
     @Inject(MeasurementsService) private readonly measurements: MeasurementsService,
     @Inject(AnamnesisService) private readonly anamnesis: AnamnesisService,
+    @Inject(FindingsService) private readonly findings: FindingsService,
   ) {}
 
   // GET /api/me/health/measurements
@@ -37,15 +39,19 @@ export class MyHealthController {
   // POST /api/me/health/measurements
   @Post('measurements')
   @HttpCode(201)
-  add(@CurrentUser() user: AuthUser, @Body({ schema: measurementSchema }) body: MeasurementBody) {
-    return this.measurements.add(user.userId, { id: user.userId, source: 'SELF' }, body);
+  async add(@CurrentUser() user: AuthUser, @Body({ schema: measurementSchema }) body: MeasurementBody) {
+    const created = await this.measurements.add(user.userId, { id: user.userId, source: 'SELF' }, body);
+    await this.findings.refreshForClient(user.userId);
+    return created;
   }
 
   // POST /api/me/health/measurements/:id/void
   @Post('measurements/:id/void')
   @HttpCode(200)
-  voidOne(@CurrentUser() user: AuthUser, @Param('id') id: string, @Body({ schema: voidSchema }) body: { reason?: string }) {
-    return this.measurements.void(user.userId, id, user.userId, body.reason);
+  async voidOne(@CurrentUser() user: AuthUser, @Param('id') id: string, @Body({ schema: voidSchema }) body: { reason?: string }) {
+    const voided = await this.measurements.void(user.userId, id, user.userId, body.reason);
+    await this.findings.refreshForClient(user.userId);
+    return voided;
   }
 
   // GET /api/me/health/anamnesis → standart sorular + aktif uzmanlarımın soruları
@@ -63,7 +69,9 @@ export class MyHealthController {
 
   // PUT /api/me/health/anamnesis/:questionKey { value }
   @Put('anamnesis/:questionKey')
-  answer(@CurrentUser() user: AuthUser, @Param('questionKey') questionKey: string, @Body({ schema: answerSchema }) body: { value?: unknown }) {
-    return this.anamnesis.setAnswer(user.userId, questionKey, body.value, { id: user.userId, source: 'SELF' });
+  async answer(@CurrentUser() user: AuthUser, @Param('questionKey') questionKey: string, @Body({ schema: answerSchema }) body: { value?: unknown }) {
+    const result = await this.anamnesis.setAnswer(user.userId, questionKey, body.value, { id: user.userId, source: 'SELF' });
+    if (result.changed) await this.findings.refreshForClient(user.userId);
+    return result;
   }
 }

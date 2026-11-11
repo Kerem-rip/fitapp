@@ -11,11 +11,17 @@ import type {
   AuthResult,
   ClientRelationshipItem,
   DocumentKind,
+  FindingDecision,
+  FindingItem,
+  FindingsResponse,
   IntakeQuestionType,
   MeasurementInput,
   MeasurementItem,
   MeasurementKind,
   NoteItem,
+  ReviewOverviewItem,
+  ReviewTask,
+  TaskItem,
   Me,
   ProfessionalRelationshipItem,
   RegisterStartInput,
@@ -295,6 +301,27 @@ export function createApiClient(config: ApiClientConfig) {
       request<{ key: string; text: string; type: IntakeQuestionType; options: string[] }>('/intake/questions', { method: 'POST', body: input, auth: true }),
     deactivateIntakeQuestion: (id: string) =>
       request<{ id: string; active: false }>(`/intake/questions/${id}/deactivate`, { method: 'POST', auth: true }),
+
+    // ───────────── Uzman inceleme özeti ─────────────
+    clientFindings: (clientId: string, view: 'open' | 'closed' | 'all' = 'open') =>
+      request<FindingsResponse>(`/clients/${clientId}/findings`, { auth: true, query: { view } }),
+    addFindingNote: (clientId: string, findingId: string, text: string) =>
+      request<{ id: string; kind: 'NOTE'; text: string; createdAt: string }>(`/clients/${clientId}/findings/${findingId}/notes`, { method: 'POST', body: { text }, auth: true }),
+    // Kararı ve gerekçesini kaydederek kapatır
+    closeFinding: (clientId: string, findingId: string, decision: FindingDecision, reason: string) =>
+      request<{ id: string; status: 'CLOSED' }>(`/clients/${clientId}/findings/${findingId}/close`, { method: 'POST', body: { decision, reason }, auth: true }),
+    reopenFinding: (clientId: string, findingId: string) =>
+      request<{ id: string; status: 'OPEN' }>(`/clients/${clientId}/findings/${findingId}/reopen`, { method: 'POST', auth: true }),
+    createFindingTask: (clientId: string, findingId: string, input: { title: string; dueAt?: string }) =>
+      request<TaskItem>(`/clients/${clientId}/findings/${findingId}/task`, { method: 'POST', body: input, auth: true }),
+    clientTasks: (clientId: string, status: 'OPEN' | 'DONE' = 'OPEN') =>
+      request<ReviewTask[]>(`/clients/${clientId}/tasks`, { auth: true, query: { status } }),
+    addClientTask: (clientId: string, input: { title: string; dueAt?: string }) =>
+      request<TaskItem>(`/clients/${clientId}/tasks`, { method: 'POST', body: input, auth: true }),
+    // Panel: danışan başına açık madde sayıları ve tüm görevlerim
+    reviewOverview: () => request<ReviewOverviewItem[]>('/review/overview', { auth: true }),
+    reviewTasks: (status: 'OPEN' | 'DONE' = 'OPEN') => request<ReviewTask[]>('/review/tasks', { auth: true, query: { status } }),
+    completeTask: (taskId: string) => request<{ id: string; status: 'DONE' }>(`/review/tasks/${taskId}/done`, { method: 'POST', auth: true }),
 
     // ───────────── Yönetici ─────────────
     adminApplications: (status: ApplicationStatus) =>

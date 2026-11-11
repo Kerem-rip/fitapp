@@ -5,6 +5,7 @@ import { ageOn } from '../../common/age.js';
 import { PrismaService } from '../../common/prisma/prisma.service.js';
 import { AccessService } from '../relationships/access.service.js';
 import { AnamnesisService } from './anamnesis.service.js';
+import { FindingsService } from './findings/findings.service.js';
 import {
   customKey,
   isCustomKey,
@@ -36,6 +37,7 @@ export class ClientFileService {
     @Inject(AccessService) private readonly access: AccessService,
     @Inject(MeasurementsService) private readonly measurements: MeasurementsService,
     @Inject(AnamnesisService) private readonly anamnesis: AnamnesisService,
+    @Inject(FindingsService) private readonly findings: FindingsService,
   ) {}
 
   async summary(professionalId: string, clientId: string) {
@@ -49,6 +51,10 @@ export class ClientFileService {
 
     const kinds = [...(acc.allowed.has('WEIGHT') ? kindsInCategory('WEIGHT') : []), ...(acc.allowed.has('MEASUREMENTS') ? kindsInCategory('MEASUREMENTS') : [])];
     const withAnamnesis = acc.allowed.has('ANAMNESIS');
+
+    // İnceleme maddelerini güncel veriyle eşitle ve açık madde sayılarını özete ekle (içerik "İnceleme" sekmesinde)
+    await this.findings.refresh(professionalId, clientId, acc);
+    const findingCounts = await this.findings.counts(professionalId, clientId, acc.allowed);
 
     const [latest, completeness, highlights, notesCount] = await Promise.all([
       this.measurements.latestPerKind(clientId, kinds),
@@ -65,6 +71,7 @@ export class ClientFileService {
       measurements: latest,
       anamnesis: withAnamnesis ? { ...completeness, highlights } : null,
       notesCount,
+      findings: findingCounts,
     };
   }
 

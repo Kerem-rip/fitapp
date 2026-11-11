@@ -8,6 +8,7 @@ import { DEMO_TOOLS } from '@/config/features';
 import { formatLong } from '@/demo/dates';
 import { useAccount, useDemoState, useToday } from '@/demo/hooks';
 import { unreadTotal } from '@/demo/selectors';
+import { RealWorkQueue } from './RealWorkQueue';
 import { useClients } from './useClients';
 
 export function ProPanel() {
@@ -97,6 +98,8 @@ export function ProPanel() {
         )}
         <Button label="Ajandayı aç" variant="light" size="sm" icon="calendar-outline" onPress={() => router.push(isDietitian ? '/(dietitian)/agenda' : '/(trainer)/agenda')} style={{ marginTop: 12 }} />
       </Card>
+
+      <RealWorkQueue />
 
       <SectionHeader title={isDietitian ? 'Bugünkü randevular' : 'Bugünkü dersler'} />
       <Card padded={false} style={{ paddingHorizontal: 16 }}>

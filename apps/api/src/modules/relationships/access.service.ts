@@ -95,6 +95,26 @@ export class AccessService {
     return { relationshipId, sharedData, sharedUntil, allowed };
   }
 
+  // Kayıt YAZMADAN hangi kategorilere erişilebildiğine bakar. Sadece uzmanın kendi karar/not işlemleri
+  // ve sistemin arka planda tazelemesi içindir; uzmana veri GÖSTEREN her yer accessibleCategories kullanmalıdır.
+  // Aktif danışanlık yoksa `relationshipId` null döner.
+  async peek(professionalId: string, clientId: string, categories: readonly SharedDataType[]) {
+    const allowed = new Set<SharedDataType>();
+    let relationshipId: string | null = null;
+    let sharedUntil: Date | null = null;
+    let sharedData: SharedDataType[] = [];
+    for (const category of categories) {
+      const { relationship, reason } = await this.check(professionalId, clientId, category);
+      if (relationship) {
+        relationshipId = relationship.id;
+        sharedUntil = relationship.sharedUntil;
+        sharedData = relationship.sharedData;
+      }
+      if (!reason) allowed.add(category);
+    }
+    return { relationshipId, sharedData, sharedUntil, allowed };
+  }
+
   private async recordSuccess(
     professionalId: string,
     clientId: string,
