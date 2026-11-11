@@ -2,5 +2,12 @@
   "name": "@fitapp/shared",
   "version": "0.0.0",
   "private": true,
-  "main": "src/index.ts"
+  "main": "src/index.ts",
+  "scripts": {
+    "test": "vitest run"
+  },
+  "devDependencies": {
+    "typescript": "~6.0.3",
+    "vitest": "^4.1.2"
+  }
 }

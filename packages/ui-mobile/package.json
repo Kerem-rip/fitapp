@@ -1,5 +1,29 @@
 {
   "name": "@fitapp/ui-mobile",
   "version": "0.0.0",
-  "private": true
+  "private": true,
+  "main": "src/index.ts",
+  "dependencies": {
+    "@fitapp/design-tokens": "workspace:*"
+  },
+  "peerDependencies": {
+    "@expo/vector-icons": "*",
+    "expo-haptics": "*",
+    "expo-linear-gradient": "*",
+    "react": "*",
+    "react-native": "*",
+    "react-native-safe-area-context": "*",
+    "react-native-svg": "*"
+  },
+  "devDependencies": {
+    "@expo/vector-icons": "15.1.1",
+    "@types/react": "~19.3.0",
+    "expo-haptics": "~58.0.7",
+    "expo-linear-gradient": "~58.0.3",
+    "react": "19.3.0",
+    "react-native": "0.88.1",
+    "react-native-safe-area-context": "~5.11.1",
+    "react-native-svg": "15.16.0",
+    "typescript": "~6.0.3"
+  }
 }
