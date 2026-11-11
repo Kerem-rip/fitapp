@@ -85,7 +85,8 @@ export class ClientFileService {
     type Item =
       | { type: 'MEASUREMENT'; at: Date; id: string; kind: string; value: number; unit: string; method: string; source: string; voided: boolean; by: string | null }
       | { type: 'ANSWER'; at: Date; id: string; questionKey: string; question: string; display: string; source: string; by: string | null }
-      | { type: 'NOTE'; at: Date; id: string; text: string };
+      | { type: 'NOTE'; at: Date; id: string; text: string }
+      | { type: 'APPOINTMENT'; at: Date; id: string; status: string; mode: string; title: string | null; outcome: string | null };
     const items: Item[] = [];
 
     if (kinds.length > 0) {
@@ -149,6 +150,17 @@ export class ClientFileService {
       select: { id: true, text: true, createdAt: true },
     });
     for (const n of notes) items.push({ type: 'NOTE', at: n.createdAt, id: n.id, text: n.text });
+
+    // Bu uzmanın danışanla randevuları (geçmiş ve gelecek)
+    const appointments = await this.prisma.appointment.findMany({
+      where: { professionalId, clientId, ...(before ? { startsAt: { lt: before } } : {}) },
+      orderBy: { startsAt: 'desc' },
+      take: limit,
+      select: { id: true, startsAt: true, status: true, mode: true, title: true, outcome: true },
+    });
+    for (const a of appointments) {
+      items.push({ type: 'APPOINTMENT', at: a.startsAt, id: a.id, status: a.status, mode: a.mode, title: a.title, outcome: a.outcome });
+    }
 
     items.sort((a, b) => b.at.getTime() - a.at.getTime());
     return items.slice(0, limit);

@@ -283,7 +283,8 @@ export interface ClientFileSummary {
 export type TimelineItem =
   | { type: 'MEASUREMENT'; at: string; id: string; kind: MeasurementKind; value: number; unit: 'kg' | 'cm' | '%'; method: MeasurementMethod; source: DataSource; voided: boolean; by: string | null }
   | { type: 'ANSWER'; at: string; id: string; questionKey: string; question: string; display: string; source: DataSource; by: string | null }
-  | { type: 'NOTE'; at: string; id: string; text: string };
+  | { type: 'NOTE'; at: string; id: string; text: string }
+  | { type: 'APPOINTMENT'; at: string; id: string; status: AppointmentStatus; mode: AppointmentMode; title: string | null; outcome: string | null };
 
 export interface NoteItem {
   id: string;
@@ -464,4 +465,99 @@ export interface ClientPlanChoice {
   mealName: string;
   versionNumber: number | null;
   options: { id: string; name: string }[];
+}
+
+// ───────────── Randevu, hedef, hatırlatma, bildirim ─────────────
+
+export type AppointmentStatus = 'SCHEDULED' | 'COMPLETED' | 'CANCELLED' | 'NO_SHOW';
+export type AppointmentMode = 'ONLINE' | 'IN_PERSON';
+
+// Uzmanın gördüğü randevu (hazırlık notu ve görüşme özeti dahil)
+export interface ProAppointment {
+  id: string;
+  clientId: string;
+  startsAt: string;
+  durationMin: number;
+  mode: AppointmentMode;
+  status: AppointmentStatus;
+  title: string | null;
+  location: string | null;
+  notes: string | null;
+  outcome: string | null;
+  cancelReason: string | null;
+  client: { id: string; name: string; username: string };
+}
+
+// Danışanın gördüğü randevu (uzmanın notları yok)
+export interface MyAppointment {
+  id: string;
+  startsAt: string;
+  durationMin: number;
+  mode: AppointmentMode;
+  status: AppointmentStatus;
+  title: string | null;
+  location: string | null;
+  cancelReason: string | null;
+  professional: { name: string; title: string | null };
+}
+
+export interface AppointmentInput {
+  startsAt: string;
+  durationMin?: number;
+  mode: AppointmentMode;
+  title?: string;
+  location?: string;
+  notes?: string;
+}
+
+export interface AgendaResponse {
+  appointments: ProAppointment[];
+  tasks: ReviewTask[];
+}
+
+export type GoalStatus = 'ACTIVE' | 'ACHIEVED' | 'DROPPED';
+
+export interface GoalItem {
+  id: string;
+  title: string;
+  measurementKind: MeasurementKind | null;
+  startValue: number | null;
+  targetValue: number | null;
+  startDate: string;
+  targetDate: string | null;
+  status: GoalStatus;
+  note: string | null;
+  closedAt: string | null;
+  // Sadece ilgili ölçüm kategorisi paylaşılıyorsa dolu
+  progress: { unit: string; latestValue: number | null; latestAt: string | null; measurementsSinceStart: number; remaining: number | null } | null;
+  progressHidden: boolean;
+}
+
+export interface MyGoal {
+  id: string;
+  title: string;
+  measurementKind: MeasurementKind | null;
+  startValue: number | null;
+  targetValue: number | null;
+  startDate: string;
+  targetDate: string | null;
+  unit: string | null;
+  professional: string;
+}
+
+export interface ReminderItem {
+  id: string;
+  text: string;
+  remindAt: string;
+  sentAt: string | null;
+  cancelledAt: string | null;
+}
+
+export interface AppNotificationItem {
+  id: string;
+  type: string;
+  title: string;
+  text: string;
+  read: boolean;
+  createdAt: string;
 }

@@ -7,6 +7,8 @@ import { removeAppointment } from '@/demo/actions';
 import { formatLong } from '@/demo/dates';
 import { useAccount, useDemoState, useToday } from '@/demo/hooks';
 import { activeLinksOf, clientView } from '@/demo/selectors';
+import { DEMO_TOOLS } from '@/config/features';
+import { RealAgenda } from './RealAgenda';
 
 export function AgendaScreen() {
   const account = useAccount();
@@ -32,6 +34,7 @@ export function AgendaScreen() {
   return (
     <Screen tabBarInset>
       <ScreenHeader title="Ajanda" subtitle={formatLong(date)} />
+      <RealAgenda demoNote={DEMO_TOOLS} />
       <WeekStrip selected={date} onSelect={setDate} marked={marked} />
 
       {day.length > 0 ? (

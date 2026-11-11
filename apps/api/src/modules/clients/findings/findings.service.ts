@@ -15,13 +15,13 @@ import { AnamnesisService } from '../anamnesis.service.js';
 import { STANDARD_QUESTIONS } from '../intake-template.js';
 import { kindsInCategory } from '../measurement-rules.js';
 import type { PlanContent } from '../plans/plan-content.js';
-import { evaluate, type BasisRef, type Candidate, type RuleInput } from './rules.js';
+import { evaluate, RULE_PARAMS, type BasisRef, type Candidate, type RuleInput } from './rules.js';
 
 export const FINDING_DECISIONS = ['EVALUATED', 'NOT_APPLICABLE', 'CLIENT_INFORMED', 'OTHER'] as const;
 export type FindingDecision = (typeof FINDING_DECISIONS)[number];
 
-// Kuralların baktığı kategoriler
-export const REVIEW_CATEGORIES: readonly SharedDataType[] = ['WEIGHT', 'MEASUREMENTS', 'ANAMNESIS'];
+// Kuralların baktığı kategoriler (MEALS: plan seçimlerinin özeti için)
+export const REVIEW_CATEGORIES: readonly SharedDataType[] = ['WEIGHT', 'MEASUREMENTS', 'ANAMNESIS', 'MEALS'];
 
 const fingerprintOf = (c: Candidate) => createHash('sha1').update(`${c.ruleCode}|${c.key}`).digest('hex');
 const covered = (categories: readonly string[], allowed: ReadonlySet<SharedDataType>) => categories.every((c) => allowed.has(c as SharedDataType));
@@ -70,7 +70,26 @@ export class FindingsService {
       answers: new Map([...answers.entries()].map(([key, a]) => [key, { value: a.value as never, answeredAt: a.answeredAt }])),
       measurements: rows,
       plan: published ? { versionNumber: published.number ?? 0, content: published.content as unknown as PlanContent } : null,
+      goals: await this.prisma.clientGoal.findMany({
+        where: { professionalId, clientId, status: 'ACTIVE' },
+        select: { id: true, title: true, measurementKind: true, startValue: true, targetValue: true, startDate: true, targetDate: true },
+      }),
+      adherence: await this.adherence(professionalId, clientId, ctx),
     };
+  }
+
+  // Son günlerde kaç gün plan seçimi yapılmış (sadece öğün kayıtları paylaşılıyor ve plan yayındaysa)
+  private async adherence(professionalId: string, clientId: string, ctx: Context) {
+    if (!ctx.allowed.has('MEALS')) return null;
+    const plan = await this.prisma.nutritionPlan.findFirst({
+      where: { professionalId, clientId, versions: { some: { status: 'APPROVED' } } },
+      select: { id: true },
+    });
+    if (!plan) return null;
+    const windowDays = RULE_PARAMS.adherenceWindowDays;
+    const from = new Date(Date.now() - (windowDays - 1) * 86_400_000).toISOString().slice(0, 10);
+    const days = await this.prisma.planChoice.findMany({ where: { planId: plan.id, date: { gte: from } }, distinct: ['date'], select: { date: true } });
+    return { daysWithChoices: days.length, windowDays };
   }
 
   // Plan onayı öncesi uyarılar için: bu kurallara ait açık maddeler (yalnızca görülebilen kategorilerdekiler)

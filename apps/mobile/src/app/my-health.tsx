@@ -10,7 +10,7 @@ import { errorText } from '@/auth/actions';
 import { AnswerSheet, answerText } from '@/components/AnswerSheet';
 import { ConfirmSheet } from '@/components/ConfirmSheet';
 import { MeasurementSheet } from '@/components/MeasurementSheet';
-import { formatFullDate, formatValue, KIND_LABELS, METHOD_LABELS, SOURCE_LABELS } from '@/features/health/labels';
+import { changeText, formatFullDate, formatValue, KIND_LABELS, METHOD_LABELS, SOURCE_LABELS } from '@/features/health/labels';
 
 export default function MyHealthScreen() {
   const router = useRouter();
@@ -85,7 +85,7 @@ export default function MyHealthScreen() {
                 <ListRow
                   key={m.id}
                   icon="analytics-outline"
-                  title={`${KIND_LABELS[m.kind]} · ${formatValue(m)}`}
+                  title={`${KIND_LABELS[m.kind]} · ${formatValue(m)}${changeText(m, measurements)}`}
                   subtitle={`${formatFullDate(m.takenAt)} · ${METHOD_LABELS[m.method]} · ${SOURCE_LABELS[m.source]}`}
                   trailing={m.source === 'SELF' ? <Button label="Geçersiz say" variant="ghost" size="sm" onPress={() => setVoidTarget(m)} /> : <Tag label="Uzman girdi" kind="neutral" />}
                   last={i === measurements.length - 1}

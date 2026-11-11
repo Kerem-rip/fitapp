@@ -65,6 +65,18 @@ export const formatShortDate = (iso: string) => new Date(iso).toLocaleDateString
 
 export const formatFullDate = (iso: string) => new Date(iso).toLocaleDateString('tr-TR', { day: 'numeric', month: 'long', year: 'numeric' });
 
+// Bir ölçümü, aynı türden bir önceki geçerli ölçümle karşılaştırır: " · önceki ölçüme göre +0,5 kg (yöntem farklı)"
+export function changeText(m: MeasurementItem, all: readonly MeasurementItem[]): string {
+  const older = all
+    .filter((x) => x.kind === m.kind && !x.voided && x.id !== m.id && x.takenAt < m.takenAt)
+    .sort((a, b) => b.takenAt.localeCompare(a.takenAt))[0];
+  if (!older) return '';
+  const diff = Math.round((m.value - older.value) * 10) / 10;
+  const sign = diff > 0 ? '+' : '';
+  const method = older.method !== m.method ? ' (yöntem farklı)' : '';
+  return ` · önceki ölçüme göre ${sign}${diff.toLocaleString('tr-TR')} ${m.unit}${method}`;
+}
+
 // Aynı ölçüm serisinde birden fazla yöntem varsa değerler doğrudan karşılaştırılamaz
 export const mixedMethods = (items: Pick<MeasurementItem, 'method'>[]) => new Set(items.map((i) => i.method)).size > 1;
 

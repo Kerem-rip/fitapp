@@ -11,17 +11,20 @@ import { AnswerSheet, answerText } from '@/components/AnswerSheet';
 import { ChipRow } from '@/components/ChipRow';
 import { ConfirmSheet } from '@/components/ConfirmSheet';
 import { MeasurementSheet } from '@/components/MeasurementSheet';
-import { formatFullDate, formatShortDate, formatValue, KIND_LABELS, KIND_ORDER, METHOD_LABELS, mixedMethods, SOURCE_LABELS } from '@/features/health/labels';
+import { changeText, formatFullDate, formatShortDate, formatValue, KIND_LABELS, KIND_ORDER, METHOD_LABELS, mixedMethods, SOURCE_LABELS } from '@/features/health/labels';
+import { FollowTab } from '@/features/agenda/FollowTab';
+import { MODE_LABELS, STATUS_TAGS } from '@/features/agenda/helpers';
 import { PlanTab } from '@/features/plans/PlanTab';
 import { ReviewTab } from '@/features/review/ReviewTab';
 import { formatDateTime, SHARED_DATA_LABELS, SHARED_DATA_ORDER } from '@/features/sharing/labels';
 
-type Tab = 'review' | 'summary' | 'plan' | 'measurements' | 'anamnesis' | 'notes' | 'timeline';
+type Tab = 'review' | 'summary' | 'plan' | 'follow' | 'measurements' | 'anamnesis' | 'notes' | 'timeline';
 
 const TABS: { key: Tab; label: string }[] = [
   { key: 'review', label: 'İnceleme' },
   { key: 'summary', label: 'Özet' },
   { key: 'plan', label: 'Plan' },
+  { key: 'follow', label: 'Takip' },
   { key: 'measurements', label: 'Ölçümler' },
   { key: 'anamnesis', label: 'Anamnez' },
   { key: 'notes', label: 'Notlar' },
@@ -80,6 +83,7 @@ export default function ClientFileScreen() {
           {tab === 'review' ? <ReviewTab clientId={clientId} onChanged={loadSummary} /> : null}
           {tab === 'summary' ? <SummaryTab summary={summary} onGo={setTab} /> : null}
           {tab === 'plan' ? <PlanTab clientId={clientId} mealsVisible={visible.includes('MEALS')} /> : null}
+          {tab === 'follow' ? <FollowTab clientId={clientId} onChanged={loadSummary} /> : null}
           {tab === 'measurements' ? <MeasurementsTab clientId={clientId} visible={visible} onChanged={loadSummary} /> : null}
           {tab === 'anamnesis' ? <AnamnesisTab clientId={clientId} canView={visible.includes('ANAMNESIS')} onChanged={loadSummary} /> : null}
           {tab === 'notes' ? <NotesTab clientId={clientId} onChanged={loadSummary} /> : null}
@@ -232,7 +236,7 @@ function MeasurementsTab({ clientId, visible, onChanged }: { clientId: string; v
             <ListRow
               key={m.id}
               icon={m.voided ? 'close-circle-outline' : 'analytics-outline'}
-              title={`${formatValue(m)}${m.voided ? ' · geçersiz' : ''}`}
+              title={`${formatValue(m)}${m.voided ? ' · geçersiz' : changeText(m, valid)}`}
               subtitle={`${formatFullDate(m.takenAt)} · ${METHOD_LABELS[m.method]}${m.deviceName ? ` (${m.deviceName})` : ''} · ${SOURCE_LABELS[m.source]}`}
               trailing={!m.voided && m.source === 'PROFESSIONAL' ? <Button label="Geçersiz say" variant="ghost" size="sm" onPress={() => setVoidTarget(m)} /> : undefined}
               last={i === items.length - 1}
@@ -472,6 +476,17 @@ function TimelineTab({ clientId }: { clientId: string }) {
                   icon="clipboard-outline"
                   title={item.question}
                   subtitle={`${item.display}\n${item.source === 'PROFESSIONAL' ? 'Uzman girdi' : 'Danışan beyan etti'} · ${formatDateTime(item.at)}`}
+                />
+              );
+            }
+            if (item.type === 'APPOINTMENT') {
+              return (
+                <ListRow
+                  key={key}
+                  {...base}
+                  icon="calendar-outline"
+                  title={`Randevu · ${STATUS_TAGS[item.status].label}${item.title ? ` · ${item.title}` : ''}`}
+                  subtitle={`${formatDateTime(item.at)} · ${MODE_LABELS[item.mode]}${item.outcome ? `\nÖzet: ${item.outcome}` : ''}`}
                 />
               );
             }

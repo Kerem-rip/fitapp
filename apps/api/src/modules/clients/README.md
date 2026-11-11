@@ -88,5 +88,26 @@ Uzman taslak hazırlar → kontrol eder → **onaylar**; onaylanmadan danışana
 - Danışanlık bitince danışan planı göremez; uzman kendi plan geçmişini okumaya devam eder (saklama süresi hukuki karar bekliyor).
 - Plan yalnızca onaylı **diyetisyen** tarafından hazırlanır (eğitmen programları Aşama 2).
 
+## Randevu, hedef, hatırlatma ve gelişim takibi (1D) — `agenda/`
+| Adres | Kim | Ne yapar |
+|---|---|---|
+| `GET/POST /api/clients/:clientId/appointments` | Uzman | Danışanla randevular / randevu ver (çakışma kontrolü, danışana bildirim) |
+| `PATCH /api/appointments/:id`, `POST /api/appointments/:id/status` | Uzman | Ertele / tamamlandı (görüşme özetiyle), gelmedi, iptal |
+| `GET /api/agenda?from=&to=` | Uzman | Aralıktaki randevular ve vadesi gelen/geçen görevler |
+| `GET/POST /api/clients/:clientId/goals`, `POST /api/goals/:id/status` | Uzman | Hedefler ve ilerleme / ulaşıldı, bırakıldı |
+| `GET/POST /api/clients/:clientId/reminders`, `POST /api/reminders/:id/cancel` | Uzman | Danışana zamanlı hatırlatma |
+| `GET /api/me/appointments`, `POST /api/me/appointments/:id/cancel`, `GET /api/me/goals` | Danışan | Randevularım (notlar olmadan), iptal, hedeflerim |
+| `GET /api/notifications`, `POST /api/notifications/read` | Herkes | Okunur metinli bildirimler, okundu işaretleme (`modules/notifications`) |
+
+### Kurallar
+- Uzmanın hazırlık notu ve görüşme özeti danışana gösterilmez. "Tamamlandı/gelmedi" randevu saati gelmeden işaretlenemez.
+- Randevudan 24 saat önce danışana bir kez otomatik hatırlatma gider (10 dakikada bir çalışan iş). Zaman değişirse yeniden gider.
+- Uzmanın hatırlatmaları zamanı gelince bildirim olur (dakikada bir). Danışanlık o an aktif değilse gönderilmez, iptal edilir.
+- Bildirim metinlerine sağlık verisi yazılmaz (kilit ekranında görünebilir).
+- Hedef değerleri uzmanındır; sistem hedef önermez. Ölçüm hedefinin başlangıcı son ölçümdür; ilerleme sadece ilgili kategori paylaşılıyorsa görünür.
+- **Beklenen değişim yoksa** (`Y-GOAL-NO-PROGRESS`): hedef 21 günden eskiyse ve son ölçüm hedefe başlangıçtan daha yakın değilse, sistem yeni plan **önermez**; uzmana inceleme soruları sunar: ölçüm yöntemi, planın uygulanma durumu (öğün kayıtları paylaşılıyorsa son 14 günde kaç gün seçim yapıldığı), danışanın geri bildirimi, hedefin gerçekçiliği. Uzman maddeyi gerekçesiyle kapatır (1B).
+- Ayrıca: hedeften sonra 14 gün ölçüm yoksa, hedef tarihi geçtiyse sarı; hedef değere ulaşıldıysa yeşil madde çıkar.
+- Ölçüm listelerinde her değer bir önceki aynı tür ölçümle karşılaştırılır; yöntem farklıysa belirtilir.
+
 ## Henüz yok (sonraki aşamalar)
-"Beklenen değişim yok" kontrolü (randevu ve hedef takibiyle, 1D), beslenme planı ve sürümleri, randevu ve hatırlatma, ölçüm cihazı entegrasyonu, danışanın kendi ölçümlerinin demo uygulamayla birleştirilmesi.
+Bildirim tercihleri (sıklık, kapatma), uzman–danışan mesajlaşmasının sunucuya taşınması, telefona anlık bildirim (push), ölçüm cihazı entegrasyonu, uzmana özel değerlendirme soruları ve kişiye uygun hesaplama araçları (5. madde), danışanın günlük kayıtlarının (öğün, su, kilo) demo depodan sunucuya taşınması.

@@ -97,6 +97,49 @@ describe('inceleme kuralları', () => {
     expect(find(input({ answers: { ...IMPORTANT, 'std.allergies': { value: ['egg'] } } }), 'R-PLAN-ALLERGEN')).toHaveLength(0);
   });
 
+  describe('hedef ve gelişim', () => {
+    const goal = (over: Partial<import('./rules.js').GoalPoint> = {}) => ({
+      id: 'g1',
+      title: 'Kilo hedefi',
+      measurementKind: 'WEIGHT' as const,
+      startValue: 80,
+      targetValue: 72,
+      startDate: daysAgo(30),
+      targetDate: null,
+      ...over,
+    });
+
+    it('yeterli süre geçtiği hâlde hedefe yaklaşılmadıysa plan dayatmadan inceleme soruları önerir', () => {
+      const i = input({ measurements: [{ id: 'w2', value: 80.5, takenAt: daysAgo(2) }, { id: 'w1', value: 79, takenAt: daysAgo(15) }] });
+      const r = find({ ...i, goals: [goal()], adherence: { daysWithChoices: 4, windowDays: 14 } }, 'Y-GOAL-NO-PROGRESS');
+      expect(r).toHaveLength(1);
+      expect(r[0]!.detail).toContain('Yeni bir plan yazmadan önce');
+      expect(r[0]!.detail).toContain('14 günde 4 gün');
+      expect(r[0]!.detail).not.toMatch(/yeni plan (hazırla|uygula)/i);
+      expect(r[0]!.basis.map((b) => b.type)).toEqual(['MEASUREMENT', 'MEASUREMENT', 'PLAN']);
+    });
+
+    it('hedefe yaklaşılıyorsa, süre kısaysa ya da kategori paylaşılmıyorsa madde çıkmaz', () => {
+      const closer = input({ measurements: [{ value: 77, takenAt: daysAgo(2) }] });
+      expect(find({ ...closer, goals: [goal()] }, 'Y-GOAL-NO-PROGRESS')).toHaveLength(0);
+      const early = input({ measurements: [{ value: 81, takenAt: daysAgo(2) }] });
+      expect(find({ ...early, goals: [goal({ startDate: daysAgo(10) })] }, 'Y-GOAL-NO-PROGRESS')).toHaveLength(0);
+      const hidden = input({ allowed: ['ANAMNESIS'], measurements: [{ value: 81, takenAt: daysAgo(2) }] });
+      expect(find({ ...hidden, goals: [goal()] }, 'Y-GOAL-NO-PROGRESS')).toHaveLength(0);
+    });
+
+    it('hedeften sonra ölçüm yoksa ve hedef tarihi geçtiyse uyarır; hedefe ulaşılınca yeşil öneri çıkar', () => {
+      const none = input({ measurements: [{ value: 80, takenAt: daysAgo(40) }] });
+      expect(find({ ...none, goals: [goal({ startDate: daysAgo(20) })] }, 'Y-GOAL-NO-MEASUREMENT')).toHaveLength(1);
+      expect(find({ ...none, goals: [goal({ targetDate: daysAgo(1) })] }, 'Y-GOAL-OVERDUE')).toHaveLength(1);
+      const reached = input({ measurements: [{ value: 71.8, takenAt: daysAgo(1) }] });
+      expect(find({ ...reached, goals: [goal()] }, 'G-GOAL-REACHED')).toHaveLength(1);
+      // Kilo alma hedefi (yukarı yönlü)
+      const up = input({ measurements: [{ value: 61, takenAt: daysAgo(1) }] });
+      expect(find({ ...up, goals: [goal({ startValue: 55, targetValue: 60 })] }, 'G-GOAL-REACHED')).toHaveLength(1);
+    });
+  });
+
   it('kırmızı madde en başta sıralanır', () => {
     const result = evaluate(input({ answers: { ...IMPORTANT, 'std.eating_disorder_history': { value: 'yes' } } }));
     expect(result[0]!.level).toBe('RED');

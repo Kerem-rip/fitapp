@@ -101,6 +101,13 @@ model User {
   plansOwned  NutritionPlan[] @relation("planOwner")
   plansAbout  NutritionPlan[] @relation("planSubject")
   planChoices PlanChoice[]
+
+  appointmentsOwned Appointment[]    @relation("appointmentOwner")
+  appointmentsAbout Appointment[]    @relation("appointmentSubject")
+  goalsOwned        ClientGoal[]     @relation("goalOwner")
+  goalsAbout        ClientGoal[]     @relation("goalSubject")
+  remindersOwned    ClientReminder[] @relation("reminderOwner")
+  remindersAbout    ClientReminder[] @relation("reminderSubject")
 }
 
 model UserRole {
@@ -913,6 +920,97 @@ model PlanChoice {
 
   @@unique([userId, planId, date, mealId])
   @@index([planId, date])
+}
+
+// ═══════════════════════════════════════════════════════════════
+// RANDEVU, HEDEF VE HATIRLATMA — profesyonel ajanda ve gelişim takibi
+// ═══════════════════════════════════════════════════════════════
+
+enum AppointmentStatus {
+  SCHEDULED
+  COMPLETED
+  CANCELLED
+  NO_SHOW // Danışan gelmedi
+}
+
+enum AppointmentMode {
+  ONLINE
+  IN_PERSON
+}
+
+// `notes` ve `outcome` uzmana özeldir; danışan sadece zaman, şekil, başlık ve yeri görür.
+model Appointment {
+  id             String            @id @default(uuid())
+  professionalId String
+  clientId       String
+  startsAt       DateTime
+  durationMin    Int               @default(45)
+  mode           AppointmentMode
+  status         AppointmentStatus @default(SCHEDULED)
+  title          String?
+  location       String?
+  notes          String? // Uzmanın hazırlık notu
+  outcome        String? // Görüşme özeti (tamamlanınca)
+  cancelledById  String?
+  cancelReason   String?
+  // Danışana "yarın randevun var" hatırlatması gönderildi mi
+  reminderSentAt DateTime?
+  createdAt      DateTime          @default(now())
+  updatedAt      DateTime          @updatedAt
+
+  professional User @relation("appointmentOwner", fields: [professionalId], references: [id], onDelete: Cascade)
+  client       User @relation("appointmentSubject", fields: [clientId], references: [id], onDelete: Cascade)
+
+  @@index([professionalId, startsAt])
+  @@index([clientId, startsAt])
+  @@index([status, startsAt])
+}
+
+enum GoalStatus {
+  ACTIVE
+  ACHIEVED
+  DROPPED
+}
+
+// Uzmanın danışanla belirlediği hedef. Ölçüm hedefinde başlangıç değeri hedef açılırken son ölçümden alınır.
+// Hedef değerler uzmanındır; sistem "uygun hedef" önermez.
+model ClientGoal {
+  id              String           @id @default(uuid())
+  professionalId  String
+  clientId        String
+  title           String
+  measurementKind MeasurementKind? // Boşsa ölçülebilir olmayan (alışkanlık) hedefi
+  startValue      Float?
+  targetValue     Float?
+  startDate       DateTime         @default(now())
+  targetDate      DateTime?
+  status          GoalStatus       @default(ACTIVE)
+  note            String?
+  closedAt        DateTime?
+  createdAt       DateTime         @default(now())
+
+  professional User @relation("goalOwner", fields: [professionalId], references: [id], onDelete: Cascade)
+  client       User @relation("goalSubject", fields: [clientId], references: [id], onDelete: Cascade)
+
+  @@index([professionalId, clientId, status])
+}
+
+// Uzmanın danışana zamanlı hatırlatması; zamanı gelince danışana bildirim gider.
+model ClientReminder {
+  id             String    @id @default(uuid())
+  professionalId String
+  clientId       String
+  text           String
+  remindAt       DateTime
+  sentAt         DateTime?
+  cancelledAt    DateTime?
+  createdAt      DateTime  @default(now())
+
+  professional User @relation("reminderOwner", fields: [professionalId], references: [id], onDelete: Cascade)
+  client       User @relation("reminderSubject", fields: [clientId], references: [id], onDelete: Cascade)
+
+  @@index([remindAt, sentAt])
+  @@index([professionalId, clientId])
 }
 
 // Denetim kaydı: bir kişinin sağlık verisine kim, ne zaman, ne yaptı. Sadece eklenir; değiştirilmez.

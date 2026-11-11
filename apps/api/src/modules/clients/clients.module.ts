@@ -7,6 +7,10 @@ import { ClientsController, IntakeQuestionsController } from './clients.controll
 import { FindingsController, ReviewOverviewController } from './findings/findings.controller.js';
 import { FindingsService } from './findings/findings.service.js';
 import { TasksService } from './findings/tasks.service.js';
+import { AgendaController, ClientAgendaController } from './agenda/agenda.controller.js';
+import { AppointmentsService } from './agenda/appointments.service.js';
+import { GoalsService } from './agenda/goals.service.js';
+import { RemindersService } from './agenda/reminders.service.js';
 import { MeasurementsService } from './measurements.service.js';
 import { MyPlansController, PlansController } from './plans/plans.controller.js';
 import { PlansService } from './plans/plans.service.js';
@@ -15,8 +19,19 @@ import { NotesService } from './notes.service.js';
 
 @Module({
   imports: [RelationshipsModule, ConsentsModule],
-  controllers: [ClientsController, IntakeQuestionsController, MyHealthController, FindingsController, ReviewOverviewController, PlansController, MyPlansController],
-  providers: [MeasurementsService, AnamnesisService, NotesService, ClientFileService, FindingsService, TasksService, PlansService],
+  controllers: [ClientsController, IntakeQuestionsController, MyHealthController, FindingsController, ReviewOverviewController, PlansController, MyPlansController, ClientAgendaController, AgendaController],
+  providers: [
+    MeasurementsService,
+    AnamnesisService,
+    NotesService,
+    ClientFileService,
+    FindingsService,
+    TasksService,
+    PlansService,
+    AppointmentsService,
+    GoalsService,
+    RemindersService,
+  ],
   exports: [MeasurementsService, AnamnesisService, FindingsService],
 })
 export class ClientsModule {}

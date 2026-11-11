@@ -29,6 +29,12 @@ export const RULE_PARAMS = {
   weightJumpWithinDays: 14,
   mixedMethodWindowDays: 120,
   sharingExpiringDays: 7,
+  // Hedef başladıktan bu kadar gün sonra hâlâ hedefe doğru değişim yoksa inceleme önerisi çıkar
+  progressReviewDays: 21,
+  // Hedef başladıktan bu kadar gün içinde hiç ölçüm yoksa uyarır
+  goalMeasurementGapDays: 14,
+  // Plan uygulama özeti için bakılan gün sayısı
+  adherenceWindowDays: 14,
 } as const;
 
 export interface BasisRef {
@@ -67,6 +73,20 @@ export interface RuleInput {
   measurements: readonly MeasurementPoint[];
   // Danışana yayında olan plan sürümü (varsa)
   plan?: { versionNumber: number; content: PlanContent } | null;
+  // Uzmanın bu danışanla aktif hedefleri
+  goals?: readonly GoalPoint[];
+  // Plan seçimlerinin özeti (öğün kayıtları paylaşılıyor ve plan yayındaysa); yoksa null
+  adherence?: { daysWithChoices: number; windowDays: number } | null;
+}
+
+export interface GoalPoint {
+  id: string;
+  title: string;
+  measurementKind: MeasurementKind | null;
+  startValue: number | null;
+  targetValue: number | null;
+  startDate: Date;
+  targetDate: Date | null;
 }
 
 export interface RuleDef {
@@ -497,6 +517,134 @@ export const RULES: readonly RuleDef[] = [
           key: input.sharedUntil.toISOString().slice(0, 10),
         },
       ];
+    },
+  },
+
+  // ── SARI: hedef ve gelişim takibi ──
+  {
+    code: 'Y-GOAL-NO-PROGRESS',
+    level: 'YELLOW',
+    kind: 'MECHANICAL',
+    reviewed: false,
+    description:
+      'Hedef başlayalı yeterince zaman geçtiği hâlde son ölçüm hedefe yaklaşmadıysa yeni plan dayatmadan inceleme soruları önerir.',
+    run(input) {
+      const result: Candidate[] = [];
+      for (const g of input.goals ?? []) {
+        if (!g.measurementKind || g.startValue === null || g.targetValue === null || g.startValue === g.targetValue) continue;
+        if (!input.allowed.has(categoryOf(g.measurementKind))) continue;
+        const elapsed = daysBetween(input.now, g.startDate);
+        if (elapsed < RULE_PARAMS.progressReviewDays) continue;
+        const since = input.measurements.filter((m) => m.kind === g.measurementKind && m.takenAt > g.startDate);
+        const last = since[0];
+        if (!last) continue;
+        // Hedefe olan uzaklık başlangıca göre azalmadıysa
+        if (Math.abs(g.targetValue - last.value) < Math.abs(g.targetValue - g.startValue)) continue;
+        const unit = MEASUREMENT_SPECS[g.measurementKind].unit;
+        const methods = new Set(since.map((m) => m.method));
+        const adherence = input.adherence
+          ? `Son ${input.adherence.windowDays} günde ${input.adherence.daysWithChoices} gün plan seçimi yapılmış.`
+          : 'Plan seçimleri görünmüyor (plan yok veya öğün kayıtları paylaşılmıyor).';
+        result.push({
+          ruleCode: this.code,
+          level: 'YELLOW',
+          title: `Hedefe doğru değişim görülmüyor: ${g.title}`,
+          detail: [
+            `Hedef ${g.startValue} → ${g.targetValue} ${unit}; ${elapsed} gün sonra son ölçüm ${last.value} ${unit}.`,
+            'Yeni bir plan yazmadan önce şunları gözden geçir:',
+            `• Ölçümler ${methods.size > 1 ? 'farklı yöntemlerle alınmış; karşılaştırma yanıltıcı olabilir' : 'aynı yöntemle mi, aynı koşullarda mı alındı?'}`,
+            `• Planın uygulanma durumu: ${adherence}`,
+            '• Danışanın geri bildirimi: zorlandığı öğünler, değişen iş/uyku/hareket düzeni',
+            '• Hedef ve süre danışan için gerçekçi mi?',
+          ].join('\n'),
+          categories: [categoryOf(g.measurementKind)],
+          basis: [
+            { type: 'MEASUREMENT', label: `${g.title} · başlangıç`, display: `${g.startValue} ${unit} · ${g.startDate.toISOString().slice(0, 10)}`, at: g.startDate.toISOString() },
+            measurementBasis(last, `${g.title} · son ölçüm`),
+            ...(input.adherence
+              ? [{ type: 'PLAN' as const, label: 'Plan seçimleri', display: `${input.adherence.daysWithChoices}/${input.adherence.windowDays} gün`, at: null }]
+              : []),
+          ],
+          key: `${g.id}:${last.id}`,
+        });
+      }
+      return result;
+    },
+  },
+  {
+    code: 'Y-GOAL-NO-MEASUREMENT',
+    level: 'YELLOW',
+    kind: 'MECHANICAL',
+    reviewed: false,
+    description: 'Ölçüme dayalı hedef başladıktan sonra uzun süre ölçüm girilmediyse uyarır.',
+    run(input) {
+      const result: Candidate[] = [];
+      for (const g of input.goals ?? []) {
+        if (!g.measurementKind || !input.allowed.has(categoryOf(g.measurementKind))) continue;
+        const elapsed = daysBetween(input.now, g.startDate);
+        if (elapsed < RULE_PARAMS.goalMeasurementGapDays) continue;
+        if (input.measurements.some((m) => m.kind === g.measurementKind && m.takenAt > g.startDate)) continue;
+        result.push({
+          ruleCode: this.code,
+          level: 'YELLOW',
+          title: `Hedef başladığından beri ölçüm yok: ${g.title}`,
+          detail: `Hedef ${elapsed} gün önce başladı ama ${KIND_LABEL[g.measurementKind].toLocaleLowerCase('tr')} ölçümü girilmedi. Gelişimi değerlendirebilmek için ölçüm iste.`,
+          categories: [categoryOf(g.measurementKind)],
+          basis: [{ type: 'MISSING', label: `${g.title} · başlangıçtan sonraki ölçüm`, display: 'Ölçüm yok', at: g.startDate.toISOString() }],
+          key: g.id,
+        });
+      }
+      return result;
+    },
+  },
+  {
+    code: 'Y-GOAL-OVERDUE',
+    level: 'YELLOW',
+    kind: 'MECHANICAL',
+    reviewed: false,
+    description: 'Hedef tarihi geçmiş aktif hedefi hatırlatır.',
+    run(input) {
+      return (input.goals ?? [])
+        .filter((g) => g.targetDate && g.targetDate < input.now)
+        .map<Candidate>((g) => ({
+          ruleCode: this.code,
+          level: 'YELLOW',
+          title: `Hedef tarihi geçti: ${g.title}`,
+          detail: 'Hedefi danışanla birlikte değerlendir: ulaşıldı mı, yeni bir tarih mi gerekiyor, yoksa hedef değişmeli mi?',
+          categories: [],
+          basis: [{ type: 'PLAN', label: 'Hedef tarihi', display: g.targetDate!.toISOString().slice(0, 10), at: g.targetDate!.toISOString() }],
+          key: `${g.id}:${g.targetDate!.toISOString().slice(0, 10)}`,
+        }));
+    },
+  },
+
+  // ── YEŞİL: değerlendirilebilecek öneriler ──
+  {
+    code: 'G-GOAL-REACHED',
+    level: 'GREEN',
+    kind: 'MECHANICAL',
+    reviewed: false,
+    description: 'Son ölçüm hedef değere ulaştıysa hedefi değerlendirmeyi önerir.',
+    run(input) {
+      const result: Candidate[] = [];
+      for (const g of input.goals ?? []) {
+        if (!g.measurementKind || g.startValue === null || g.targetValue === null || g.startValue === g.targetValue) continue;
+        if (!input.allowed.has(categoryOf(g.measurementKind))) continue;
+        const last = input.measurements.find((m) => m.kind === g.measurementKind && m.takenAt > g.startDate);
+        if (!last) continue;
+        const down = g.targetValue < g.startValue;
+        if (down ? last.value > g.targetValue : last.value < g.targetValue) continue;
+        result.push({
+          ruleCode: this.code,
+          level: 'GREEN',
+          title: `Hedef değere ulaşıldı: ${g.title}`,
+          detail: 'Son ölçüm hedef değere ulaştı. Danışanla değerlendirip hedefi "ulaşıldı" olarak kapatabilir ya da yeni bir hedef belirleyebilirsin.',
+          categories: [categoryOf(g.measurementKind)],
+          basis: [measurementBasis(last, `${g.title} · son ölçüm`)],
+          key: `${g.id}:${last.id}`,
+        });
+      }
+      return result;
     },
   },
 

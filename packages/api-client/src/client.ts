@@ -1,6 +1,11 @@
 // Sunucuyla konuşan istemci. Erişim anahtarı süresi dolunca yenileme anahtarıyla bir kez yeniler ve isteği tekrarlar.
 import type {
   AdminApplicationDetail,
+  AgendaResponse,
+  AppNotificationItem,
+  AppointmentInput,
+  AppointmentMode,
+  AppointmentStatus,
   AdminApplicationItem,
   ApplicationStatus,
   ApplicationSummary,
@@ -15,16 +20,22 @@ import type {
   FindingDecision,
   FindingItem,
   FindingsResponse,
+  GoalItem,
+  GoalStatus,
   IntakeQuestionType,
   MeasurementInput,
   MeasurementItem,
   MeasurementKind,
+  MyAppointment,
+  MyGoal,
   MyPlanListItem,
   MyPlanView,
   NoteItem,
   PlanCheck,
   PlanContent,
   PlanOverview,
+  ProAppointment,
+  ReminderItem,
   ReviewOverviewItem,
   ReviewTask,
   TaskItem,
@@ -347,6 +358,34 @@ export function createApiClient(config: ApiClientConfig) {
     myPlan: (planId: string, date: string) => request<MyPlanView>(`/me/plans/${planId}`, { auth: true, query: { date } }),
     choosePlanOptions: (planId: string, input: { date: string; mealId: string; optionIds: string[] }) =>
       request<{ date: string; mealId: string; optionIds: string[] }>(`/me/plans/${planId}/choices`, { method: 'PUT', body: input, auth: true }),
+
+    // ───────────── Randevu, hedef, hatırlatma ─────────────
+    agenda: (from: string, to: string) => request<AgendaResponse>('/agenda', { auth: true, query: { from, to } }),
+    clientAppointments: (clientId: string, from: string, to: string) =>
+      request<ProAppointment[]>(`/clients/${clientId}/appointments`, { auth: true, query: { from, to } }),
+    addAppointment: (clientId: string, input: AppointmentInput) =>
+      request<ProAppointment>(`/clients/${clientId}/appointments`, { method: 'POST', body: input, auth: true }),
+    updateAppointment: (id: string, patch: Partial<AppointmentInput>) =>
+      request<ProAppointment>(`/appointments/${id}`, { method: 'PATCH', body: patch, auth: true }),
+    setAppointmentStatus: (id: string, input: { status: Exclude<AppointmentStatus, 'SCHEDULED'>; outcome?: string; reason?: string }) =>
+      request<ProAppointment>(`/appointments/${id}/status`, { method: 'POST', body: input, auth: true }),
+    myAppointments: () => request<MyAppointment[]>('/me/appointments', { auth: true }),
+    cancelMyAppointment: (id: string, reason?: string) =>
+      request<{ id: string; status: 'CANCELLED' }>(`/me/appointments/${id}/cancel`, { method: 'POST', body: { reason }, auth: true }),
+    clientGoals: (clientId: string) => request<GoalItem[]>(`/clients/${clientId}/goals`, { auth: true }),
+    addGoal: (clientId: string, input: { title: string; measurementKind?: MeasurementKind; targetValue?: number; targetDate?: string; note?: string }) =>
+      request<GoalItem>(`/clients/${clientId}/goals`, { method: 'POST', body: input, auth: true }),
+    setGoalStatus: (id: string, status: GoalStatus, note?: string) =>
+      request<GoalItem>(`/goals/${id}/status`, { method: 'POST', body: { status, note }, auth: true }),
+    myGoals: () => request<MyGoal[]>('/me/goals', { auth: true }),
+    clientReminders: (clientId: string) => request<ReminderItem[]>(`/clients/${clientId}/reminders`, { auth: true }),
+    addReminder: (clientId: string, input: { text: string; remindAt: string }) =>
+      request<ReminderItem>(`/clients/${clientId}/reminders`, { method: 'POST', body: input, auth: true }),
+    cancelReminder: (id: string) => request<ReminderItem>(`/reminders/${id}/cancel`, { method: 'POST', auth: true }),
+
+    // ───────────── Bildirimler ─────────────
+    notifications: (limit = 50) => request<{ unread: number; items: AppNotificationItem[] }>('/notifications', { auth: true, query: { limit: String(limit) } }),
+    markNotificationsRead: (ids?: string[]) => request<{ updated: number }>('/notifications/read', { method: 'POST', body: ids ? { ids } : {}, auth: true }),
 
     // ───────────── Yönetici ─────────────
     adminApplications: (status: ApplicationStatus) =>
