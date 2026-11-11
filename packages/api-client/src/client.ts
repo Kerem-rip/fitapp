@@ -23,6 +23,18 @@ import type {
   FindingsResponse,
   GoalItem,
   GoalStatus,
+  GymInfo,
+  GymInviteItem,
+  GymMemberDetail,
+  GymMemberListItem,
+  GymPaymentItem,
+  GymPaymentsReport,
+  GymStaffItem,
+  GymStaffRole,
+  GymTodayPanel,
+  MembershipItem,
+  MembershipPlanItem,
+  PaymentMethod,
   IntakeQuestionType,
   MeasurementInput,
   MeasurementItem,
@@ -414,6 +426,38 @@ export function createApiClient(config: ApiClientConfig) {
     logProgramDay: (programId: string, input: WorkoutLogInput) =>
       request<WorkoutLogItem>(`/me/programs/${programId}/logs`, { method: 'POST', body: input, auth: true }),
     myWorkouts: () => request<WorkoutLogItem[]>('/me/workouts', { auth: true }),
+
+    // ───────────── Spor salonu (ödemeler sadece kayıttır) ─────────────
+    gymMe: () => request<GymInfo>('/gym/me', { auth: true }),
+    updateGym: (patch: { name?: string; address?: string | null; city?: string | null; phone?: string | null }) =>
+      request<GymInfo['gym']>('/gym/me', { method: 'PATCH', body: patch, auth: true }),
+    gymToday: () => request<GymTodayPanel>('/gym/today', { auth: true }),
+    gymStaff: () => request<GymStaffItem[]>('/gym/staff', { auth: true }),
+    inviteGymStaff: (username: string, role: GymStaffRole) => request<{ id: string }>('/gym/staff/invite', { method: 'POST', body: { username, role }, auth: true }),
+    changeGymStaffRole: (id: string, role: GymStaffRole) => request<{ id: string }>(`/gym/staff/${id}`, { method: 'PATCH', body: { role }, auth: true }),
+    endGymStaff: (id: string) => request<{ id: string; status: 'ENDED' }>(`/gym/staff/${id}/end`, { method: 'POST', auth: true }),
+    gymPlans: (all = false) => request<MembershipPlanItem[]>('/gym/plans', { auth: true, query: all ? { all: 'true' } : {} }),
+    addGymPlan: (input: { name: string; durationDays: number; sessionCount?: number; priceKurus: number }) =>
+      request<MembershipPlanItem>('/gym/plans', { method: 'POST', body: input, auth: true }),
+    updateGymPlan: (id: string, patch: { name?: string; priceKurus?: number; active?: boolean }) =>
+      request<MembershipPlanItem>(`/gym/plans/${id}`, { method: 'PATCH', body: patch, auth: true }),
+    gymMembers: (options: { q?: string; status?: 'ACTIVE' | 'ARCHIVED' } = {}) =>
+      request<GymMemberListItem[]>('/gym/members', { auth: true, query: { ...(options.q ? { q: options.q } : {}), status: options.status ?? 'ACTIVE' } }),
+    addGymMember: (input: { fullName: string; phone?: string; note?: string }) => request<{ id: string }>('/gym/members', { method: 'POST', body: input, auth: true }),
+    gymMember: (id: string) => request<GymMemberDetail>(`/gym/members/${id}`, { auth: true }),
+    updateGymMember: (id: string, patch: { fullName?: string; phone?: string | null; note?: string | null; status?: 'ACTIVE' | 'ARCHIVED' }) =>
+      request<{ id: string }>(`/gym/members/${id}`, { method: 'PATCH', body: patch, auth: true }),
+    sellMembership: (memberId: string, input: { planId: string; startDate?: string; priceKurus?: number }) =>
+      request<MembershipItem>(`/gym/members/${memberId}/memberships`, { method: 'POST', body: input, auth: true }),
+    cancelMembership: (id: string, reason: string) => request<MembershipItem>(`/gym/memberships/${id}/cancel`, { method: 'POST', body: { reason }, auth: true }),
+    recordGymPayment: (memberId: string, input: { amountKurus: number; method: PaymentMethod; paidAt?: string; membershipId?: string; note?: string }) =>
+      request<GymPaymentItem>(`/gym/members/${memberId}/payments`, { method: 'POST', body: input, auth: true }),
+    voidGymPayment: (id: string, reason: string) => request<GymPaymentItem>(`/gym/payments/${id}/void`, { method: 'POST', body: { reason }, auth: true }),
+    gymPaymentsReport: (from: string, to: string) => request<GymPaymentsReport>('/gym/reports/payments', { auth: true, query: { from, to } }),
+    myGymInvites: () => request<GymInviteItem[]>('/me/gym-invites', { auth: true }),
+    acceptGymInvite: (id: string) => request<{ id: string; status: 'ACTIVE' }>(`/me/gym-invites/${id}/accept`, { method: 'POST', auth: true }),
+    declineGymInvite: (id: string) => request<{ id: string; status: 'DECLINED' }>(`/me/gym-invites/${id}/decline`, { method: 'POST', auth: true }),
+    leaveGym: () => request<{ id: string; status: 'ENDED' }>('/me/gym-invites/leave', { method: 'POST', auth: true }),
 
     // ───────────── Yönetici ─────────────
     adminApplications: (status: ApplicationStatus) =>

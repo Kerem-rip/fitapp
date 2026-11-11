@@ -7,7 +7,9 @@ import { ChipRow } from '@/components/ChipRow';
 import { inviteStaff, setShift } from '@/demo/actions';
 import { DAY_SHORT } from '@/demo/dates';
 import { WEEKDAY_FULL } from '@/demo/labels';
+import { RealStaffInvite, RealStaffList } from './RealStaff';
 import { useGym } from './useGym';
+import { useGymInfo } from './useGymInfo';
 
 type Seg = 'staff' | 'shifts' | 'invite';
 
@@ -15,6 +17,7 @@ const SHIFT_PRESETS = ['08:00–16:00', '09:00–17:00', '12:00–20:00', '16:00
 
 export function TeamScreen() {
   const { gym, staff, todayIndex } = useGym();
+  const { info, can } = useGymInfo();
   const [seg, setSeg] = useState<Seg>('staff');
   const [day, setDay] = useState(todayIndex);
   const [editing, setEditing] = useState<string | null>(null);
@@ -45,18 +48,22 @@ export function TeamScreen() {
 
   return (
     <Screen tabBarInset>
-      <ScreenHeader title="Ekip" subtitle={`${staff.length} kişi`} />
+      <ScreenHeader title="Ekip" subtitle={info ? info.gym.name : `${staff.length} kişi`} />
       <Segmented<Seg>
         options={[
           { key: 'staff', label: 'Personel' },
           { key: 'shifts', label: 'Vardiya' },
-          { key: 'invite', label: 'Davet' },
+          ...(!info || can('staff.manage') ? [{ key: 'invite' as const, label: 'Davet' }] : []),
         ]}
         value={seg}
         onChange={setSeg}
       />
 
-      {seg === 'staff' ? (
+      {seg === 'staff' && info ? <RealStaffList canManage={can('staff.manage')} /> : null}
+      {seg === 'invite' && info ? <RealStaffInvite onInvited={() => setSeg('staff')} /> : null}
+      {info && seg === 'shifts' ? <Notice kind="info" text="Vardiyalar henüz örnek veriyle çalışıyor; sıradaki aşamada gerçek ekibe bağlanacak." /> : null}
+
+      {seg === 'staff' && !info ? (
         staff.length > 0 ? (
           <Card padded={false} style={{ paddingHorizontal: 16 }}>
             {staff.map((s, i) => (
@@ -104,7 +111,7 @@ export function TeamScreen() {
         </>
       ) : null}
 
-      {seg === 'invite' ? (
+      {seg === 'invite' && !info ? (
         <View>
           <TextField label="Ad soyad" value={name} onChangeText={(t) => { setName(t); setNameError(undefined); }} autoCapitalize="words" error={nameError} />
           <TextField label="E-posta" value={email} onChangeText={setEmail} keyboardType="email-address" />

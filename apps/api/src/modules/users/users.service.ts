@@ -37,8 +37,17 @@ export class UsersService {
           take: 1,
           select: { id: true, field: true, status: true, rejectionReason: true, submittedAt: true, attemptNumber: true },
         },
+        gymOwned: { select: { id: true, name: true } },
+        gymStaffRoles: { where: { status: 'ACTIVE' }, take: 1, select: { role: true, gym: { select: { id: true, name: true } } } },
       },
     });
+    const staff = user.gymStaffRoles[0];
+    // Salondaki görevi: sahip ya da ekip (rozet: "<Salon> eğitmeni")
+    const gym = user.gymOwned
+      ? { id: user.gymOwned.id, name: user.gymOwned.name, role: 'OWNER' as const }
+      : staff
+        ? { id: staff.gym.id, name: staff.gym.name, role: staff.role }
+        : null;
     const application = user.professionalApplications[0] ?? null;
     return {
       id: user.id,
@@ -60,6 +69,7 @@ export class UsersService {
         : null,
       bio: user.profile?.bio ?? null,
       isPrivate: user.profile?.isPrivate ?? true,
+      gym,
       createdAt: user.createdAt,
     };
   }

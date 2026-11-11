@@ -26,6 +26,15 @@ function describe(type: string, d: Data, name: (id: unknown) => string): { title
       return { title: 'Başvurun onaylanmadı', text: typeof d.reason === 'string' ? d.reason : 'Ayrıntılar başvuru ekranında.' };
     case 'plan_published':
       return { title: 'Beslenme planın güncellendi', text: `Diyetisyenin planının ${d.number}. sürümünü yayınladı.` };
+    case 'gym_invite':
+      return {
+        title: 'Salon ekibine davet',
+        text: `${String(d.gymName ?? 'Bir salon')} seni ${d.role === 'RECEPTION' ? 'resepsiyon görevlisi' : 'eğitmen'} olarak ekibine davet etti.`,
+      };
+    case 'gym_invite_accepted':
+      return { title: 'Ekibine yeni biri katıldı', text: `${name(d.clientId)} salon davetini kabul etti.` };
+    case 'gym_staff_ended':
+      return { title: 'Salon ekibinden çıkarıldın', text: `${String(d.gymName ?? 'Salon')} ekibindeki görevin sona erdi.` };
     case 'program_published':
       return { title: 'Antrenman programın güncellendi', text: `Antrenörün programının ${d.number}. sürümünü yayınladı.` };
     case 'appointment_created':

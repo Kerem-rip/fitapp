@@ -98,7 +98,25 @@ async function main() {
       }
     }
   }
-  console.log(`${USERS.length} demo hesabı hazır.`);
+  // Demo salon: Selim'in "Fit Merkez" salonu, Deniz salon eğitmeni
+  const gym = await prisma.gym.upsert({
+    where: { ownerId: 'acc-selim' },
+    create: { ownerId: 'acc-selim', name: 'Fit Merkez', address: 'Kadıköy', city: 'İstanbul' },
+    update: {},
+  });
+  if (!(await prisma.gymStaffMember.findFirst({ where: { gymId: gym.id, userId: 'acc-deniz', status: 'ACTIVE' } }))) {
+    await prisma.gymStaffMember.create({ data: { gymId: gym.id, userId: 'acc-deniz', role: 'TRAINER', status: 'ACTIVE', invitedById: 'acc-selim', joinedAt: new Date() } });
+  }
+  if ((await prisma.membershipPlan.count({ where: { gymId: gym.id } })) === 0) {
+    await prisma.membershipPlan.createMany({
+      data: [
+        { gymId: gym.id, name: '1 aylık', durationDays: 30, priceKurus: 150_000 },
+        { gymId: gym.id, name: '3 aylık', durationDays: 90, priceKurus: 390_000 },
+        { gymId: gym.id, name: '10 ders özel', durationDays: 60, sessionCount: 10, priceKurus: 600_000 },
+      ],
+    });
+  }
+  console.log(`${USERS.length} demo hesabı ve demo salon hazır.`);
 }
 
 try {

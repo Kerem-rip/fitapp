@@ -121,7 +121,7 @@ export class AdminService {
 
   async approve(applicationId: string, adminId: string) {
     const application = await this.requirePending(applicationId);
-    const details = application.details as { city?: string; specialties?: string[] };
+    const details = application.details as { city?: string; specialties?: string[]; gymName?: string; gymAddress?: string };
     const field = application.field;
     const now = new Date();
 
@@ -156,6 +156,16 @@ export class AdminService {
       this.prisma.notification.create({
         data: { userId: application.userId, type: 'application_approved', data: { field } },
       }),
+      // Salon sahibinin salonu başvurusundaki bilgilerle hemen açılır
+      ...(field === 'GYM_OWNER'
+        ? [
+            this.prisma.gym.upsert({
+              where: { ownerId: application.userId },
+              create: { ownerId: application.userId, name: details.gymName ?? 'Salonum', address: details.gymAddress ?? null, city: details.city ?? null },
+              update: {},
+            }),
+          ]
+        : []),
     ]);
     return { id: applicationId, status: 'APPROVED' as const };
   }

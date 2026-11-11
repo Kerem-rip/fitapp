@@ -6,11 +6,14 @@ import { AccountSection } from '@/components/AccountSection';
 import { formatLong } from '@/demo/dates';
 import { useAccount } from '@/demo/hooks';
 import { fullName, proByAccount } from '@/demo/selectors';
+import { RealPlans } from './RealPlans';
 import { useGym } from './useGym';
+import { useGymInfo } from './useGymInfo';
 
 export function GymProfileScreen() {
   const router = useRouter();
   const account = useAccount();
+  const { can } = useGymInfo();
   const { gym, staff, lessons, today } = useGym();
   const pro = account ? proByAccount(account.id) : undefined;
 
@@ -44,6 +47,8 @@ export function GymProfileScreen() {
         </Text>
         <Button label="Müşteriler nasıl görür" variant="ghost" block onPress={() => router.push('/professional/pro-fitmerkez')} style={{ marginTop: 14 }} />
       </Card>
+
+      {can('plans.manage') ? <RealPlans /> : null}
 
       <SectionHeader title="Çalışma saatleri" />
       <Card padded={false} style={{ paddingHorizontal: 16 }}>

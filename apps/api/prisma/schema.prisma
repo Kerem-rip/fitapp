@@ -102,6 +102,8 @@ model User {
   plansAbout  NutritionPlan[] @relation("planSubject")
   planChoices PlanChoice[]
 
+  gymOwned          Gym?
+  gymStaffRoles     GymStaffMember[] @relation("gymStaffUser")
   appointmentsOwned Appointment[]    @relation("appointmentOwner")
   appointmentsAbout Appointment[]    @relation("appointmentSubject")
   goalsOwned        ClientGoal[]     @relation("goalOwner")
@@ -1097,6 +1099,162 @@ model WorkoutLog {
 
   @@index([userId, date])
   @@index([programId, date])
+}
+
+// ═══════════════════════════════════════════════════════════════
+// SPOR SALONU — ekip, paketler, üyeler, üyelikler ve ödeme KAYITLARI
+// Uygulama ödeme almaz: salon resepsiyonda aldığı ödemeyi buraya işler (nakit/kart/havale).
+// Üyelerin kişisel verilerinin sorumlusu salondur (KVKK); yalnızca gerekli alanlar tutulur.
+// Tutarlar kuruş cinsinden tamsayıdır.
+// ═══════════════════════════════════════════════════════════════
+
+model Gym {
+  id        String   @id @default(uuid())
+  ownerId   String   @unique
+  name      String
+  address   String?
+  city      String?
+  phone     String?
+  createdAt DateTime @default(now())
+
+  owner    User             @relation(fields: [ownerId], references: [id], onDelete: Cascade)
+  staff    GymStaffMember[]
+  plans    MembershipPlan[]
+  members  GymMember[]
+  payments GymPayment[]
+}
+
+enum GymStaffRole {
+  TRAINER // Salon eğitmeni
+  RECEPTION // Resepsiyon / ön büro
+}
+
+enum GymStaffStatus {
+  INVITED
+  ACTIVE
+  DECLINED
+  ENDED
+}
+
+// Salonun ekibi: sahibi kullanıcı adıyla davet eder, kişi kabul edince ekibe katılır.
+model GymStaffMember {
+  id          String         @id @default(uuid())
+  gymId       String
+  userId      String
+  role        GymStaffRole
+  status      GymStaffStatus @default(INVITED)
+  invitedById String
+  invitedAt   DateTime       @default(now())
+  joinedAt    DateTime?
+  endedAt     DateTime?
+
+  gym  Gym  @relation(fields: [gymId], references: [id], onDelete: Cascade)
+  user User @relation("gymStaffUser", fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([gymId, status])
+  @@index([userId, status])
+}
+
+// Üyelik paketi (ör. "1 aylık", "10 ders özel"). Fiyatı salon belirler.
+model MembershipPlan {
+  id           String   @id @default(uuid())
+  gymId        String
+  name         String
+  durationDays Int
+  sessionCount Int? // Boşsa sınırsız giriş; doluysa ders/seans hakkı
+  priceKurus   Int
+  active       Boolean  @default(true)
+  createdAt    DateTime @default(now())
+
+  gym         Gym          @relation(fields: [gymId], references: [id], onDelete: Cascade)
+  memberships Membership[]
+
+  @@index([gymId, active])
+}
+
+enum GymMemberStatus {
+  ACTIVE
+  ARCHIVED
+}
+
+// Salon üyesi: uygulama hesabı olması gerekmez.
+model GymMember {
+  id          String          @id @default(uuid())
+  gymId       String
+  fullName    String
+  phone       String?
+  note        String?
+  status      GymMemberStatus @default(ACTIVE)
+  createdById String
+  createdAt   DateTime        @default(now())
+
+  gym         Gym          @relation(fields: [gymId], references: [id], onDelete: Cascade)
+  memberships Membership[]
+  payments    GymPayment[]
+
+  @@index([gymId, status])
+}
+
+enum MembershipStatus {
+  ACTIVE
+  CANCELLED
+}
+
+// Üyenin satın aldığı üyelik. Paket bilgisi satış anındaki haliyle kopyalanır (sonradan paket değişse de bu kayıt değişmez).
+model Membership {
+  id            String           @id @default(uuid())
+  gymId         String
+  memberId      String
+  planId        String?
+  planName      String
+  startDate     DateTime         @db.Date
+  endDate       DateTime         @db.Date
+  sessionsTotal Int?
+  sessionsLeft  Int?
+  priceKurus    Int
+  status        MembershipStatus @default(ACTIVE)
+  createdById   String
+  createdAt     DateTime         @default(now())
+  cancelledAt   DateTime?
+  cancelReason  String?
+
+  member   GymMember       @relation(fields: [memberId], references: [id], onDelete: Cascade)
+  plan     MembershipPlan? @relation(fields: [planId], references: [id], onDelete: SetNull)
+  payments GymPayment[]
+
+  @@index([gymId, endDate])
+  @@index([memberId])
+}
+
+enum PaymentMethod {
+  CASH
+  CARD
+  TRANSFER
+  OTHER
+}
+
+// Ödeme KAYDI (para uygulamadan geçmez). Silinmez; hatalı kayıt gerekçeyle iptal edilir.
+model GymPayment {
+  id           String        @id @default(uuid())
+  gymId        String
+  memberId     String
+  membershipId String?
+  amountKurus  Int
+  method       PaymentMethod
+  paidAt       DateTime
+  recordedById String
+  note         String?
+  voidedAt     DateTime?
+  voidedById   String?
+  voidReason   String?
+  createdAt    DateTime      @default(now())
+
+  gym        Gym         @relation(fields: [gymId], references: [id], onDelete: Cascade)
+  member     GymMember   @relation(fields: [memberId], references: [id], onDelete: Cascade)
+  membership Membership? @relation(fields: [membershipId], references: [id], onDelete: SetNull)
+
+  @@index([gymId, paidAt])
+  @@index([memberId])
 }
 
 // Denetim kaydı: bir kişinin sağlık verisine kim, ne zaman, ne yaptı. Sadece eklenir; değiştirilmez.

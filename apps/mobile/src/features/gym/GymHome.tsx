@@ -5,11 +5,14 @@ import { View } from 'react-native';
 import { AppHeader } from '@/components/AppHeader';
 import { formatLong } from '@/demo/dates';
 import { useAccount } from '@/demo/hooks';
+import { RealGymToday } from './RealGymToday';
 import { shiftStart, useGym } from './useGym';
+import { useGymInfo } from './useGymInfo';
 
 export function GymHome() {
   const router = useRouter();
   const account = useAccount();
+  const { info } = useGymInfo();
   const { gym, staff, tasks, members, lessons, today, todayIndex, staffName } = useGym();
 
   if (!account) return null;
@@ -23,25 +26,11 @@ export function GymHome() {
 
   return (
     <Screen tabBarInset>
-      <AppHeader title={`Merhaba, ${account.firstName}`} subtitle={`${gym?.name ?? 'Salon'} · ${formatLong(today)}`} showMessages={false} />
+      <AppHeader title={`Merhaba, ${account.firstName}`} subtitle={`${info?.gym.name ?? gym?.name ?? 'Salon'} · ${formatLong(today)}`} showMessages={false} />
 
-      <Card variant="accent">
-        <Text variant="micro" tone="onAccent" style={{ opacity: 0.9 }}>
-          BUGÜN
-        </Text>
-        <Text variant="title" tone="onAccent" style={{ marginTop: 4 }}>
-          {onShift.length} personel vardiyada
-        </Text>
-        <Text variant="body" tone="onAccent" style={{ opacity: 0.95 }}>
-          {todaysLessons.length} ders · {openTasks.length} bekleyen görev
-        </Text>
-      </Card>
+      {info ? <RealGymToday /> : <DemoSummary onShift={onShift.length} lessons={todaysLessons.length} openTasks={openTasks.length} staff={staff.length} expiring={expiring.length} />}
 
-      <View style={{ flexDirection: 'row', gap: 10, marginBottom: 12 }}>
-        <StatTile label="Personel" value={String(staff.length)} sub="ekipte" icon="people-outline" />
-        <StatTile label="Görev" value={String(openTasks.length)} sub="bekleyen" icon="checkbox-outline" />
-        <StatTile label="Üyelik" value={String(expiring.length)} sub="bitiyor" icon="id-card-outline" />
-      </View>
+      {info ? <Notice kind="info" text="Vardiya, görev ve ders bölümleri henüz örnek veriyle çalışıyor; sıradaki aşamada gerçek veriye bağlanacak." /> : null}
 
       <SectionHeader title="Bugünkü vardiyalar" action="Ekip" onAction={() => router.push('/(gym-manager)/team')} />
       <Card padded={false} style={{ paddingHorizontal: 16 }}>
@@ -89,5 +78,30 @@ export function GymHome() {
         ))}
       </Card>
     </Screen>
+  );
+}
+
+// Sunucuda salonu olmayan demo hesaplar için örnek özet
+function DemoSummary({ onShift, lessons, openTasks, staff, expiring }: { onShift: number; lessons: number; openTasks: number; staff: number; expiring: number }) {
+  return (
+    <>
+      <Card variant="accent">
+        <Text variant="micro" tone="onAccent" style={{ opacity: 0.9 }}>
+          BUGÜN
+        </Text>
+        <Text variant="title" tone="onAccent" style={{ marginTop: 4 }}>
+          {onShift} personel vardiyada
+        </Text>
+        <Text variant="body" tone="onAccent" style={{ opacity: 0.95 }}>
+          {lessons} ders · {openTasks} bekleyen görev
+        </Text>
+      </Card>
+
+      <View style={{ flexDirection: 'row', gap: 10, marginBottom: 12 }}>
+        <StatTile label="Personel" value={String(staff)} sub="ekipte" icon="people-outline" />
+        <StatTile label="Görev" value={String(openTasks)} sub="bekleyen" icon="checkbox-outline" />
+        <StatTile label="Üyelik" value={String(expiring)} sub="bitiyor" icon="id-card-outline" />
+      </View>
+    </>
   );
 }

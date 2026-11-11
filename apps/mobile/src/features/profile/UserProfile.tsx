@@ -253,6 +253,12 @@ export function UserProfile() {
           onPress={() => router.push('/my-plans')}
         />
         <ListRow
+          icon="business-outline"
+          title="Salon davetlerim"
+          subtitle="Bir salonun ekibine katılma davetleri"
+          onPress={() => router.push('/gym-invites')}
+        />
+        <ListRow
           icon="clipboard-outline"
           title="Ölçümlerim ve sağlık öyküm"
           subtitle="Kilo, ölçüler, alerji ve yaşam tarzı bilgilerin"

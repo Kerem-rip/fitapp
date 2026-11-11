@@ -13,6 +13,7 @@ import { ConsentsModule } from './modules/consents/consents.module.js';
 import { EmailModule } from './modules/email/email.module.js';
 import { FilesModule } from './modules/files/files.module.js';
 import { HealthModule } from './modules/health/health.module.js';
+import { GymsModule } from './modules/gyms/gyms.module.js';
 import { NotificationsModule } from './modules/notifications/notifications.module.js';
 import { RegistrationModule } from './modules/registration/registration.module.js';
 import { RelationshipsModule } from './modules/relationships/relationships.module.js';
@@ -37,6 +38,7 @@ import { UsersModule } from './modules/users/users.module.js';
     RelationshipsModule,
     ClientsModule,
     NotificationsModule,
+    GymsModule,
   ],
   providers: [{ provide: APP_GUARD, useClass: ThrottlerGuard }],
 })

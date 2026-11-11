@@ -4,11 +4,14 @@ import { useMemo, useState } from 'react';
 import { WeekStrip } from '@/components/WeekStrip';
 import { formatLong } from '@/demo/dates';
 import { LessonForm } from './LessonSheet';
+import { RealMembers } from './RealMembers';
 import { useGym } from './useGym';
+import { useGymInfo } from './useGymInfo';
 
 type Seg = 'members' | 'lessons';
 
 export function MembersScreen() {
+  const { info, can } = useGymInfo();
   const { gym, members, lessons, today, staffName } = useGym();
   const [seg, setSeg] = useState<Seg>('members');
   const [query, setQuery] = useState('');
@@ -25,7 +28,7 @@ export function MembersScreen() {
 
   return (
     <Screen tabBarInset>
-      <ScreenHeader title="Üyeler" subtitle={`${members.length} üye · ${privateLessons.length} özel ders`} />
+      <ScreenHeader title="Üyeler" subtitle={info ? info.gym.name : `${members.length} üye · ${privateLessons.length} özel ders`} />
       <Segmented<Seg>
         options={[
           { key: 'members', label: 'Üyeler' },
@@ -35,7 +38,9 @@ export function MembersScreen() {
         onChange={setSeg}
       />
 
-      {seg === 'members' ? (
+      {seg === 'members' && info ? (
+        <RealMembers canManage={can('members.manage')} />
+      ) : seg === 'members' ? (
         <>
           <SearchBar value={query} onChangeText={setQuery} placeholder="Üye ara" />
           <Card padded={false} style={{ paddingHorizontal: 16 }}>

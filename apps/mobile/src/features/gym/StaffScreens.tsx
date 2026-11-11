@@ -1,5 +1,6 @@
 // Salon eğitmeni (personel) ekranları: bugün, danışanlar, dersler, profil.
 import { Card, EmptyState, IconButton, ListRow, Notice, Screen, ScreenHeader, SectionHeader, StatTile, Tag, Text } from '@fitapp/ui-mobile';
+import { useRouter } from 'expo-router';
 import { useMemo, useState } from 'react';
 import { View } from 'react-native';
 import { AccountSection } from '@/components/AccountSection';
@@ -10,10 +11,15 @@ import { formatLong, DAY_SHORT } from '@/demo/dates';
 import { useAccount } from '@/demo/hooks';
 import { ROLE_LABELS, WEEKDAY_FULL } from '@/demo/labels';
 import { fullName } from '@/demo/selectors';
+import { GYM_ROLE_LABELS } from './labels';
+import { RealGymToday } from './RealGymToday';
+import { RealMembers } from './RealMembers';
 import { useGym } from './useGym';
+import { useGymInfo } from './useGymInfo';
 
 export function StaffHome() {
   const account = useAccount();
+  const { info } = useGymInfo();
   const { gym, tasks, lessons, me, today, todayIndex } = useGym();
 
   if (!account) return null;
@@ -23,7 +29,10 @@ export function StaffHome() {
 
   return (
     <Screen tabBarInset>
-      <AppHeader title={`Merhaba, ${account.firstName}`} subtitle={`${gym?.name ?? 'Salon'} · ${formatLong(today)}`} showMessages={false} />
+      <AppHeader title={`Merhaba, ${account.firstName}`} subtitle={`${info?.gym.name ?? gym?.name ?? 'Salon'} · ${formatLong(today)}`} showMessages={false} />
+
+      {info ? <RealGymToday /> : null}
+      {info ? <Notice kind="info" text="Vardiya, görev ve ders bölümleri henüz örnek veriyle çalışıyor." /> : null}
 
       <View style={{ flexDirection: 'row', gap: 10, marginBottom: 12 }}>
         <StatTile label="Vardiya" value={shift === 'İzinli' ? 'İzinli' : shift.replace('–', '-')} icon="time-outline" />
@@ -75,8 +84,18 @@ export function StaffHome() {
 }
 
 export function StaffClients() {
+  const { info, can } = useGymInfo();
   const { members, me, staffName } = useGym();
   const mine = members.filter((m) => m.trainerId === me?.id);
+
+  if (info) {
+    return (
+      <Screen tabBarInset>
+        <ScreenHeader title="Salon üyeleri" subtitle={`${info.gym.name} · ${GYM_ROLE_LABELS[info.role]}`} />
+        <RealMembers canManage={can('members.manage')} />
+      </Screen>
+    );
+  }
 
   return (
     <Screen tabBarInset>
@@ -133,17 +152,19 @@ export function StaffLessons() {
 }
 
 export function StaffProfile() {
+  const router = useRouter();
   const account = useAccount();
+  const { info } = useGymInfo();
   const { gym, me, todayIndex } = useGym();
   if (!account) return null;
 
   return (
     <Screen tabBarInset>
-      <ScreenHeader title="Profil" subtitle={ROLE_LABELS[account.roleKey]} />
+      <ScreenHeader title="Profil" subtitle={info ? `${info.gym.name} ${GYM_ROLE_LABELS[info.role].toLocaleLowerCase('tr-TR')}` : ROLE_LABELS[account.roleKey]} />
       <Card>
         <Text variant="title">{fullName(account)}</Text>
         <Text variant="caption" tone="secondary">
-          @{account.username} · {gym?.name}
+          @{account.username} · {info?.gym.name ?? gym?.name}
         </Text>
         <Text variant="body" style={{ marginTop: 10 }}>
           {account.bio}
@@ -165,6 +186,10 @@ export function StaffProfile() {
       <Text variant="micro" tone="muted" style={{ marginTop: 6 }}>
         Vardiyalarını salon yöneticisi belirler. Bugün: {DAY_SHORT[todayIndex]}.
       </Text>
+
+      <Card padded={false} style={{ paddingHorizontal: 16, marginTop: 12 }}>
+        <ListRow icon="mail-open-outline" title="Salon davetlerim" subtitle="Davetler ve salondan ayrılma" onPress={() => router.push('/gym-invites')} last />
+      </Card>
 
       <AccountSection />
     </Screen>

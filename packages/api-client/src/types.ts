@@ -31,6 +31,8 @@ export interface Me {
   application: ApplicationSummary | null;
   bio: string | null;
   isPrivate: boolean;
+  // Salondaki görevi (sahip ya da ekip); yoksa null
+  gym: { id: string; name: string; role: GymRole } | null;
   createdAt: string;
 }
 
@@ -661,4 +663,112 @@ export interface ExercisePerformance {
   key: string;
   name: string;
   sessions: { date: string; bestLoadKg: number | null; totalReps: number; volumeKg: number }[];
+}
+// ───────────── Spor salonu ─────────────
+
+export type GymRole = 'OWNER' | 'TRAINER' | 'RECEPTION';
+export type GymStaffRole = 'TRAINER' | 'RECEPTION';
+export type PaymentMethod = 'CASH' | 'CARD' | 'TRANSFER' | 'OTHER';
+export type MembershipState = 'UPCOMING' | 'ACTIVE' | 'USED_UP' | 'EXPIRED' | 'CANCELLED';
+
+export interface GymInfo {
+  gym: { id: string; name: string; address: string | null; city: string | null; phone: string | null };
+  role: GymRole;
+  permissions: string[];
+}
+
+export interface GymStaffItem {
+  id: string;
+  role: GymStaffRole;
+  status: 'INVITED' | 'ACTIVE';
+  invitedAt: string;
+  joinedAt: string | null;
+  user: { id: string; name: string; username: string };
+}
+
+export interface GymInviteItem {
+  id: string;
+  role: GymStaffRole;
+  invitedAt: string;
+  gym: { name: string; city: string | null };
+}
+
+export interface MembershipPlanItem {
+  id: string;
+  name: string;
+  durationDays: number;
+  sessionCount: number | null;
+  // Kuruş
+  priceKurus: number;
+  active: boolean;
+}
+
+export interface MembershipItem {
+  id: string;
+  planName: string;
+  startDate: string;
+  endDate: string;
+  sessionsTotal: number | null;
+  sessionsLeft: number | null;
+  priceKurus: number;
+  status: 'ACTIVE' | 'CANCELLED';
+  state: MembershipState;
+  daysLeft: number;
+  cancelReason: string | null;
+  // Sadece para bilgisini görebilen görevlerde
+  dueKurus?: number;
+}
+
+export interface GymMemberListItem {
+  id: string;
+  fullName: string;
+  status: 'ACTIVE' | 'ARCHIVED';
+  // Sadece iletişim bilgisini görebilen görevlerde
+  phone?: string | null;
+  current: MembershipItem | null;
+  balanceKurus?: number;
+}
+
+export interface GymPaymentItem {
+  id: string;
+  membershipId: string | null;
+  amountKurus: number;
+  method: PaymentMethod;
+  paidAt: string;
+  note: string | null;
+  voidedAt: string | null;
+  voidReason: string | null;
+}
+
+export interface GymMemberDetail {
+  member: { id: string; fullName: string; status: 'ACTIVE' | 'ARCHIVED'; createdAt: string; phone?: string | null; note?: string | null };
+  memberships: MembershipItem[];
+  payments?: GymPaymentItem[];
+  balance?: { chargedKurus: number; paidKurus: number; balanceKurus: number };
+}
+
+export interface PaymentSummary {
+  totalKurus: number;
+  count: number;
+  byMethod: Record<PaymentMethod, number>;
+}
+
+export interface GymTodayPanel {
+  gymName: string;
+  role: GymRole;
+  today: string;
+  activeMembers: number;
+  staffCount: number;
+  expiring: { memberId: string; fullName: string; planName: string; endDate: string; daysLeft: number; sessionsLeft: number | null }[];
+  expired: { memberId: string; fullName: string; planName: string; endDate: string; daysLeft: number; sessionsLeft: number | null }[];
+  // Sadece sahip ve resepsiyon
+  todayCollections?: PaymentSummary;
+  debts?: { memberId: string; fullName: string; balanceKurus: number }[];
+}
+
+export interface GymPaymentsReport {
+  from: string;
+  to: string;
+  total: PaymentSummary;
+  days: (PaymentSummary & { day: string })[];
 }
