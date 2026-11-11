@@ -11,6 +11,12 @@ import { AuditService } from './audit.service.js';
 
 export type DenyReason = 'NO_RELATIONSHIP' | 'SHARING_EXPIRED' | 'NOT_SHARED' | 'CONSENT_REVOKED';
 
+export interface AccessOptions {
+  // Aynı kişi aynı veriye bu kadar dakika içinde yeniden bakarsa yeni kayıt yazılmaz (kayıt listesi şişmesin).
+  // Sadece okuma (DATA_VIEWED) için geçerlidir; değişiklikler her zaman kaydedilir.
+  dedupeMinutes?: number;
+}
+
 @Injectable()
 export class AccessService {
   constructor(
@@ -40,6 +46,7 @@ export class AccessService {
     category: SharedDataType,
     action: 'DATA_VIEWED' | 'DATA_CHANGED' = 'DATA_VIEWED',
     meta?: Record<string, string>,
+    options: AccessOptions = {},
   ) {
     const { relationship, reason } = await this.check(professionalId, clientId, category);
     if (reason || !relationship) {
@@ -56,14 +63,55 @@ export class AccessService {
       }
       throw forbidden('NO_ACCESS', 'Bu bilgiye erişimin yok.');
     }
-    await this.audit.record({
-      actorId: professionalId,
-      targetUserId: clientId,
-      action,
-      category,
-      relationshipId: relationship.id,
-      meta,
-    });
+    await this.recordSuccess(professionalId, clientId, category, relationship.id, action, meta, options);
     return relationship;
+  }
+
+  // Birden çok kategoriden hangilerine erişilebildiğini döner (kısmi görünüm için). Erişilenler okuma olarak kaydedilir.
+  // Danışanlık yoksa 403 fırlatır; sadece bazı kategoriler paylaşılmamışsa hata vermez, o kategoriler `allowed` dışında kalır.
+  async accessibleCategories(
+    professionalId: string,
+    clientId: string,
+    categories: readonly SharedDataType[],
+    options: AccessOptions = {},
+  ) {
+    const allowed = new Set<SharedDataType>();
+    let relationshipId: string | null = null;
+    let sharedUntil: Date | null = null;
+    let sharedData: SharedDataType[] = [];
+    for (const category of categories) {
+      const { relationship, reason } = await this.check(professionalId, clientId, category);
+      if (relationship) {
+        relationshipId = relationship.id;
+        sharedUntil = relationship.sharedUntil;
+        sharedData = relationship.sharedData;
+      }
+      if (!reason && relationship) {
+        allowed.add(category);
+        await this.recordSuccess(professionalId, clientId, category, relationship.id, 'DATA_VIEWED', undefined, options);
+      }
+    }
+    if (!relationshipId) throw forbidden('NO_ACCESS', 'Bu bilgiye erişimin yok.');
+    return { relationshipId, sharedData, sharedUntil, allowed };
+  }
+
+  private async recordSuccess(
+    professionalId: string,
+    clientId: string,
+    category: SharedDataType,
+    relationshipId: string,
+    action: 'DATA_VIEWED' | 'DATA_CHANGED',
+    meta: Record<string, string> | undefined,
+    options: AccessOptions,
+  ) {
+    if (action === 'DATA_VIEWED' && options.dedupeMinutes) {
+      const since = new Date(Date.now() - options.dedupeMinutes * 60_000);
+      const recent = await this.prisma.auditLog.findFirst({
+        where: { actorId: professionalId, targetUserId: clientId, action, category, createdAt: { gt: since } },
+        select: { id: true },
+      });
+      if (recent) return;
+    }
+    await this.audit.record({ actorId: professionalId, targetUserId: clientId, action, category, relationshipId, meta });
   }
 }

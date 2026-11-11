@@ -4,10 +4,18 @@ import type {
   AdminApplicationItem,
   ApplicationStatus,
   ApplicationSummary,
+  AnamnesisResponse,
+  AnswerValue,
   AuditEntry,
+  ClientFileSummary,
   AuthResult,
   ClientRelationshipItem,
   DocumentKind,
+  IntakeQuestionType,
+  MeasurementInput,
+  MeasurementItem,
+  MeasurementKind,
+  NoteItem,
   Me,
   ProfessionalRelationshipItem,
   RegisterStartInput,
@@ -15,6 +23,7 @@ import type {
   RelationshipBase,
   RelationshipStatus,
   SharedDataType,
+  TimelineItem,
   Tokens,
   UploadFile,
 } from './types';
@@ -57,6 +66,9 @@ interface RequestOptions {
   timeoutMs?: number;
 }
 
+function measurementQuery(options: { kind?: MeasurementKind; includeVoided?: boolean }): Record<string, string> {
+  return { ...(options.kind ? { kind: options.kind } : {}), ...(options.includeVoided ? { includeVoided: 'true' } : {}) };
+}
 export function createApiClient(config: ApiClientConfig) {
   const doFetch: typeof fetch = config.fetchImpl ?? ((...args) => fetch(...args));
   let refreshing: Promise<boolean> | null = null;
@@ -247,6 +259,42 @@ export function createApiClient(config: ApiClientConfig) {
         auth: true,
         query: { ...(options.limit ? { limit: String(options.limit) } : {}), ...(options.before ? { before: options.before } : {}) },
       }),
+
+    // ───────────── Danışan dosyası ─────────────
+    // Kişinin kendi sağlık bilgileri
+    myMeasurements: (options: { kind?: MeasurementKind; includeVoided?: boolean } = {}) =>
+      request<MeasurementItem[]>('/me/health/measurements', { auth: true, query: measurementQuery(options) }),
+    addMyMeasurement: (input: MeasurementInput) =>
+      request<MeasurementItem>('/me/health/measurements', { method: 'POST', body: input, auth: true }),
+    voidMyMeasurement: (id: string, reason?: string) =>
+      request<MeasurementItem>(`/me/health/measurements/${id}/void`, { method: 'POST', body: { reason }, auth: true }),
+    myAnamnesis: () => request<AnamnesisResponse>('/me/health/anamnesis', { auth: true }),
+    answerMyAnamnesis: (questionKey: string, value: AnswerValue) =>
+      request<{ changed: boolean }>(`/me/health/anamnesis/${encodeURIComponent(questionKey)}`, { method: 'PUT', body: { value }, auth: true }),
+
+    // Profesyonel: danışanın dosyası (sadece danışanın paylaştıkları gelir)
+    clientFile: (clientId: string) => request<ClientFileSummary>(`/clients/${clientId}/file`, { auth: true }),
+    clientTimeline: (clientId: string, options: { limit?: number; before?: string } = {}) =>
+      request<TimelineItem[]>(`/clients/${clientId}/timeline`, {
+        auth: true,
+        query: { ...(options.limit ? { limit: String(options.limit) } : {}), ...(options.before ? { before: options.before } : {}) },
+      }),
+    clientMeasurements: (clientId: string, options: { kind?: MeasurementKind; includeVoided?: boolean } = {}) =>
+      request<MeasurementItem[]>(`/clients/${clientId}/measurements`, { auth: true, query: measurementQuery(options) }),
+    addClientMeasurement: (clientId: string, input: MeasurementInput) =>
+      request<MeasurementItem>(`/clients/${clientId}/measurements`, { method: 'POST', body: input, auth: true }),
+    voidClientMeasurement: (clientId: string, id: string, reason?: string) =>
+      request<MeasurementItem>(`/clients/${clientId}/measurements/${id}/void`, { method: 'POST', body: { reason }, auth: true }),
+    clientAnamnesis: (clientId: string) => request<AnamnesisResponse>(`/clients/${clientId}/anamnesis`, { auth: true }),
+    answerClientAnamnesis: (clientId: string, questionKey: string, value: AnswerValue) =>
+      request<{ changed: boolean }>(`/clients/${clientId}/anamnesis/${encodeURIComponent(questionKey)}`, { method: 'PUT', body: { value }, auth: true }),
+    clientNotes: (clientId: string) => request<NoteItem[]>(`/clients/${clientId}/notes`, { auth: true }),
+    addClientNote: (clientId: string, text: string) =>
+      request<NoteItem>(`/clients/${clientId}/notes`, { method: 'POST', body: { text }, auth: true }),
+    addIntakeQuestion: (input: { text: string; type: IntakeQuestionType; options?: string[] }) =>
+      request<{ key: string; text: string; type: IntakeQuestionType; options: string[] }>('/intake/questions', { method: 'POST', body: input, auth: true }),
+    deactivateIntakeQuestion: (id: string) =>
+      request<{ id: string; active: false }>(`/intake/questions/${id}/deactivate`, { method: 'POST', auth: true }),
 
     // ───────────── Yönetici ─────────────
     adminApplications: (status: ApplicationStatus) =>

@@ -175,3 +175,116 @@ export interface AuditEntry {
   // Hesabı silinmiş kişi için null
   actor: { firstName: string | null; lastName: string | null; username: string } | null;
 }
+
+// ───────────── Danışan dosyası: ölçümler, anamnez, notlar ─────────────
+
+export type DataSource = 'SELF' | 'PROFESSIONAL' | 'DEVICE';
+export type MeasurementKind =
+  | 'WEIGHT'
+  | 'HEIGHT'
+  | 'WAIST'
+  | 'HIP'
+  | 'CHEST'
+  | 'ARM'
+  | 'THIGH'
+  | 'BODY_FAT_PERCENT'
+  | 'MUSCLE_MASS'
+  | 'BODY_WATER_PERCENT';
+export type MeasurementMethod = 'SCALE' | 'TAPE' | 'CALIPER' | 'BIA' | 'DEXA' | 'SELF_REPORT' | 'OTHER';
+
+export interface PersonName {
+  firstName: string | null;
+  lastName: string | null;
+  username: string;
+}
+
+export interface MeasurementItem {
+  id: string;
+  kind: MeasurementKind;
+  value: number;
+  unit: 'kg' | 'cm' | '%';
+  method: MeasurementMethod;
+  deviceName: string | null;
+  source: DataSource;
+  takenAt: string;
+  note: string | null;
+  // Yanlış girişler silinmez, geçersiz işaretlenir
+  voided: boolean;
+  voidedAt: string | null;
+  voidReason: string | null;
+  createdAt: string;
+  enteredBy: PersonName | null;
+}
+
+export interface MeasurementInput {
+  kind: MeasurementKind;
+  value: number;
+  method: MeasurementMethod;
+  deviceName?: string;
+  // ISO tarih-saat; boşsa şimdi
+  takenAt?: string;
+  note?: string;
+}
+
+export type IntakeQuestionType = 'TEXT' | 'NUMBER' | 'SINGLE_CHOICE' | 'MULTI_CHOICE';
+export type AnswerValue = string | number | string[];
+
+export interface IntakeChoice {
+  value: string;
+  label: string;
+}
+
+export interface IntakeQuestionView {
+  // "std.xxx" standart soru, "custom.<id>" uzmanın sorusu
+  key: string;
+  section: string;
+  sectionLabel: string;
+  text: string;
+  type: IntakeQuestionType;
+  options: IntakeChoice[] | null;
+  min: number | null;
+  max: number | null;
+  unit: string | null;
+  important: boolean;
+  // Uzmanın sorusuysa uzmanın adı
+  askedBy: string | null;
+  answer: { value: AnswerValue; source: DataSource; answeredAt: string; answeredBy: string | null } | null;
+}
+
+export interface AnamnesisResponse {
+  // Soru seti henüz uzman tarafından onaylanmadı
+  templateStatus: 'DRAFT';
+  questions: IntakeQuestionView[];
+}
+
+export interface ClientFileSummary {
+  client: { name: string; username: string };
+  sharing: { sharedData: SharedDataType[]; sharedUntil: string | null; visible: SharedDataType[] };
+  profile: { ageYears: number; gender: Gender } | null;
+  measurements: MeasurementItem[];
+  anamnesis: {
+    total: number;
+    answered: number;
+    missing: { key: string; text: string; important: boolean }[];
+    highlights: {
+      key: string;
+      text: string;
+      value: AnswerValue | null;
+      options: IntakeChoice[] | null;
+      source: DataSource | null;
+      answeredAt: string | null;
+    }[];
+  } | null;
+  notesCount: number;
+}
+
+export type TimelineItem =
+  | { type: 'MEASUREMENT'; at: string; id: string; kind: MeasurementKind; value: number; unit: 'kg' | 'cm' | '%'; method: MeasurementMethod; source: DataSource; voided: boolean; by: string | null }
+  | { type: 'ANSWER'; at: string; id: string; questionKey: string; question: string; display: string; source: DataSource; by: string | null }
+  | { type: 'NOTE'; at: string; id: string; text: string };
+
+export interface NoteItem {
+  id: string;
+  text: string;
+  createdAt: string;
+}

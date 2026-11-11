@@ -13,7 +13,7 @@ export const SHARED_DATA_LABELS: Record<SharedDataType, string> = {
 };
 
 export const SHARED_DATA_HINTS: Partial<Record<SharedDataType, string>> = {
-  ANAMNESIS: 'Alerji, hastalık ve yaşam tarzı bilgilerin',
+  ANAMNESIS: 'Yaş, cinsiyet, alerji, hastalık ve yaşam tarzı bilgilerin',
 };
 
 // Cümle içinde kullanım: "kilo verine baktı"

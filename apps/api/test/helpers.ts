@@ -133,6 +133,27 @@ export async function registerApprovedProfessional(app: INestApplication<App>, f
   return { ...pro, adminToken: admin.accessToken };
 }
 
+// Onaylı diyetisyen + sağlık verisi rızası vermiş danışan; teklif kabul edilmiş, `sharedData` paylaşılıyor
+export async function createActiveRelationship(
+  app: INestApplication<App>,
+  options: { sharedData?: string[]; sharedUntil?: string | null; pro?: Awaited<ReturnType<typeof registerApprovedProfessional>> } = {},
+) {
+  const pro = options.pro ?? (await registerApprovedProfessional(app));
+  const client = await registerUser(app, { healthDataConsent: true });
+  const sent = await request(app.getHttpServer())
+    .post('/api/relationships/offer')
+    .set(bearer(pro.accessToken))
+    .send({ username: client.body.username })
+    .expect(201);
+  const id = sent.body.id as string;
+  await request(app.getHttpServer())
+    .post(`/api/relationships/${id}/accept`)
+    .set(bearer(client.accessToken))
+    .send({ sharedData: options.sharedData ?? ['WEIGHT', 'MEASUREMENTS', 'ANAMNESIS'], sharedUntil: options.sharedUntil ?? null })
+    .expect(200);
+  return { pro, client, id };
+}
+
 // Yönetici hesabı (veritabanında doğrudan oluşturulur; kayıtla açılamaz) ve girişi
 export async function createAdminAndLogin(app: INestApplication<App>) {
   const prisma = app.get(PrismaService);

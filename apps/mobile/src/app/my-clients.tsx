@@ -127,13 +127,17 @@ export default function MyClientsScreen() {
               {formatDay(item.offeredAt)} tarihinde gönderildi
             </Text>
           )}
-          <Button
-            label={item.status === 'OFFERED' ? 'Teklifi geri çek' : 'Danışanlığı sonlandır'}
-            variant="danger"
-            size="sm"
-            onPress={() => setEndTarget(item)}
-            style={{ marginTop: 12, alignSelf: 'flex-start' }}
-          />
+          <View style={{ flexDirection: 'row', gap: 10, marginTop: 12 }}>
+            {item.status === 'ACTIVE' ? (
+              <Button label="Dosyayı aç" icon="folder-open-outline" size="sm" onPress={() => router.push(`/client-file/${item.client.id}`)} />
+            ) : null}
+            <Button
+              label={item.status === 'OFFERED' ? 'Teklifi geri çek' : 'Danışanlığı sonlandır'}
+              variant="danger"
+              size="sm"
+              onPress={() => setEndTarget(item)}
+            />
+          </View>
         </Card>
       ))}
 

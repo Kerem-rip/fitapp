@@ -8,6 +8,7 @@ import { AdminModule } from './modules/admin/admin.module.js';
 import { ApplicationsModule } from './modules/applications/applications.module.js';
 import { AuthCoreModule } from './modules/auth/auth-core.module.js';
 import { AuthModule } from './modules/auth/auth.module.js';
+import { ClientsModule } from './modules/clients/clients.module.js';
 import { ConsentsModule } from './modules/consents/consents.module.js';
 import { EmailModule } from './modules/email/email.module.js';
 import { FilesModule } from './modules/files/files.module.js';
@@ -33,6 +34,7 @@ import { UsersModule } from './modules/users/users.module.js';
     UsersModule,
     ConsentsModule,
     RelationshipsModule,
+    ClientsModule,
   ],
   providers: [{ provide: APP_GUARD, useClass: ThrottlerGuard }],
 })

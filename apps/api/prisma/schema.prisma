@@ -84,6 +84,14 @@ model User {
 
   auditActed    AuditLog[] @relation("auditActor")
   auditTargeted AuditLog[] @relation("auditTarget")
+
+  measurements       Measurement[]      @relation("measured")
+  measurementsMade   Measurement[]      @relation("measurementEnteredBy")
+  intakeQuestions    IntakeQuestion[]
+  intakeAnswers      IntakeAnswer[]     @relation("answerSubject")
+  intakeAnswersGiven IntakeAnswer[]     @relation("answerGivenBy")
+  notesWritten       ProfessionalNote[] @relation("noteAuthor")
+  notesAbout         ProfessionalNote[] @relation("noteSubject")
 }
 
 model UserRole {
@@ -613,6 +621,118 @@ model ClientRelationship {
 
   @@index([professionalId, status])
   @@index([clientId, status])
+}
+
+// ═══════════════════════════════════════════════════════════════
+// DANIŞAN DOSYASI — ölçümler, anamnez (sağlık öyküsü), uzman notları
+// Sağlık verisidir: profesyonel buna sadece AccessService üzerinden (danışanlık + paylaşım + rıza) erişir.
+// ═══════════════════════════════════════════════════════════════
+
+enum DataSource {
+  SELF // Kişi kendisi girdi
+  PROFESSIONAL // Danışanın uzmanı girdi
+  DEVICE // Cihazdan geldi (ileride)
+}
+
+enum MeasurementKind {
+  WEIGHT // kg
+  HEIGHT // cm
+  WAIST // cm
+  HIP // cm
+  CHEST // cm
+  ARM // cm
+  THIGH // cm
+  BODY_FAT_PERCENT // %
+  MUSCLE_MASS // kg
+  BODY_WATER_PERCENT // %
+}
+
+// Ölçüm yöntemi: aynı değer farklı yöntemle ölçülünce farklı çıkabilir; karşılaştırırken gösterilir
+enum MeasurementMethod {
+  SCALE // Tartı
+  TAPE // Mezura
+  CALIPER // Kaliper (deri kıvrımı)
+  BIA // Biyoelektrik empedans (vücut analiz tartısı/cihazı)
+  DEXA
+  SELF_REPORT // Kişi yöntemi belirtmeden bildirdi
+  OTHER
+}
+
+// Ölçümler sadece eklenir; yanlış girişler silinmez, "geçersiz" işaretlenir (voidedAt).
+model Measurement {
+  id          String            @id @default(uuid())
+  userId      String // Ölçülen kişi
+  kind        MeasurementKind
+  value       Float // Birim türden bellidir (kg, cm, %)
+  method      MeasurementMethod
+  deviceName  String?
+  source      DataSource
+  enteredById String?
+  takenAt     DateTime
+  note        String?
+  voidedAt    DateTime?
+  voidedById  String?
+  voidReason  String?
+  createdAt   DateTime          @default(now())
+
+  user      User  @relation("measured", fields: [userId], references: [id], onDelete: Cascade)
+  enteredBy User? @relation("measurementEnteredBy", fields: [enteredById], references: [id], onDelete: SetNull)
+
+  @@index([userId, kind, takenAt])
+}
+
+enum IntakeQuestionType {
+  TEXT
+  NUMBER
+  SINGLE_CHOICE
+  MULTI_CHOICE
+}
+
+// Uzmanın kendi eklediği anamnez soruları (standart sorular kodda tanımlıdır: modules/clients/intake-template.ts)
+model IntakeQuestion {
+  id        String             @id @default(uuid())
+  ownerId   String // Soruyu ekleyen profesyonel
+  section   String
+  text      String
+  type      IntakeQuestionType
+  options   String[]
+  active    Boolean            @default(true)
+  createdAt DateTime           @default(now())
+
+  owner User @relation(fields: [ownerId], references: [id], onDelete: Cascade)
+
+  @@index([ownerId, active])
+}
+
+// Yanıtlar sadece eklenir; güncel yanıt, soru başına en yeni kayıttır. Eski yanıtlar geçmiş olarak kalır.
+// questionKey: standart soru için "std.xxx", uzman sorusu için "custom.<IntakeQuestion.id>"
+model IntakeAnswer {
+  id           String     @id @default(uuid())
+  userId       String // Yanıtın ait olduğu kişi (danışan)
+  questionKey  String
+  value        Json
+  source       DataSource
+  answeredById String?
+  answeredAt   DateTime   @default(now())
+
+  user       User  @relation("answerSubject", fields: [userId], references: [id], onDelete: Cascade)
+  answeredBy User? @relation("answerGivenBy", fields: [answeredById], references: [id], onDelete: SetNull)
+
+  @@index([userId, questionKey, answeredAt])
+}
+
+// Uzmanın görüşme notları: danışana gösterilmez, sadece yazan uzman okur.
+model ProfessionalNote {
+  id             String   @id @default(uuid())
+  professionalId String
+  clientId       String
+  text           String
+  createdAt      DateTime @default(now())
+
+  professional User @relation("noteAuthor", fields: [professionalId], references: [id], onDelete: Cascade)
+  client       User @relation("noteSubject", fields: [clientId], references: [id], onDelete: Cascade)
+
+  @@index([professionalId, clientId, createdAt])
 }
 
 // Denetim kaydı: bir kişinin sağlık verisine kim, ne zaman, ne yaptı. Sadece eklenir; değiştirilmez.
