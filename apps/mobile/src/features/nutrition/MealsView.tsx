@@ -19,7 +19,7 @@ export function MealsView({ hideCalories = false }: { hideCalories?: boolean }) 
   const router = useRouter();
   const data = useUserData();
   const today = useToday();
-  const { target, result } = useTarget();
+  const { target, result, missing } = useTarget();
   const [date, setDate] = useState(today);
   const [sheetSlot, setSheetSlot] = useState<MealSlot | null>(null);
   const { day, marked, error, run } = useFoodLog(date);
@@ -57,12 +57,12 @@ export function MealsView({ hideCalories = false }: { hideCalories?: boolean }) 
       {!hideCalories ? (
         <Card variant="accent">
           <View style={{ flexDirection: 'row', alignItems: 'center', gap: 16 }}>
-            <ProgressRing value={totals.kcal} goal={target} size={118} stroke={12} light>
+            <ProgressRing value={totals.kcal} goal={missing ? Math.max(totals.kcal, 1) : target} size={118} stroke={12} light>
               <Text variant="title" tone="onAccent">
                 {totals.kcal}
               </Text>
               <Text variant="micro" tone="onAccent">
-                / {target} kcal
+                {missing ? 'kcal (tahmini)' : `/ ${target} kcal`}
               </Text>
             </ProgressRing>
             <View style={{ flex: 1, gap: 8 }}>
@@ -76,7 +76,7 @@ export function MealsView({ hideCalories = false }: { hideCalories?: boolean }) 
               ].map(([label, value, goal]) => (
                 <View key={String(label)}>
                   <Text variant="micro" tone="onAccent">
-                    {label} · {Number(value).toLocaleString('tr-TR')} / {goal} g
+                    {label} · {Number(value).toLocaleString('tr-TR')}{Number(goal) > 0 ? ` / ${goal}` : ''} g
                   </Text>
                   <View style={{ height: 5, borderRadius: 3, backgroundColor: 'rgba(255,255,255,0.3)', marginTop: 3 }}>
                     <View
@@ -96,6 +96,10 @@ export function MealsView({ hideCalories = false }: { hideCalories?: boolean }) 
       ) : (
         <Notice kind="info" title="Genç modu" text="Kalori sayımı ve kilo hedefi kapalıdır. Öğünlerini sadece düzenli beslenme alışkanlığı için kaydedebilirsin." />
       )}
+
+      {!hideCalories && missing ? (
+        <Notice kind="info" text="Günlük hedefini görmek için Profil › Profilini doldur bölümünden boy ve kilonu ekle ya da Hesapla sekmesinden kendi hedefini belirle." />
+      ) : null}
 
       {!hideCalories && plan ? (
         <Card onPress={() => router.push(`/my-plan/${plan.planId}`)} variant="soft">

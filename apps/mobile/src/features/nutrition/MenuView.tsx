@@ -26,7 +26,9 @@ export function MenuView() {
   const account = useAccount();
   const data = useUserData();
   const today = useToday();
-  const { target } = useTarget();
+  const { target: ownTarget, missing } = useTarget();
+  // Hedef bilinmiyorsa örnek menü genel bir 2000 kcal üzerinden gösterilir (ekranda yazar)
+  const target = missing ? 2000 : ownTarget;
   const ensureConsent = useEnsureConsent();
   const [variant, setVariant] = useState(0);
 
@@ -67,6 +69,7 @@ export function MenuView() {
 
   return (
     <View>
+      {missing ? <Notice kind="info" text="Boy ve kilon eklenmediği için bu menü genel 2000 kcal üzerinden örneklenmiştir. Profil › Profilini doldur bölümünden eklersen sana göre hesaplanır." /> : null}
       <Text variant="subheading" style={{ marginBottom: 4 }}>
         Alerjilerin
       </Text>

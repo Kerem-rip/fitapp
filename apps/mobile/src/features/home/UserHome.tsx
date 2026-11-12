@@ -47,7 +47,7 @@ export function UserHome() {
   const shared = useShared();
   const state = useDemoState();
   const today = useToday();
-  const { target, result } = useTarget();
+  const { target, result, missing } = useTarget();
   const { weights, plans } = useRealWeight();
   const { day, run } = useFoodLog(today);
 
@@ -86,6 +86,22 @@ export function UserHome() {
           <Text variant="body" tone="onAccent" style={{ marginTop: 6, opacity: 0.95 }}>
             Kalori sayımı ve kilo hedefi bu modda kapalı. Egzersizlerine ve su alışkanlığına odaklan.
           </Text>
+        </Card>
+      ) : missing ? (
+        <Card variant="accent">
+          <Text variant="caption" tone="onAccent" style={{ opacity: 0.9 }}>
+            Bugünkü kalori (tahmini)
+          </Text>
+          <Text variant="title" tone="onAccent" style={{ marginTop: 4 }}>
+            {totals.kcal} kcal
+          </Text>
+          <Text variant="body" tone="onAccent" style={{ marginTop: 4, opacity: 0.95 }}>
+            Günlük hedefini görmek için boy ve kilonu ekle ya da Beslenme › Hesapla bölümünden kendi hedefini belirle.
+          </Text>
+          <View style={{ flexDirection: 'row', gap: 8, marginTop: 10 }}>
+            <Button label="Boy ve kilo ekle" variant="light" size="sm" icon="add" onPress={() => router.push('/my-health')} />
+            <Button label="Öğün ekle" variant="light" size="sm" onPress={() => router.push('/nutrition')} />
+          </View>
         </Card>
       ) : (
         <Card variant="accent">

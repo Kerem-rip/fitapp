@@ -1,11 +1,5 @@
-// Profilim (bireysel ve genç kullanıcı): profil, sağlık bilgileri, gizlilik, KVKK izinleri, danışan paylaşımı.
-import {
-  ALLERGEN_LABELS_TR,
-  ALLERGENS,
-  type ActivityLevel,
-  type Allergen,
-  type DietPreference,
-} from '@fitapp/shared';
+// Profilim (bireysel ve genç kullanıcı): profil, "Profilini doldur" (sunucudaki gerçek sağlık bilgileri), gizlilik, KVKK izinleri, danışan paylaşımı.
+// Hiçbir bilgi zorunlu değildir ve otomatik soru sorulmaz; isteyen buradan doldurur.
 import {
   Avatar,
   BottomSheet,
@@ -13,6 +7,7 @@ import {
   Card,
   ListRow,
   Notice,
+  ProgressBar,
   Screen,
   ScreenHeader,
   SectionHeader,
@@ -26,24 +21,22 @@ import { useRouter } from 'expo-router';
 import { useState } from 'react';
 import { View } from 'react-native';
 import { AccountSection } from '@/components/AccountSection';
-import { ChipRow } from '@/components/ChipRow';
 import { ConfirmSheet } from '@/components/ConfirmSheet';
 import { errorText, saveProfile, setConsentRemote, setPrivateRemote } from '@/auth/actions';
 import { DEMO_TOOLS } from '@/config/features';
-import { endClientLink, setSharing, simulateParentalApproval, updateHealth } from '@/demo/actions';
+import { endClientLink, setSharing, simulateParentalApproval } from '@/demo/actions';
 import { useAccount, useDemoState, useUserData } from '@/demo/hooks';
-import { ACTIVITY_LABELS, DIET_LABELS, ROLE_LABELS } from '@/demo/labels';
+import { ROLE_LABELS } from '@/demo/labels';
 import { fullName, proByAccount } from '@/demo/selectors';
-
-const num = (text: string) => Number(text.replace(',', '.'));
+import { useHealthProfile } from '@/features/health/useHealthProfile';
 
 export function UserProfile() {
   const router = useRouter();
   const account = useAccount();
   const data = useUserData();
   const state = useDemoState();
+  const health = useHealthProfile();
   const [editOpen, setEditOpen] = useState(false);
-  const [healthOpen, setHealthOpen] = useState(false);
   const [endTarget, setEndTarget] = useState<string | null>(null);
 
   // Profil düzenleme alanları
@@ -52,13 +45,6 @@ export function UserProfile() {
   const [username, setUsername] = useState('');
   const [bio, setBio] = useState('');
   const [editError, setEditError] = useState<string | undefined>();
-
-  // Sağlık bilgisi alanları
-  const [height, setHeight] = useState('');
-  const [weight, setWeight] = useState('');
-  const [activity, setActivity] = useState<ActivityLevel>('moderate');
-  const [diet, setDiet] = useState<DietPreference>('none');
-  const [allergens, setAllergens] = useState<Allergen[]>([]);
 
   if (!account) return null;
   const teen = account.roleKey === 'teen';
@@ -80,31 +66,6 @@ export function UserProfile() {
     } catch (e) {
       setEditError(errorText(e));
     }
-  };
-
-  const openHealth = () => {
-    setHeight(String(data.heightCm));
-    setWeight(String(data.weightKg));
-    setActivity(data.activity);
-    setDiet(data.diet);
-    setAllergens(data.allergens);
-    setHealthOpen(true);
-  };
-
-  const saveHealth = () => {
-    if (!data.consents.health_data) {
-      showToast('Önce sağlık verisi iznini ver', 'warning');
-      return;
-    }
-    const h = num(height);
-    const w = num(weight);
-    if (!(h >= 120 && h <= 230) || !(w >= 30 && w <= 300)) {
-      showToast('Boy ve kilo değerlerini kontrol et', 'warning');
-      return;
-    }
-    updateHealth(account.id, { heightCm: h, weightKg: w, activity, diet, allergens });
-    setHealthOpen(false);
-    showToast('Sağlık bilgilerin güncellendi');
   };
 
   // Bu kullanıcının danışanı olduğu uzmanlar
@@ -185,27 +146,47 @@ export function UserProfile() {
         </Card>
       ) : null}
 
-      <SectionHeader title="Sağlık bilgilerim" action="Düzenle" onAction={openHealth} />
+      <SectionHeader title="Profilini doldur" action={health.loaded ? `${health.filled}/${health.total}` : undefined} />
       <Card padded={false} style={{ paddingHorizontal: 16 }}>
-        <ListRow icon="resize-outline" title="Boy" trailing={<Text variant="bodyStrong">{data.heightCm} cm</Text>} />
-        <ListRow icon="scale-outline" title="Kilo" trailing={<Text variant="bodyStrong">{data.weightKg.toLocaleString('tr-TR')} kg</Text>} />
-        <ListRow icon="walk-outline" title="Hareket düzeyi" trailing={<Text variant="bodyStrong">{ACTIVITY_LABELS[data.activity]}</Text>} />
-        <ListRow icon="leaf-outline" title="Beslenme tercihi" trailing={<Text variant="bodyStrong">{DIET_LABELS[data.diet]}</Text>} />
+        <View style={{ paddingTop: 14 }}>
+          <Text variant="caption" tone="secondary">
+            İstersen doldur; hiçbiri zorunlu değil. Boy ve kilon kalori tahminini, alerji bilgin yemek uyarılarını iyileştirir.
+          </Text>
+          {health.loaded ? (
+            <View style={{ marginTop: 8 }}>
+              <ProgressBar value={health.filled} max={health.total} />
+            </View>
+          ) : null}
+        </View>
+        <ListRow
+          icon="resize-outline"
+          title="Boy"
+          trailing={<Text variant={health.height ? 'bodyStrong' : 'caption'} tone={health.height ? undefined : 'muted'}>{health.height ? `${health.height.value.toLocaleString('tr-TR')} cm` : 'Eklenmedi'}</Text>}
+          onPress={() => router.push('/my-health')}
+        />
+        <ListRow
+          icon="scale-outline"
+          title="Kilo"
+          trailing={<Text variant={health.weight ? 'bodyStrong' : 'caption'} tone={health.weight ? undefined : 'muted'}>{health.weight ? `${health.weight.value.toLocaleString('tr-TR')} kg` : 'Eklenmedi'}</Text>}
+          onPress={() => router.push('/my-health')}
+        />
         <ListRow
           icon="warning-outline"
           title="Alerjiler"
-          trailing={
-            <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 4, justifyContent: 'flex-end', maxWidth: 190 }}>
-              {data.allergens.length ? data.allergens.map((a) => <Tag key={a} label={ALLERGEN_LABELS_TR[a]} kind="danger" />) : <Text variant="caption" tone="muted">Yok</Text>}
-            </View>
-          }
+          trailing={<Text variant={health.allergies ? 'bodyStrong' : 'caption'} tone={health.allergies ? undefined : 'muted'} numberOfLines={1} style={{ maxWidth: 190 }}>{health.allergies ?? 'Eklenmedi'}</Text>}
+          onPress={() => router.push('/my-health')}
+        />
+        <ListRow
+          icon="leaf-outline"
+          title="Beslenme tercihi"
+          trailing={<Text variant={health.diet ? 'bodyStrong' : 'caption'} tone={health.diet ? undefined : 'muted'} numberOfLines={1} style={{ maxWidth: 190 }}>{health.diet ?? 'Eklenmedi'}</Text>}
+          onPress={() => router.push('/my-health')}
           last
         />
       </Card>
       <Text variant="caption" tone="muted" style={{ marginTop: 6 }}>
-        Sağlık bilgilerin sadece senin izin verdiğin uzmana görünür.
+        Doldurmak için bir satıra dokun. Sağlık bilgilerin sadece senin izin verdiğin uzmana görünür.
       </Text>
-
       <SectionHeader title="Gizlilik ve izinler" />
       <Card padded={false} style={{ paddingHorizontal: 16 }}>
         <SwitchRow
@@ -310,35 +291,6 @@ export function UserProfile() {
         <TextField label="Kullanıcı adı" value={username} onChangeText={(t) => { setUsername(t); setEditError(undefined); }} error={editError} />
         <TextField label="Hakkında" value={bio} onChangeText={setBio} multiline maxLength={200} />
         <Button label="Kaydet" size="lg" block onPress={saveEdit} style={{ marginBottom: 8 }} />
-      </BottomSheet>
-
-      <BottomSheet visible={healthOpen} onClose={() => setHealthOpen(false)} title="Sağlık bilgilerim">
-        <View style={{ flexDirection: 'row', gap: 10 }}>
-          <View style={{ flex: 1 }}>
-            <TextField label="Boy (cm)" value={height} onChangeText={setHeight} keyboardType="decimal-pad" />
-          </View>
-          <View style={{ flex: 1 }}>
-            <TextField label="Kilo (kg)" value={weight} onChangeText={setWeight} keyboardType="decimal-pad" />
-          </View>
-        </View>
-        <Text variant="caption" tone="secondary" style={{ marginBottom: 8, fontWeight: '600' }}>
-          Hareket düzeyi
-        </Text>
-        <ChipRow wrap options={(Object.keys(ACTIVITY_LABELS) as ActivityLevel[]).map((key) => ({ key, label: ACTIVITY_LABELS[key] }))} selected={[activity]} onToggle={setActivity} />
-        <Text variant="caption" tone="secondary" style={{ marginBottom: 8, fontWeight: '600' }}>
-          Beslenme tercihi
-        </Text>
-        <ChipRow wrap options={(Object.keys(DIET_LABELS) as DietPreference[]).map((key) => ({ key, label: DIET_LABELS[key] }))} selected={[diet]} onToggle={setDiet} />
-        <Text variant="caption" tone="secondary" style={{ marginBottom: 8, fontWeight: '600' }}>
-          Alerjiler
-        </Text>
-        <ChipRow
-          wrap
-          options={ALLERGENS.map((key) => ({ key, label: ALLERGEN_LABELS_TR[key] }))}
-          selected={allergens}
-          onToggle={(a) => setAllergens((cur) => (cur.includes(a) ? cur.filter((x) => x !== a) : [...cur, a]))}
-        />
-        <Button label="Kaydet" size="lg" block onPress={saveHealth} style={{ marginBottom: 8 }} />
       </BottomSheet>
 
       <ConfirmSheet

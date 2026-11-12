@@ -45,12 +45,15 @@ export function CalculatorView() {
   const router = useRouter();
   const account = useAccount();
   const data = useUserData();
-  const { ageYears } = useTarget();
+  const { ageYears, heightCm, weightKg } = useTarget();
   const ensureConsent = useEnsureConsent();
   const [goal, setGoal] = useState<Goal>(data.goal);
   const [activity, setActivity] = useState<ActivityLevel>(data.activity);
-  const [height, setHeight] = useState(String(data.heightCm));
-  const [weight, setWeight] = useState(String(data.weightKg));
+  // Boş bırakılırsa sunucudaki son boy/kilo ölçümü kullanılır (varsa); uydurma değer gösterilmez
+  const [heightText, setHeight] = useState<string | null>(null);
+  const [weightText, setWeight] = useState<string | null>(null);
+  const height = heightText ?? (heightCm !== null ? String(heightCm).replace('.', ',') : '');
+  const weight = weightText ?? (weightKg !== null ? String(weightKg).replace('.', ',') : '');
 
   const input = useMemo(
     () => ({ sex: account?.sex ?? 'other', ageYears, heightCm: num(height), weightKg: num(weight), activity, goal }) as const,
@@ -82,10 +85,10 @@ export function CalculatorView() {
       <Card>
         <View style={{ flexDirection: 'row', gap: 10 }}>
           <View style={{ flex: 1 }}>
-            <TextField label="Boy (cm)" value={height} onChangeText={setHeight} keyboardType="decimal-pad" error={error === 'height' ? errorText : undefined} />
+            <TextField label="Boy (cm)" value={height} onChangeText={setHeight} keyboardType="decimal-pad" error={error === 'height' && height !== '' ? errorText : undefined} />
           </View>
           <View style={{ flex: 1 }}>
-            <TextField label="Kilo (kg)" value={weight} onChangeText={setWeight} keyboardType="decimal-pad" error={error === 'weight' ? errorText : undefined} />
+            <TextField label="Kilo (kg)" value={weight} onChangeText={setWeight} keyboardType="decimal-pad" error={error === 'weight' && weight !== '' ? errorText : undefined} />
           </View>
         </View>
         <Text variant="caption" tone="secondary" style={{ marginBottom: 8, fontWeight: '600' }}>
