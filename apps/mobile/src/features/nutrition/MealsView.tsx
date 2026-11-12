@@ -11,6 +11,7 @@ import { WeekStrip } from '@/components/WeekStrip';
 import { ARTICLES } from '@/demo/content';
 import { formatLong } from '@/demo/dates';
 import { useToday, useUserData } from '@/demo/hooks';
+import { useMyAllergens } from '@/features/health/useMyAllergens';
 import { AddFoodSheet, mealTypeOf } from './AddFoodSheet';
 import { useFoodLog } from './useFoodLog';
 import { useTarget } from './useTarget';
@@ -23,6 +24,7 @@ export function MealsView({ hideCalories = false }: { hideCalories?: boolean }) 
   const [date, setDate] = useState(today);
   const [sheetSlot, setSheetSlot] = useState<MealSlot | null>(null);
   const { day, marked, error, run } = useFoodLog(date);
+  const { allergens } = useMyAllergens();
   const [plan, setPlan] = useState<MyPlanListItem | null>(null);
 
   useFocusEffect(
@@ -135,7 +137,7 @@ export function MealsView({ hideCalories = false }: { hideCalories?: boolean }) 
               <EntryRow
                 key={entry.id}
                 entry={entry}
-                allergens={data.allergens}
+                allergens={allergens}
                 hideCalories={hideCalories}
                 onRemove={() => run(() => api.removeMeal(entry.id), 'Kayıt silindi')}
                 last={i === items.length - 1}

@@ -5,7 +5,7 @@ import { BottomSheet, Button, ListRow, Notice, SearchBar, Stepper, Tag, Text } f
 import { useMemo, useState } from 'react';
 import { View } from 'react-native';
 import { api } from '@/api/client';
-import { useUserData } from '@/demo/hooks';
+import { useMyAllergens } from '@/features/health/useMyAllergens';
 
 export const mealTypeOf = (slot: MealSlot) => slot.toUpperCase() as MealType;
 
@@ -23,7 +23,7 @@ export function AddFoodSheet({
   onClose: () => void;
   run: (fn: () => Promise<unknown>, message?: string) => Promise<boolean>;
 }) {
-  const data = useUserData();
+  const { allergens } = useMyAllergens();
   const [query, setQuery] = useState('');
   const [selected, setSelected] = useState<FoodItem | null>(null);
   const [servings, setServings] = useState(1);
@@ -35,7 +35,7 @@ export function AddFoodSheet({
     return q ? list.filter((f) => f.name.toLocaleLowerCase('tr-TR').includes(q)) : list;
   }, [query, slot]);
 
-  const myAllergens = selected ? selected.allergens.filter((a) => data.allergens.includes(a)) : [];
+  const myAllergens = selected ? selected.allergens.filter((a) => allergens.includes(a)) : [];
 
   const add = async () => {
     if (!selected || busy) return;
@@ -69,7 +69,7 @@ export function AddFoodSheet({
           </Text>
           <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 6, marginBottom: 12 }}>
             {selected.allergens.map((a) => (
-              <Tag key={a} label={ALLERGEN_LABELS_TR[a]} kind={data.allergens.includes(a) ? 'danger' : 'neutral'} />
+              <Tag key={a} label={ALLERGEN_LABELS_TR[a]} kind={allergens.includes(a) ? 'danger' : 'neutral'} />
             ))}
             {!selected.allergenInfoComplete ? <Tag label="Alerjen bilgisi eksik" kind="warning" /> : null}
           </View>

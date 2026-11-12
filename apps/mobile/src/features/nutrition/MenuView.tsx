@@ -19,6 +19,7 @@ import { errorText } from '@/auth/actions';
 import { updateHealth } from '@/demo/actions';
 import { useAccount, useEnsureConsent, useToday, useUserData } from '@/demo/hooks';
 import { DIET_LABELS } from '@/demo/labels';
+import { useMyAllergens } from '@/features/health/useMyAllergens';
 import { mealTypeOf } from './AddFoodSheet';
 import { useTarget } from './useTarget';
 
@@ -31,17 +32,23 @@ export function MenuView() {
   const target = missing ? 2000 : ownTarget;
   const ensureConsent = useEnsureConsent();
   const [variant, setVariant] = useState(0);
+  const { allergens, save: saveAllergens } = useMyAllergens();
 
   const menu = useMemo(
-    () => suggestMenu(SEED_FOODS, { targetKcal: target, allergens: data.allergens, diet: data.diet, variant }),
-    [target, data.allergens, data.diet, variant],
+    () => suggestMenu(SEED_FOODS, { targetKcal: target, allergens, diet: data.diet, variant }),
+    [target, allergens, data.diet, variant],
   );
 
-  const toggleAllergen = (a: Allergen) => {
-    if (!account) return;
-    const next = data.allergens.includes(a) ? data.allergens.filter((x) => x !== a) : [...data.allergens, a];
-    updateHealth(account.id, { allergens: next });
-    setVariant(0);
+  // Alerji seçimi sağlık öyküsündeki yanıtı günceller (tek kaynak; diyetisyen de aynısını görür)
+  const toggleAllergen = async (a: Allergen) => {
+    if (!account || !ensureConsent()) return;
+    const next = allergens.includes(a) ? allergens.filter((x) => x !== a) : [...allergens, a];
+    try {
+      await saveAllergens(next);
+      setVariant(0);
+    } catch (e) {
+      showToast(errorText(e), 'warning');
+    }
   };
 
   // Menüdeki her yemek bugünün öğün kaydına eklenir (sunucuda; değerler tahminidir)
@@ -74,9 +81,9 @@ export function MenuView() {
         Alerjilerin
       </Text>
       <Text variant="caption" tone="secondary" style={{ marginBottom: 8 }}>
-        Seçtiklerin menüye hiç girmez. Bu bilgiler profilinde de kayıtlıdır.
+        Seçtiklerin menüye hiç girmez. Bu seçim sağlık öyküne kaydedilir; profilindeki ve yemek uyarılarındaki alerjiler de bunlardır.
       </Text>
-      <ChipRow wrap options={ALLERGENS.map((key) => ({ key, label: ALLERGEN_LABELS_TR[key] }))} selected={data.allergens} onToggle={toggleAllergen} />
+      <ChipRow wrap options={ALLERGENS.map((key) => ({ key, label: ALLERGEN_LABELS_TR[key] }))} selected={allergens} onToggle={toggleAllergen} />
 
       <Text variant="subheading" style={{ marginBottom: 8 }}>
         Beslenme tercihin
