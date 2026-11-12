@@ -29,6 +29,9 @@ export const passwordSchema = z
   .min(8, 'Şifre en az 8 karakter olmalı')
   .max(128, 'Şifre en fazla 128 karakter olabilir');
 
+export const forgotSchema = z.object({ email: emailSchema });
+export const resetSchema = z.object({ email: emailSchema, code: z.string().trim().regex(/^\d{6}$/, '6 haneli kodu yaz'), password: passwordSchema });
+
 export const usernameSchema = z
   .string()
   .trim()

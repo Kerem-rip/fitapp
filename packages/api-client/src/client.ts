@@ -252,6 +252,13 @@ export function createApiClient(config: ApiClientConfig) {
     async registerVerify(registrationId: string, code: string): Promise<AuthResult> {
       return storeAuth(await request<AuthResult>('/auth/register/verify', { method: 'POST', body: { registrationId, code } }));
     },
+    // Şifremi unuttum: her durumda aynı cevap; test modunda kod da döner
+    forgotPassword(email: string) {
+      return request<{ sent: true; codeTtlMinutes: number; devCode?: string }>('/auth/password/forgot', { method: 'POST', body: { email } });
+    },
+    resetPassword(email: string, code: string, password: string) {
+      return request<{ reset: true }>('/auth/password/reset', { method: 'POST', body: { email, code, password } });
+    },
     registerResend(registrationId: string) {
       return request<{ codeExpiresAt: string; devCode?: string }>('/auth/register/resend', { method: 'POST', body: { registrationId } });
     },

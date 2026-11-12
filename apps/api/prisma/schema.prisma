@@ -51,6 +51,7 @@ model User {
   consents         Consent[]
   parentalConsents ParentalConsent[]
   sessions         Session[]
+  passwordReset    PasswordReset?
   profile          Profile?
 
   following   Follow[] @relation("follower")
@@ -164,6 +165,21 @@ model Session {
   createdAt        DateTime  @default(now())
   expiresAt        DateTime
   revokedAt        DateTime?
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+// Şifre sıfırlama: e-postaya 6 haneli kod gider. Kodun kendisi saklanmaz (anahtarlı özet).
+// Kişi başı tek etkin kayıt; deneme ve gönderim sayısı sınırlıdır. Şifre değişince tüm oturumlar kapanır.
+model PasswordReset {
+  id            String   @id @default(uuid())
+  userId        String   @unique
+  codeHash      String
+  codeExpiresAt DateTime
+  attempts      Int      @default(0)
+  sendCount     Int      @default(1)
+  lastSentAt    DateTime @default(now())
+  createdAt     DateTime @default(now())
 
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 }

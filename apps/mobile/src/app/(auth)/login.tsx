@@ -58,6 +58,11 @@ export default function LoginScreen() {
         onSubmitEditing={() => submit(identifier, password)}
       />
       <Button label={busy ? 'Giriş yapılıyor...' : 'Giriş yap'} size="lg" block disabled={busy} onPress={() => submit(identifier, password)} />
+      <Pressable onPress={() => router.push('/forgot')} hitSlop={8} style={{ alignSelf: 'center', marginTop: 14 }}>
+        <Text variant="bodyStrong" tone="accent">
+          Şifremi unuttum
+        </Text>
+      </Pressable>
 
       <View style={{ flexDirection: 'row', justifyContent: 'center', gap: 6, marginTop: 18 }}>
         <Text variant="body" tone="secondary">

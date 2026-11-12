@@ -10,4 +10,8 @@ export class EmailService {
     // Test modu: kodu kaydeder (gerçek e-posta servisi bağlanınca burası gönderim yapacak)
     this.logger.log(`[E-POSTA TEST MODU] ${to} adresine doğrulama kodu: ${code} (${ttlMinutes} dk geçerli)`);
   }
+
+  async sendPasswordResetCode(to: string, code: string, ttlMinutes: number): Promise<void> {
+    this.logger.log(`[E-POSTA TEST MODU] ${to} adresine şifre sıfırlama kodu: ${code} (${ttlMinutes} dk geçerli)`);
+  }
 }
