@@ -23,6 +23,10 @@ import type {
   FindingsResponse,
   GoalItem,
   GoalStatus,
+  ClientFoodView,
+  FoodDay,
+  MealEntryItem,
+  MealType,
   GymInfo,
   GymInviteItem,
   GymBookingItem,
@@ -319,6 +323,21 @@ export function createApiClient(config: ApiClientConfig) {
       request<MeasurementItem>('/me/health/measurements', { method: 'POST', body: input, auth: true }),
     voidMyMeasurement: (id: string, reason?: string) =>
       request<MeasurementItem>(`/me/health/measurements/${id}/void`, { method: 'POST', body: { reason }, auth: true }),
+    // Öğün ve su günlüğüm (sağlık verisi izni gerekir)
+    myFood: (from: string, to: string) => request<FoodDay[]>('/me/health/food', { auth: true, query: { from, to } }),
+    addMeal: (input: {
+      date?: string;
+      mealType: MealType;
+      foodKey?: string;
+      name: string;
+      portion: string;
+      servings: number;
+      perServing: { kcal: number; proteinG: number; carbsG: number; fatG: number };
+    }) => request<MealEntryItem>('/me/health/meals', { method: 'POST', body: input, auth: true }),
+    removeMeal: (id: string) => request<{ id: string }>(`/me/health/meals/${id}`, { method: 'DELETE', auth: true }),
+    addWater: (amountMl: number) => request<{ date: string; waterMl: number }>('/me/health/water', { method: 'POST', body: { amountMl }, auth: true }),
+    // Danışanın öğün ve suyu (sadece paylaşılan kategoriler; bakış denetim kaydına yazılır)
+    clientFood: (clientId: string, from: string, to: string) => request<ClientFoodView>(`/clients/${clientId}/food`, { auth: true, query: { from, to } }),
     myAnamnesis: () => request<AnamnesisResponse>('/me/health/anamnesis', { auth: true }),
     answerMyAnamnesis: (questionKey: string, value: AnswerValue) =>
       request<{ changed: boolean }>(`/me/health/anamnesis/${encodeURIComponent(questionKey)}`, { method: 'PUT', body: { value }, auth: true }),

@@ -11,6 +11,7 @@ import { AgendaController, ClientAgendaController } from './agenda/agenda.contro
 import { AppointmentsService } from './agenda/appointments.service.js';
 import { GoalsService } from './agenda/goals.service.js';
 import { RemindersService } from './agenda/reminders.service.js';
+import { FoodLogService } from './food-log.service.js';
 import { MeasurementsService } from './measurements.service.js';
 import { MyProgramsController, ProgramsController } from './programs/programs.controller.js';
 import { ProgramsService } from './programs/programs.service.js';
@@ -25,6 +26,7 @@ import { NotesService } from './notes.service.js';
   controllers: [ClientsController, IntakeQuestionsController, MyHealthController, FindingsController, ReviewOverviewController, PlansController, MyPlansController, ClientAgendaController, AgendaController, ProgramsController, MyProgramsController],
   providers: [
     MeasurementsService,
+    FoodLogService,
     AnamnesisService,
     NotesService,
     ClientFileService,

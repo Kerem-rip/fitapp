@@ -40,6 +40,8 @@ export const RULE_PARAMS = {
   // Program yayınlandıktan bu kadar gün sonra kontrol başlar; bu pencerede kayıt yoksa uyarır
   workoutGraceDays: 7,
   workoutWindowDays: 14,
+  // Bu kadar gündür öğün kaydı (ya da plan seçimi) yoksa hatırlatır; danışanlık en az bu kadar eski olmalı
+  mealGapDays: 3,
 } as const;
 
 export interface BasisRef {
@@ -84,6 +86,8 @@ export interface RuleInput {
   adherence?: { daysWithChoices: number; windowDays: number } | null;
   // Antrenman kayıtları "Antrenman kayıtlarım" paylaşılıyorsa; yoksa null
   workouts?: { logs: readonly WorkoutPoint[]; programApprovedAt: Date | null } | null;
+  // Öğün kayıtları paylaşılıyorsa: son öğün kaydı ya da plan seçimi günü (Türkiye günü) ve bugünün günü; yoksa null
+  meals?: { lastDay: string | null; today: string; relationshipSince: Date } | null;
   // Maddeleri görecek uzmanın türü; beslenmeye özel kurallar sadece diyetisyene çıkar
   professionalType?: 'DIETITIAN' | 'TRAINER' | 'GYM' | null;
 }
@@ -692,6 +696,38 @@ export const RULES: readonly RuleDef[] = [
             last ? { type: 'ANSWER', label: 'Son antrenman kaydı', display: last.date, at: null } : { type: 'MISSING', label: 'Antrenman kaydı', display: 'Hiç kayıt yok', at: null },
           ],
           key: `${w.programApprovedAt.toISOString().slice(0, 10)}:${last?.id ?? 'none'}`,
+        },
+      ];
+    },
+  },
+
+  {
+    code: 'Y-NO-MEAL-LOGS',
+    level: 'YELLOW',
+    kind: 'MECHANICAL',
+    reviewed: false,
+    audience: 'DIETITIAN',
+    description: 'Öğün kayıtları paylaşıldığı hâlde son günlerde hiç öğün kaydı ya da plan seçimi yoksa, yorum yapmadan danışana sorulacakları önerir.',
+    run(input) {
+      const m = input.meals;
+      if (!m) return [];
+      if (daysBetween(input.now, m.relationshipSince) < RULE_PARAMS.mealGapDays) return [];
+      const since = new Date(new Date(`${m.today}T00:00:00Z`).getTime() - (RULE_PARAMS.mealGapDays - 1) * DAY_MS).toISOString().slice(0, 10);
+      if (m.lastDay && m.lastDay >= since) return [];
+      return [
+        {
+          ruleCode: this.code,
+          level: 'YELLOW',
+          title: `Son ${RULE_PARAMS.mealGapDays} günde öğün kaydı yok`,
+          detail: [
+            `Danışan öğün kayıtlarını paylaşıyor ama son ${RULE_PARAMS.mealGapDays} günde kayıt girilmemiş${m.lastDay ? ` (son kayıt ${m.lastDay})` : ''}.`,
+            'Kayıt olmaması yemediği anlamına gelmez; değerlendirme yapmadan önce sor:',
+            '• Kaydetmeyi mi unutuyor, uygulamada zorlandığı bir yer mi var?',
+            '• Plan ya da hedefle ilgili konuşmak istediği bir şey var mı?',
+          ].join('\n'),
+          categories: ['MEALS'],
+          basis: [m.lastDay ? { type: 'ANSWER', label: 'Son öğün kaydı', display: m.lastDay, at: null } : { type: 'MISSING', label: 'Öğün kaydı', display: 'Hiç kayıt yok', at: null }],
+          key: m.lastDay ?? 'none',
         },
       ];
     },

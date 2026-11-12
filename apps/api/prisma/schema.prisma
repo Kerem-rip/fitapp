@@ -62,7 +62,7 @@ model User {
   onboardingAnswers OnboardingAnswer[]
   goals             UserGoal[]
 
-  mealLogs         MealLog[]
+  mealEntries      MealEntry[]
   nutritionTargets NutritionTarget[]
   waterLogs        WaterLog[]
   weightLogs       WeightLog[]
@@ -306,7 +306,6 @@ model Food {
   updatedAt  DateTime   @updatedAt
 
   portions FoodPortion[]
-  logItems MealLogItem[]
 
   @@index([name])
 }
@@ -328,28 +327,27 @@ enum MealType {
   SNACK
 }
 
-model MealLog {
-  id       String   @id @default(uuid())
-  userId   String
-  date     DateTime @db.Date
-  mealType MealType
+// Öğün kaydı: danışanın kendi günlüğü. Yemeğin adı, porsiyonu ve tahmini değerleri kayıt anındaki haliyle kopyalanır
+// (yemek listesi sonradan değişse de geçmiş kayıt değişmez). Değerler TAHMİNİDİR. Gün Türkiye saatine göredir.
+model MealEntry {
+  id        String   @id @default(uuid())
+  userId    String
+  date      String // "YYYY-AA-GG"
+  mealType  MealType
+  foodKey   String? // Uygulamanın yemek listesindeki kimlik (varsa)
+  name      String
+  portion   String // "1 porsiyon", "1 kase"...
+  servings  Float
+  // Toplam (porsiyon sayısıyla çarpılmış) tahmini değerler
+  kcal      Float
+  proteinG  Float
+  carbsG    Float
+  fatG      Float
+  createdAt DateTime @default(now())
 
-  user  User          @relation(fields: [userId], references: [id], onDelete: Cascade)
-  items MealLogItem[]
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
-  @@unique([userId, date, mealType])
-}
-
-model MealLogItem {
-  id        String  @id @default(uuid())
-  mealLogId String
-  foodId    String
-  grams     Float
-  portionId String? // Ev ölçüsüyle eklendiyse hangisi
-  quantity  Float? // Kaç porsiyon
-
-  mealLog MealLog @relation(fields: [mealLogId], references: [id], onDelete: Cascade)
-  food    Food    @relation(fields: [foodId], references: [id])
+  @@index([userId, date])
 }
 
 // Günlük kalori/makro hedefi. Diyetisyen belirlediyse setById dolu olur.

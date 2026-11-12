@@ -62,6 +62,7 @@ Bunlar klinik eşik değil, veri kalitesi ayarlarıdır; yine de bir diyetisyenl
 - Ani kilo farkı uyarısı: **14 gün içinde %10'dan fazla**
 - Farklı yöntem uyarısı penceresi: **120 gün**
 - Paylaşım bitiyor uyarısı: **7 gün**
+- Öğün kaydı yok hatırlatması: **3 gün** (sadece diyetisyene; plan seçimi de kayıt sayılır)
 - Hangi anamnez soruları "önemli" sayılacak (alerji, sağlık durumu, ilaç, hamilelik/emzirme, yeme bozukluğu öyküsü)
 - Madde metinlerinin dili (tanı/tedavi dili geçmemeli; birim testi bazı ifadeleri yasaklar)
 - "İlaç/ek alerji" serbest metninde "yok", "hayır" gibi yanıtların madde üretmemesi (basit metin eşleşmesi)
@@ -127,5 +128,20 @@ Uzman taslak hazırlar → kontrol eder → **onaylar**; onaylanmadan danışana
 - **Kayıt yok** (`Y-NO-WORKOUT-LOGS`, sarı): program yayınlanalı 7 günden fazla olduğu hâlde son 14 günde kayıt yoksa programı değiştirmeden önce sorulacakları önerir.
 - Performans yalnızca girilen değerlerin özetidir (en yüksek yük, toplam tekrar, hacim); yorum ya da öneri içermez.
 
+## Öğün ve su günlüğü — ood-log.service.ts
+| Adres | Kim | Ne yapar |
+|---|---|---|
+| `GET /api/me/health/food?from=&to=` | Danışan | Gün gün öğünlerim, tahmini toplamlar ve su (en fazla 31 gün) |
+| `POST /api/me/health/meals` · `DELETE /api/me/health/meals/:id` | Danışan | Öğün ekle / kendi kaydını sil |
+| `POST /api/me/health/water` `{ amountMl }` | Danışan | +250 / −250 ml; günün toplamı eksiye düşmez |
+| `GET /api/clients/:clientId/food?from=&to=` | Uzman | Sadece paylaşılan kategoriler (MEALS, WATER); bakış denetim kaydına yazılır |
+
+### Kurallar
+- Kayıt için sağlık verisi rızası gerekir. Gün Türkiye saatine göredir; ileri tarihe ve 30 günden eskiye kayıt olmaz.
+- Yemeğin adı, porsiyonu ve tahmini değerleri kayıt anındaki haliyle kopyalanır (yemek listesi değişse de geçmiş değişmez).
+  Değerler uygulamanın yemek listesinden gelir; sunucu sadece makul üst sınırları denetler. Tüm değerler **tahminidir**.
+- Danışan kendi kaydını silebilir (kendi günlüğü). Uzman kayıt ekleyemez ya da silemez.
+- `Y-NO-MEAL-LOGS` (sarı, sadece diyetisyen): öğün kayıtları paylaşıldığı hâlde 3 gündür kayıt ya da plan seçimi yoksa sorulacakları önerir; yorum yapmaz.
+
 ## Henüz yok (sonraki aşamalar)
-Bildirim tercihleri (sıklık, kapatma), uzman–danışan mesajlaşmasının sunucuya taşınması, telefona anlık bildirim (push), ölçüm cihazı entegrasyonu, uzmana özel değerlendirme soruları ve kişiye uygun hesaplama araçları (5. madde), danışanın günlük kayıtlarının (öğün, su, kilo) demo depodan sunucuya taşınması.
+Bildirim tercihleri (sıklık, kapatma), uzman–danışan mesajlaşmasının sunucuya taşınması, telefona anlık bildirim (push), ölçüm cihazı entegrasyonu, uzmana özel değerlendirme soruları ve kişiye uygun hesaplama araçları (5. madde), listede olmayan yemeği elle yazma, barkod, diyetisyenin öğüne yorum yazması, plandan tek dokunuşla öğün ekleme.

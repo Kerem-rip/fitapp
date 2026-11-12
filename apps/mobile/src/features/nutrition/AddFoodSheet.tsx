@@ -1,31 +1,33 @@
-// Öğüne yemek ekleme penceresi: arama, porsiyon seçimi, alerjen uyarısı.
+// Öğüne yemek ekleme penceresi: arama, porsiyon seçimi, alerjen uyarısı. Kayıt sunucuya gider (değerler tahminidir).
+import type { MealType } from '@fitapp/api-client';
 import { ALLERGEN_LABELS_TR, MEAL_SLOT_LABELS_TR, SEED_FOODS, type FoodItem, type MealSlot } from '@fitapp/shared';
-import { BottomSheet, Button, ListRow, Notice, SearchBar, showToast, Stepper, Tag, Text } from '@fitapp/ui-mobile';
+import { BottomSheet, Button, ListRow, Notice, SearchBar, Stepper, Tag, Text } from '@fitapp/ui-mobile';
 import { useMemo, useState } from 'react';
 import { View } from 'react-native';
-import { addMeal } from '@/demo/actions';
-import { useAccount, useEnsureConsent, useUserData } from '@/demo/hooks';
+import { api } from '@/api/client';
+import { useUserData } from '@/demo/hooks';
+
+export const mealTypeOf = (slot: MealSlot) => slot.toUpperCase() as MealType;
 
 export function AddFoodSheet({
-  visible,
   slot,
   date,
   hideCalories = false,
   onClose,
+  run,
 }: {
-  visible: boolean;
   slot: MealSlot;
   date: string;
   // Genç modunda kalori sayıları gösterilmez
   hideCalories?: boolean;
   onClose: () => void;
+  run: (fn: () => Promise<unknown>, message?: string) => Promise<boolean>;
 }) {
-  const account = useAccount();
   const data = useUserData();
-  const ensureConsent = useEnsureConsent();
   const [query, setQuery] = useState('');
   const [selected, setSelected] = useState<FoodItem | null>(null);
   const [servings, setServings] = useState(1);
+  const [busy, setBusy] = useState(false);
 
   const foods = useMemo(() => {
     const q = query.trim().toLocaleLowerCase('tr-TR');
@@ -33,24 +35,30 @@ export function AddFoodSheet({
     return q ? list.filter((f) => f.name.toLocaleLowerCase('tr-TR').includes(q)) : list;
   }, [query, slot]);
 
-  const close = () => {
-    setSelected(null);
-    setServings(1);
-    setQuery('');
-    onClose();
-  };
-
   const myAllergens = selected ? selected.allergens.filter((a) => data.allergens.includes(a)) : [];
 
-  const add = () => {
-    if (!account || !selected || !ensureConsent()) return;
-    addMeal(account.id, date, { slot, foodId: selected.id, servings });
-    showToast(`${selected.name} eklendi`);
-    close();
+  const add = async () => {
+    if (!selected || busy) return;
+    setBusy(true);
+    const ok = await run(
+      () =>
+        api.addMeal({
+          date,
+          mealType: mealTypeOf(slot),
+          foodKey: selected.id,
+          name: selected.name,
+          portion: selected.portion,
+          servings,
+          perServing: { kcal: selected.kcal, proteinG: selected.proteinG, carbsG: selected.carbsG, fatG: selected.fatG },
+        }),
+      `${selected.name} eklendi`,
+    );
+    setBusy(false);
+    if (ok) onClose();
   };
 
   return (
-    <BottomSheet visible={visible} onClose={close} title={`${MEAL_SLOT_LABELS_TR[slot]} için yemek ekle`}>
+    <BottomSheet visible onClose={onClose} title={`${MEAL_SLOT_LABELS_TR[slot]} için yemek ekle`}>
       {selected ? (
         <View>
           <Text variant="heading">{selected.name}</Text>
@@ -78,7 +86,13 @@ export function AddFoodSheet({
             Değerler tahminidir.
           </Text>
           <View style={{ gap: 10, marginBottom: 8 }}>
-            <Button label={hideCalories ? 'Ekle' : `Ekle · ${Math.round(selected.kcal * servings)} kcal`} size="lg" block onPress={add} />
+            <Button
+              label={busy ? 'Kaydediliyor...' : hideCalories ? 'Ekle' : `Ekle · ${Math.round(selected.kcal * servings)} kcal`}
+              size="lg"
+              block
+              disabled={busy}
+              onPress={add}
+            />
             <Button label="Listeye dön" variant="ghost" block onPress={() => setSelected(null)} />
           </View>
         </View>

@@ -1,46 +1,41 @@
 // Günlük öğün kaydı: kalori halkası, öğünler, diyetisyen planı ve beslenme rehberleri.
-import {
-  ALLERGEN_LABELS_TR,
-  findFood,
-  MEAL_SLOT_LABELS_TR,
-  MEAL_SLOTS,
-  type MealSlot,
-} from '@fitapp/shared';
-import { Button, Card, IconButton, ListRow, Notice, ProgressRing, SectionHeader, showToast, Tag, Text } from '@fitapp/ui-mobile';
-import { useRouter } from 'expo-router';
-import { useMemo, useState } from 'react';
+// Öğünler sunucuda tutulur; danışan "Öğün kayıtlarım"ı paylaştıysa uzmanı da görür. Değerler tahminidir.
+import type { MealEntryItem, MyPlanListItem } from '@fitapp/api-client';
+import { ALLERGEN_LABELS_TR, findFood, MEAL_SLOT_LABELS_TR, MEAL_SLOTS, type MealSlot } from '@fitapp/shared';
+import { Avatar, Card, IconButton, ListRow, Notice, ProgressRing, SectionHeader, Tag, Text } from '@fitapp/ui-mobile';
+import { useFocusEffect, useRouter } from 'expo-router';
+import { useCallback, useState } from 'react';
 import { View } from 'react-native';
+import { api } from '@/api/client';
 import { WeekStrip } from '@/components/WeekStrip';
-import { addMeals, removeMeal } from '@/demo/actions';
 import { ARTICLES } from '@/demo/content';
 import { formatLong } from '@/demo/dates';
-import { useAccount, useEnsureConsent, useShared, useToday, useUserData } from '@/demo/hooks';
-import { mealsBySlot, totalsOf } from '@/demo/selectors';
-import { AddFoodSheet } from './AddFoodSheet';
+import { useToday, useUserData } from '@/demo/hooks';
+import { AddFoodSheet, mealTypeOf } from './AddFoodSheet';
+import { useFoodLog } from './useFoodLog';
 import { useTarget } from './useTarget';
 
 export function MealsView({ hideCalories = false }: { hideCalories?: boolean }) {
   const router = useRouter();
-  const account = useAccount();
   const data = useUserData();
-  const shared = useShared();
   const today = useToday();
   const { target, result } = useTarget();
-  const ensureConsent = useEnsureConsent();
   const [date, setDate] = useState(today);
   const [sheetSlot, setSheetSlot] = useState<MealSlot | null>(null);
+  const { day, marked, error, run } = useFoodLog(date);
+  const [plan, setPlan] = useState<MyPlanListItem | null>(null);
 
-  const entries = data.meals[date];
-  const totals = useMemo(() => totalsOf(entries ?? []), [entries]);
-  const bySlot = useMemo(() => mealsBySlot(entries ?? []), [entries]);
-  const marked = useMemo(() => Object.keys(data.meals).filter((d) => (data.meals[d]?.length ?? 0) > 0), [data.meals]);
-
-  // Danışanı olduğu diyetisyenin hazırladığı plan
-  const plan = useMemo(
-    () => shared.plans.find((p) => shared.clients[p.clientId]?.accountId === account?.id),
-    [shared.plans, shared.clients, account?.id],
+  useFocusEffect(
+    useCallback(() => {
+      api
+        .myPlans()
+        .then((list) => setPlan(list[0] ?? null))
+        .catch(() => setPlan(null));
+    }, []),
   );
 
+  const totals = day.totals;
+  const slotItems = (slot: MealSlot) => day.meals.filter((m) => m.mealType === mealTypeOf(slot));
   const guides = ARTICLES.filter((a) => (hideCalories ? a.forTeens : true));
 
   return (
@@ -56,7 +51,8 @@ export function MealsView({ hideCalories = false }: { hideCalories?: boolean }) 
           }
         />
       ) : null}
-      <WeekStrip selected={date} onSelect={setDate} marked={marked} />
+      {error ? <Notice kind="danger" text={error} /> : null}
+      <WeekStrip selected={date} onSelect={(d) => (d <= today ? setDate(d) : undefined)} marked={marked} />
 
       {!hideCalories ? (
         <Card variant="accent">
@@ -80,7 +76,7 @@ export function MealsView({ hideCalories = false }: { hideCalories?: boolean }) 
               ].map(([label, value, goal]) => (
                 <View key={String(label)}>
                   <Text variant="micro" tone="onAccent">
-                    {label} · {value} / {goal} g
+                    {label} · {Number(value).toLocaleString('tr-TR')} / {goal} g
                   </Text>
                   <View style={{ height: 5, borderRadius: 3, backgroundColor: 'rgba(255,255,255,0.3)', marginTop: 3 }}>
                     <View
@@ -102,45 +98,22 @@ export function MealsView({ hideCalories = false }: { hideCalories?: boolean }) 
       )}
 
       {!hideCalories && plan ? (
-        <Card>
-          <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}>
-            <Text variant="heading">Diyetisyeninin planı</Text>
-            <Tag label={`${plan.targetKcal} kcal`} kind="accent" />
-          </View>
-          {plan.menu.map((slot) => (
-            <View key={slot.slot} style={{ marginBottom: 6 }}>
-              <Text variant="caption" tone="secondary" style={{ fontWeight: '700' }}>
-                {MEAL_SLOT_LABELS_TR[slot.slot]}
-              </Text>
-              <Text variant="body">
-                {slot.items
-                  .map((i) => `${findFood(i.foodId)?.name ?? ''}${i.servings !== 1 ? ` (${i.servings}×)` : ''}`)
-                  .join(', ')}
+        <Card onPress={() => router.push(`/my-plan/${plan.planId}`)} variant="soft">
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
+            <Avatar name={plan.professional.name} size={42} />
+            <View style={{ flex: 1 }}>
+              <Text variant="bodyStrong">Diyetisyeninin planı · sürüm {plan.number}</Text>
+              <Text variant="caption" tone="secondary">
+                {plan.professional.name} · {plan.mealCount} öğün. Açmak için dokun.
               </Text>
             </View>
-          ))}
-          <Button
-            label="Bugüne ekle"
-            variant="secondary"
-            size="sm"
-            icon="add"
-            onPress={() => {
-              if (!account || !ensureConsent()) return;
-              addMeals(
-                account.id,
-                today,
-                plan.menu.flatMap((s) => s.items.map((i) => ({ slot: s.slot, foodId: i.foodId, servings: i.servings }))),
-              );
-              showToast('Plan bugünkü kayıtlarına eklendi');
-            }}
-            style={{ marginTop: 6 }}
-          />
+          </View>
         </Card>
       ) : null}
 
       {MEAL_SLOTS.map((slot) => {
-        const items = bySlot[slot];
-        const slotKcal = totalsOf(items).kcal;
+        const items = slotItems(slot);
+        const slotKcal = Math.round(items.reduce((s, m) => s + m.kcal, 0));
         return (
           <Card key={slot}>
             <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
@@ -154,34 +127,16 @@ export function MealsView({ hideCalories = false }: { hideCalories?: boolean }) 
               </View>
               <IconButton icon="add" label={`${MEAL_SLOT_LABELS_TR[slot]} için yemek ekle`} size={38} filled onPress={() => setSheetSlot(slot)} />
             </View>
-            {items.map((entry, i) => {
-              const food = findFood(entry.foodId);
-              if (!food) return null;
-              const conflict = food.allergens.filter((a) => data.allergens.includes(a));
-              return (
-                <ListRow
-                  key={entry.id}
-                  icon="restaurant-outline"
-                  title={food.name}
-                  subtitle={`${entry.servings}× ${food.portion}${conflict.length ? ` · ${conflict.map((a) => ALLERGEN_LABELS_TR[a]).join(', ')} içerir` : ''}`}
-                  trailing={
-                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
-                      {!hideCalories ? (
-                        <Text variant="bodyStrong">{Math.round(food.kcal * entry.servings)}</Text>
-                      ) : null}
-                      {conflict.length ? <Tag label="Alerjen" kind="danger" /> : null}
-                      <IconButton
-                        icon="trash-outline"
-                        label="Kaydı sil"
-                        size={34}
-                        onPress={() => account && removeMeal(account.id, date, entry.id)}
-                      />
-                    </View>
-                  }
-                  last={i === items.length - 1}
-                />
-              );
-            })}
+            {items.map((entry, i) => (
+              <EntryRow
+                key={entry.id}
+                entry={entry}
+                allergens={data.allergens}
+                hideCalories={hideCalories}
+                onRemove={() => run(() => api.removeMeal(entry.id), 'Kayıt silindi')}
+                last={i === items.length - 1}
+              />
+            ))}
             {items.length === 0 ? (
               <Text variant="caption" tone="muted" style={{ marginTop: 8 }}>
                 Henüz eklenmedi.
@@ -191,10 +146,7 @@ export function MealsView({ hideCalories = false }: { hideCalories?: boolean }) 
         );
       })}
 
-      {!hideCalories ? (
-        <Notice kind="info" text="Değerler tahminidir. Kesin değerler ve sana özel plan için bir diyetisyenle çalış." />
-      ) : null}
-      {!hideCalories && !plan ? <Button label="Diyetisyen bul" variant="ghost" block onPress={() => router.push('/discover')} /> : null}
+      {!hideCalories ? <Notice kind="info" text="Değerler tahminidir. Kesin değerler ve sana özel plan için bir diyetisyenle çalış." /> : null}
 
       <SectionHeader title="Beslenme rehberi" />
       <Card padded={false} style={{ paddingHorizontal: 16 }}>
@@ -210,9 +162,40 @@ export function MealsView({ hideCalories = false }: { hideCalories?: boolean }) 
         ))}
       </Card>
 
-      {sheetSlot ? (
-        <AddFoodSheet visible slot={sheetSlot} date={date} hideCalories={hideCalories} onClose={() => setSheetSlot(null)} />
-      ) : null}
+      {sheetSlot ? <AddFoodSheet slot={sheetSlot} date={date} hideCalories={hideCalories} onClose={() => setSheetSlot(null)} run={run} /> : null}
     </View>
+  );
+}
+
+function EntryRow({
+  entry,
+  allergens,
+  hideCalories,
+  onRemove,
+  last,
+}: {
+  entry: MealEntryItem;
+  allergens: readonly string[];
+  hideCalories: boolean;
+  onRemove: () => void;
+  last: boolean;
+}) {
+  // Yemek listesindeki kaydın alerjenleri (liste dışı kayıtta bilinmez)
+  const food = entry.foodKey ? findFood(entry.foodKey) : undefined;
+  const conflict = food ? food.allergens.filter((a) => allergens.includes(a)) : [];
+  return (
+    <ListRow
+      icon="restaurant-outline"
+      title={entry.name}
+      subtitle={`${entry.servings.toLocaleString('tr-TR')}× ${entry.portion}${conflict.length ? ` · ${conflict.map((a) => ALLERGEN_LABELS_TR[a]).join(', ')} içerir` : ''}`}
+      trailing={
+        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+          {!hideCalories ? <Text variant="bodyStrong">{Math.round(entry.kcal)}</Text> : null}
+          {conflict.length ? <Tag label="Alerjen" kind="danger" /> : null}
+          <IconButton icon="trash-outline" label="Kaydı sil" size={34} onPress={onRemove} />
+        </View>
+      }
+      last={last}
+    />
   );
 }

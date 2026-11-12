@@ -166,6 +166,27 @@ describe('inceleme kuralları', () => {
     });
   });
 
+  describe('öğün kaydı', () => {
+    const today = NOW.toISOString().slice(0, 10);
+    const day = (n: number) => daysAgo(n).toISOString().slice(0, 10);
+
+    it('son 3 günde öğün kaydı yoksa sorulacakları önerir; kayıt varsa, danışanlık yeniyse ya da paylaşılmıyorsa çıkmaz', () => {
+      const base = { ...input(), professionalType: 'DIETITIAN' as const };
+      const r = find({ ...base, meals: { lastDay: day(4), today, relationshipSince: daysAgo(20) } }, 'Y-NO-MEAL-LOGS');
+      expect(r).toHaveLength(1);
+      expect(r[0]!.detail).toContain('yemediği anlamına gelmez');
+      expect(find({ ...base, meals: { lastDay: null, today, relationshipSince: daysAgo(20) } }, 'Y-NO-MEAL-LOGS')[0]!.basis[0]!.type).toBe('MISSING');
+      expect(find({ ...base, meals: { lastDay: day(2), today, relationshipSince: daysAgo(20) } }, 'Y-NO-MEAL-LOGS')).toHaveLength(0);
+      expect(find({ ...base, meals: { lastDay: null, today, relationshipSince: daysAgo(1) } }, 'Y-NO-MEAL-LOGS')).toHaveLength(0);
+      expect(find({ ...base, meals: null }, 'Y-NO-MEAL-LOGS')).toHaveLength(0);
+    });
+
+    it('sadece diyetisyene çıkar', () => {
+      const meals = { lastDay: null, today, relationshipSince: daysAgo(20) };
+      expect(find({ ...input(), professionalType: 'TRAINER', meals }, 'Y-NO-MEAL-LOGS')).toHaveLength(0);
+    });
+  });
+
   it('beslenmeye özel maddeler antrenöre çıkmaz, diyetisyene çıkar', () => {
     const i = input({ answers: { ...IMPORTANT, 'std.allergies': { value: ['egg'] }, 'std.diet_preference': { value: 'vegan' } } });
     expect(codes({ ...i, professionalType: 'TRAINER' })).not.toContain('G-ALLERGY-FILTER');

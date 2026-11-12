@@ -17,11 +17,12 @@ import { MODE_LABELS, STATUS_TAGS } from '@/features/agenda/helpers';
 import { PlanTab } from '@/features/plans/PlanTab';
 import { ProgramTab } from '@/features/programs/ProgramTab';
 import { WorkoutsTab } from '@/features/programs/WorkoutsTab';
+import { FoodTab } from '@/features/food/FoodTab';
 import { useAccount } from '@/demo/hooks';
 import { ReviewTab } from '@/features/review/ReviewTab';
 import { formatDateTime, SHARED_DATA_LABELS, SHARED_DATA_ORDER } from '@/features/sharing/labels';
 
-type Tab = 'review' | 'summary' | 'plan' | 'program' | 'workouts' | 'follow' | 'measurements' | 'anamnesis' | 'notes' | 'timeline';
+type Tab = 'review' | 'summary' | 'plan' | 'program' | 'workouts' | 'food' | 'follow' | 'measurements' | 'anamnesis' | 'notes' | 'timeline';
 
 // Diyetisyen beslenme planı, antrenör egzersiz programı ve antrenman kayıtları sekmelerini görür
 const tabsFor = (trainer: boolean): { key: Tab; label: string }[] => [
@@ -33,6 +34,7 @@ const tabsFor = (trainer: boolean): { key: Tab; label: string }[] => [
         { key: 'workouts' as const, label: 'Antrenmanlar' },
       ]
     : [{ key: 'plan' as const, label: 'Plan' }]),
+  { key: 'food', label: 'Öğünler' },
   { key: 'follow', label: 'Takip' },
   { key: 'measurements', label: 'Ölçümler' },
   { key: 'anamnesis', label: 'Anamnez' },
@@ -95,6 +97,7 @@ export default function ClientFileScreen() {
           {tab === 'plan' ? <PlanTab clientId={clientId} mealsVisible={visible.includes('MEALS')} /> : null}
           {tab === 'program' ? <ProgramTab clientId={clientId} /> : null}
           {tab === 'workouts' ? <WorkoutsTab clientId={clientId} visible={visible.includes('WORKOUTS')} /> : null}
+          {tab === 'food' ? <FoodTab clientId={clientId} /> : null}
           {tab === 'follow' ? <FollowTab clientId={clientId} onChanged={loadSummary} /> : null}
           {tab === 'measurements' ? <MeasurementsTab clientId={clientId} visible={visible} onChanged={loadSummary} /> : null}
           {tab === 'anamnesis' ? <AnamnesisTab clientId={clientId} canView={visible.includes('ANAMNESIS')} onChanged={loadSummary} /> : null}

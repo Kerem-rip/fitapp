@@ -8,6 +8,7 @@ import { AccessService } from '../relationships/access.service.js';
 import { AnamnesisService } from './anamnesis.service.js';
 import { ClientFileService } from './client-file.service.js';
 import { FindingsService } from './findings/findings.service.js';
+import { FoodLogService } from './food-log.service.js';
 import { TEMPLATE_STATUS } from './intake-template.js';
 import { kindsInCategory, MEASUREMENT_KINDS, MEASUREMENT_SPECS } from './measurement-rules.js';
 import { MeasurementsService } from './measurements.service.js';
@@ -40,6 +41,20 @@ export const measurementListSchema = z.object({
 export type MeasurementListQuery = { kind?: MeasurementKind; limit: number; includeVoided: boolean };
 
 export const voidSchema = z.object({ reason: z.string().trim().max(200).optional() });
+
+const day = z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'Tarih YYYY-AA-GG olmalı');
+export const foodRangeSchema = z.object({ from: day, to: day });
+const macro = z.number().finite().min(0);
+export const mealSchema = z.object({
+  date: day.optional(),
+  mealType: z.enum(['BREAKFAST', 'LUNCH', 'SNACK', 'DINNER']),
+  foodKey: z.string().trim().max(60).optional(),
+  name: z.string().trim().min(1).max(80),
+  portion: z.string().trim().min(1).max(60),
+  servings: z.number().min(0.5).max(10).multipleOf(0.5),
+  perServing: z.object({ kcal: macro, proteinG: macro, carbsG: macro, fatG: macro }),
+});
+export const waterSchema = z.object({ amountMl: z.number().int().min(-1000).max(1000).refine((v) => v !== 0, 'Miktar sıfır olamaz') });
 export const answerSchema = z.object({ value: z.unknown() });
 
 const noteSchema = z.object({ text: z.string().trim().min(1, 'Notu yaz').max(2000) });
@@ -65,7 +80,17 @@ export class ClientsController {
     @Inject(AnamnesisService) private readonly anamnesis: AnamnesisService,
     @Inject(NotesService) private readonly notes: NotesService,
     @Inject(FindingsService) private readonly findings: FindingsService,
+    @Inject(FoodLogService) private readonly foodLog: FoodLogService,
   ) {}
+
+  // GET /api/clients/:clientId/food?from=&to= → öğünler ve su (sadece paylaşılan kategoriler; bakış denetim kaydına yazılır)
+  @Get('food')
+  async food(@CurrentUser() user: AuthUser, @Param('clientId') clientId: string, @Query({ schema: foodRangeSchema }) query: { from: string; to: string }) {
+    const { allowed } = await this.access.accessibleCategories(user.userId, clientId, ['MEALS', 'WATER'], DEDUPE);
+    const meals = allowed.has('MEALS');
+    const water = allowed.has('WATER');
+    return { shared: { meals, water }, days: meals || water ? await this.foodLog.days(clientId, query.from, query.to, { meals, water }) : [] };
+  }
 
   // GET /api/clients/:clientId/file → dosya özeti (sadece paylaşılan kategoriler dolu gelir)
   @Get('file')

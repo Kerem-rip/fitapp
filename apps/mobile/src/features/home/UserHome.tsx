@@ -1,5 +1,5 @@
 // Bugün: kişisel ana sayfa. Hedefe göre şekillenir; kalori halkası, su, kilo, plan ve programlar.
-// Kilo ve beslenme planı sunucudaki gerçek kayıtlardan gelir. Örnek uzmanlar ve ipuçları sadece demo kutusunda görünür.
+// Kalori, su, kilo ve beslenme planı sunucudaki gerçek kayıtlardan gelir. Örnek uzmanlar ve ipuçları sadece demo kutusunda görünür.
 import type { MeasurementItem, MyPlanListItem } from '@fitapp/api-client';
 import { Avatar, Button, Card, IconButton, ListRow, Notice, ProgressBar, ProgressRing, Screen, SectionHeader, Tag, Text, useTheme } from '@fitapp/ui-mobile';
 import { useFocusEffect, useRouter } from 'expo-router';
@@ -8,13 +8,14 @@ import { Pressable, ScrollView, View } from 'react-native';
 import { api } from '@/api/client';
 import { AppHeader } from '@/components/AppHeader';
 import { DemoBlock } from '@/components/DemoBlock';
-import { addWater, toggleLike, toggleSave } from '@/demo/actions';
+import { toggleLike, toggleSave } from '@/demo/actions';
 import { PLATFORM_PROGRAMS, TIP_POSTS } from '@/demo/content';
 import { formatLong } from '@/demo/dates';
 import { useAccount, useDemoState, useShared, useToday, useUserData } from '@/demo/hooks';
 import { GOAL_LABELS } from '@/demo/labels';
-import { proById, totalsOf } from '@/demo/selectors';
+import { proById } from '@/demo/selectors';
 import { SEED_PROS } from '@/demo/seed';
+import { useFoodLog } from '@/features/nutrition/useFoodLog';
 import { useTarget } from '@/features/nutrition/useTarget';
 
 const WATER_GOAL_ML = 2000;
@@ -48,11 +49,11 @@ export function UserHome() {
   const today = useToday();
   const { target, result } = useTarget();
   const { weights, plans } = useRealWeight();
+  const { day, run } = useFoodLog(today);
 
   const teen = account?.roleKey === 'teen';
-  const entries = data.meals[today];
-  const totals = useMemo(() => totalsOf(entries ?? []), [entries]);
-  const water = data.waterMl[today] ?? 0;
+  const totals = day.totals;
+  const water = day.waterMl ?? 0;
   const latest = weights?.[0];
   const weightDelta = latest && weights?.[1] ? Math.round((latest.value - weights[1].value) * 10) / 10 : null;
   const plan = plans[0];
@@ -123,8 +124,8 @@ export function UserHome() {
             <ProgressBar value={water} max={WATER_GOAL_ML} />
           </View>
           <View style={{ flexDirection: 'row', gap: 6 }}>
-            <Button label="+250 ml" size="sm" variant="secondary" onPress={() => addWater(account.id, today, 250)} />
-            <IconButton icon="remove" label="250 ml azalt" size={38} onPress={() => addWater(account.id, today, -250)} />
+            <Button label="+250 ml" size="sm" variant="secondary" onPress={() => run(() => api.addWater(250))} />
+            <IconButton icon="remove" label="250 ml azalt" size={38} onPress={() => (water > 0 ? run(() => api.addWater(-250)) : undefined)} />
           </View>
         </Card>
         {/* Kilo: sağlık bilgilerimdeki son ölçüm; ölçüm eklemek ve geçmiş için oraya gider */}

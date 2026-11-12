@@ -14,9 +14,12 @@ import { Button, Card, ListRow, Notice, showToast, Tag, Text } from '@fitapp/ui-
 import { useMemo, useState } from 'react';
 import { View } from 'react-native';
 import { ChipRow } from '@/components/ChipRow';
-import { addMeals, updateHealth } from '@/demo/actions';
+import { api } from '@/api/client';
+import { errorText } from '@/auth/actions';
+import { updateHealth } from '@/demo/actions';
 import { useAccount, useEnsureConsent, useToday, useUserData } from '@/demo/hooks';
 import { DIET_LABELS } from '@/demo/labels';
+import { mealTypeOf } from './AddFoodSheet';
 import { useTarget } from './useTarget';
 
 export function MenuView() {
@@ -39,14 +42,27 @@ export function MenuView() {
     setVariant(0);
   };
 
-  const addToToday = () => {
+  // Menüdeki her yemek bugünün öğün kaydına eklenir (sunucuda; değerler tahminidir)
+  const addToToday = async () => {
     if (!account || !ensureConsent()) return;
-    addMeals(
-      account.id,
-      today,
-      menu.slots.flatMap((s) => s.items.map((i) => ({ slot: s.slot, foodId: i.food.id, servings: i.servings }))),
-    );
-    showToast('Menü bugünkü kayıtlarına eklendi');
+    try {
+      for (const s of menu.slots) {
+        for (const i of s.items) {
+          await api.addMeal({
+            date: today,
+            mealType: mealTypeOf(s.slot),
+            foodKey: i.food.id,
+            name: i.food.name,
+            portion: i.food.portion,
+            servings: Math.max(0.5, Math.round(i.servings * 2) / 2),
+            perServing: { kcal: i.food.kcal, proteinG: i.food.proteinG, carbsG: i.food.carbsG, fatG: i.food.fatG },
+          });
+        }
+      }
+      showToast('Menü bugünkü kayıtlarına eklendi');
+    } catch (e) {
+      showToast(errorText(e), 'warning');
+    }
   };
 
   return (

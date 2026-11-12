@@ -8,6 +8,7 @@
 import { Inject, Injectable, Logger } from '@nestjs/common';
 import { createHash } from 'node:crypto';
 import { badRequest, conflict, forbidden, notFound } from '../../../common/app-error.js';
+import { localDay } from '../../../common/local-day.js';
 import { PrismaService } from '../../../common/prisma/prisma.service.js';
 import type { FindingStatus, SharedDataType } from '../../../generated/prisma/enums.js';
 import { AccessService } from '../../relationships/access.service.js';
@@ -76,9 +77,23 @@ export class FindingsService {
       }),
       adherence: await this.adherence(professionalId, clientId, ctx),
       workouts: await this.workouts(professionalId, clientId, ctx),
+      meals: await this.meals(professionalId, clientId, ctx),
       professionalType:
         (await this.prisma.professionalProfile.findUnique({ where: { userId: professionalId }, select: { type: true } }))?.type ?? null,
     };
+  }
+
+  // Son öğün kaydı ya da plan seçimi günü (sadece öğün kayıtları paylaşılıyorsa)
+  private async meals(professionalId: string, clientId: string, ctx: Context) {
+    if (!ctx.allowed.has('MEALS')) return null;
+    const [relationship, lastMeal, lastChoice] = await Promise.all([
+      this.prisma.clientRelationship.findFirst({ where: { professionalId, clientId, status: 'ACTIVE' }, select: { acceptedAt: true, offeredAt: true } }),
+      this.prisma.mealEntry.findFirst({ where: { userId: clientId }, orderBy: { date: 'desc' }, select: { date: true } }),
+      this.prisma.planChoice.findFirst({ where: { plan: { clientId } }, orderBy: { date: 'desc' }, select: { date: true } }),
+    ]);
+    if (!relationship) return null;
+    const days = [lastMeal?.date, lastChoice?.date].filter((d): d is string => typeof d === 'string').sort();
+    return { lastDay: days.at(-1) ?? null, today: localDay(), relationshipSince: relationship.acceptedAt ?? relationship.offeredAt };
   }
 
   // Antrenman kayıtları (son 60 gün) ve bu antrenörün yayındaki programının onay tarihi

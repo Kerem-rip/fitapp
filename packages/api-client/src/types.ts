@@ -838,3 +838,34 @@ export interface GymShiftRow {
   // 0 = Pazartesi … 6 = Pazar; null = izinli
   days: ({ start: string; end: string } | null)[];
 }
+// Öğün ve su günlüğü (değerler tahminidir; gün Türkiye saatine göre)
+export type MealType = 'BREAKFAST' | 'LUNCH' | 'SNACK' | 'DINNER';
+
+export interface MealEntryItem {
+  id: string;
+  date: string;
+  mealType: MealType;
+  foodKey: string | null;
+  name: string;
+  portion: string;
+  servings: number;
+  // Porsiyon sayısıyla çarpılmış toplamlar
+  kcal: number;
+  proteinG: number;
+  carbsG: number;
+  fatG: number;
+  createdAt: string;
+}
+
+export interface FoodDay {
+  date: string;
+  meals: MealEntryItem[];
+  totals: { kcal: number; proteinG: number; carbsG: number; fatG: number };
+  // Uzman görünümünde su paylaşılmıyorsa null
+  waterMl: number | null;
+}
+
+export interface ClientFoodView {
+  shared: { meals: boolean; water: boolean };
+  days: FoodDay[];
+}
