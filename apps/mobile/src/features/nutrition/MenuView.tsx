@@ -16,27 +16,27 @@ import { View } from 'react-native';
 import { ChipRow } from '@/components/ChipRow';
 import { api } from '@/api/client';
 import { errorText } from '@/auth/actions';
-import { updateHealth } from '@/demo/actions';
-import { useAccount, useEnsureConsent, useToday, useUserData } from '@/demo/hooks';
+import { useAccount, useEnsureConsent, useToday } from '@/demo/hooks';
 import { DIET_LABELS } from '@/demo/labels';
-import { useMyAllergens } from '@/features/health/useMyAllergens';
+import { useMyNutritionPrefs } from '@/features/health/useMyNutritionPrefs';
 import { mealTypeOf } from './AddFoodSheet';
 import { useTarget } from './useTarget';
 
 export function MenuView() {
   const account = useAccount();
-  const data = useUserData();
   const today = useToday();
   const { target: ownTarget, missing } = useTarget();
   // Hedef bilinmiyorsa örnek menü genel bir 2000 kcal üzerinden gösterilir (ekranda yazar)
   const target = missing ? 2000 : ownTarget;
   const ensureConsent = useEnsureConsent();
   const [variant, setVariant] = useState(0);
-  const { allergens, save: saveAllergens } = useMyAllergens();
+  const { allergens, diet, saveAllergens, saveDiet } = useMyNutritionPrefs();
+  // "Diğer" tercihte menü özel bir kısıt uygulamaz
+  const menuDiet: DietPreference = diet === 'other' ? 'none' : diet;
 
   const menu = useMemo(
-    () => suggestMenu(SEED_FOODS, { targetKcal: target, allergens, diet: data.diet, variant }),
-    [target, allergens, data.diet, variant],
+    () => suggestMenu(SEED_FOODS, { targetKcal: target, allergens, diet: menuDiet, variant }),
+    [target, allergens, menuDiet, variant],
   );
 
   // Alerji seçimi sağlık öyküsündeki yanıtı günceller (tek kaynak; diyetisyen de aynısını görür)
@@ -90,12 +90,22 @@ export function MenuView() {
       </Text>
       <ChipRow
         options={(Object.keys(DIET_LABELS) as DietPreference[]).map((key) => ({ key, label: DIET_LABELS[key] }))}
-        selected={[data.diet]}
-        onToggle={(diet) => {
-          if (account) updateHealth(account.id, { diet });
-          setVariant(0);
+        selected={diet === 'other' ? [] : [diet]}
+        onToggle={async (next) => {
+          if (!account || !ensureConsent()) return;
+          try {
+            await saveDiet(next);
+            setVariant(0);
+          } catch (e) {
+            showToast(errorText(e), 'warning');
+          }
         }}
       />
+      {diet === 'other' ? (
+        <Text variant="caption" tone="muted" style={{ marginBottom: 8 }}>
+          Sağlık öykünde tercihin &quot;Diğer&quot;; örnek menü buna göre ayrıca kısıt uygulamaz.
+        </Text>
+      ) : null}
 
       <Card variant="soft">
         <Text variant="bodyStrong">Örnek gün · yaklaşık {menu.totalKcal} kcal</Text>

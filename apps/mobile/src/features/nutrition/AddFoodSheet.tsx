@@ -5,7 +5,7 @@ import { BottomSheet, Button, ListRow, Notice, SearchBar, Stepper, Tag, Text } f
 import { useMemo, useState } from 'react';
 import { View } from 'react-native';
 import { api } from '@/api/client';
-import { useMyAllergens } from '@/features/health/useMyAllergens';
+import { useMyNutritionPrefs } from '@/features/health/useMyNutritionPrefs';
 
 export const mealTypeOf = (slot: MealSlot) => slot.toUpperCase() as MealType;
 
@@ -23,7 +23,7 @@ export function AddFoodSheet({
   onClose: () => void;
   run: (fn: () => Promise<unknown>, message?: string) => Promise<boolean>;
 }) {
-  const { allergens } = useMyAllergens();
+  const { allergens } = useMyNutritionPrefs();
   const [query, setQuery] = useState('');
   const [selected, setSelected] = useState<FoodItem | null>(null);
   const [servings, setServings] = useState(1);
