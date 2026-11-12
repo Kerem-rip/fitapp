@@ -1,5 +1,6 @@
 // Keşfet: doğrulanmış diyetisyen, eğitmen ve spor salonları. Ücretsiz kullanıcılar da uzmanlara ulaşabilir.
 import { Avatar, Button, Card, Notice, Screen, ScreenHeader, SearchBar, Stars, Tag, Text } from '@fitapp/ui-mobile';
+import { DemoBlock } from '@/components/DemoBlock';
 import { useRouter } from 'expo-router';
 import { useMemo, useState } from 'react';
 import { Pressable, View } from 'react-native';
@@ -47,7 +48,9 @@ export function DiscoverScreen() {
 
   return (
     <Screen tabBarInset>
-      <ScreenHeader title="Keşfet" subtitle="Doğrulanmış uzmanlar ve salonlar" />
+      <ScreenHeader title="Keşfet" subtitle="Uzmanlar ve salonlar" />
+      <Notice kind="info" text="Uzman ve salon profilleri yakında burada listelenecek. Şimdilik bir diyetisyen ya da eğitmen seni kullanıcı adınla danışan olarak ekleyebilir; teklifi Profil › Paylaşım ve erişim bölümünden yanıtlarsın." />
+      <DemoBlock>
 
       {teen ? (
         <Notice
@@ -106,6 +109,7 @@ export function DiscoverScreen() {
           </Text>
         </Pressable>
       ) : null}
+      </DemoBlock>
     </Screen>
   );
 }

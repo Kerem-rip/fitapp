@@ -1,36 +1,42 @@
-// Bugün: kişisel ana sayfa. Hedefe göre şekillenir; kalori halkası, su, kilo, program ve uzman ipuçları.
-import {
-  Avatar,
-  BottomSheet,
-  Button,
-  Card,
-  IconButton,
-  ListRow,
-  Notice,
-  ProgressBar,
-  ProgressRing,
-  Screen,
-  SectionHeader,
-  showToast,
-  Tag,
-  Text,
-  TextField,
-  useTheme,
-} from '@fitapp/ui-mobile';
-import { useRouter } from 'expo-router';
-import { useMemo, useState } from 'react';
+// Bugün: kişisel ana sayfa. Hedefe göre şekillenir; kalori halkası, su, kilo, plan ve programlar.
+// Kilo ve beslenme planı sunucudaki gerçek kayıtlardan gelir. Örnek uzmanlar ve ipuçları sadece demo kutusunda görünür.
+import type { MeasurementItem, MyPlanListItem } from '@fitapp/api-client';
+import { Avatar, Button, Card, IconButton, ListRow, Notice, ProgressBar, ProgressRing, Screen, SectionHeader, Tag, Text, useTheme } from '@fitapp/ui-mobile';
+import { useFocusEffect, useRouter } from 'expo-router';
+import { useCallback, useMemo, useState } from 'react';
 import { Pressable, ScrollView, View } from 'react-native';
+import { api } from '@/api/client';
 import { AppHeader } from '@/components/AppHeader';
-import { addWater, addWeight, toggleLike, toggleSave } from '@/demo/actions';
+import { DemoBlock } from '@/components/DemoBlock';
+import { addWater, toggleLike, toggleSave } from '@/demo/actions';
 import { PLATFORM_PROGRAMS, TIP_POSTS } from '@/demo/content';
 import { formatLong } from '@/demo/dates';
-import { useAccount, useDemoState, useEnsureConsent, useShared, useToday, useUserData } from '@/demo/hooks';
+import { useAccount, useDemoState, useShared, useToday, useUserData } from '@/demo/hooks';
 import { GOAL_LABELS } from '@/demo/labels';
 import { proById, totalsOf } from '@/demo/selectors';
 import { SEED_PROS } from '@/demo/seed';
 import { useTarget } from '@/features/nutrition/useTarget';
 
 const WATER_GOAL_ML = 2000;
+
+// Sunucudaki son iki geçerli kilo ölçümü (en yeni önce)
+function useRealWeight() {
+  const [weights, setWeights] = useState<MeasurementItem[] | null>(null);
+  const [plans, setPlans] = useState<MyPlanListItem[]>([]);
+  useFocusEffect(
+    useCallback(() => {
+      api
+        .myMeasurements({ kind: 'WEIGHT' })
+        .then((list) => setWeights(list.filter((m) => !m.voided).sort((a, b) => b.takenAt.localeCompare(a.takenAt))))
+        .catch(() => setWeights([]));
+      api
+        .myPlans()
+        .then(setPlans)
+        .catch(() => setPlans([]));
+    }, []),
+  );
+  return { weights, plans };
+}
 
 export function UserHome() {
   const router = useRouter();
@@ -41,21 +47,19 @@ export function UserHome() {
   const state = useDemoState();
   const today = useToday();
   const { target, result } = useTarget();
-  const ensureConsent = useEnsureConsent();
-  const [weightOpen, setWeightOpen] = useState(false);
-  const [weightText, setWeightText] = useState('');
+  const { weights, plans } = useRealWeight();
 
   const teen = account?.roleKey === 'teen';
   const entries = data.meals[today];
   const totals = useMemo(() => totalsOf(entries ?? []), [entries]);
   const water = data.waterMl[today] ?? 0;
-  const previousWeight = data.weights.length > 1 ? data.weights[data.weights.length - 2]!.kg : data.weightKg;
-  const weightDelta = Math.round((data.weightKg - previousWeight) * 10) / 10;
+  const latest = weights?.[0];
+  const weightDelta = latest && weights?.[1] ? Math.round((latest.value - weights[1].value) * 10) / 10 : null;
+  const plan = plans[0];
 
   const followed = SEED_PROS.filter((p) => data.following.includes(p.id));
-  const plan = shared.plans.find((p) => shared.clients[p.clientId]?.accountId === account?.id);
 
-  // Kayıtlı programlar; yoksa cevaplarına göre öneri
+  // Kayıtlı programlar; yoksa cevaplarına göre öneri (uygulamanın kendi program içerikleri)
   const enrolledPrograms = shared.programs.filter((p) => data.enrollments[p.id]);
   const suggested = useMemo(() => {
     const goals = state.ui.onboarding?.goals ?? [];
@@ -63,44 +67,12 @@ export function UserHome() {
     return PLATFORM_PROGRAMS.filter((p) => ids.includes(p.id) || p.id === 'ev-baslangic').slice(0, 2);
   }, [state.ui.onboarding]);
 
-  const saveWeight = () => {
-    const kg = Number(weightText.replace(',', '.'));
-    if (!account || !ensureConsent()) return;
-    if (!(kg >= 30 && kg <= 300)) {
-      showToast('Kiloyu 30-300 kg arasında gir', 'warning');
-      return;
-    }
-    addWeight(account.id, kg);
-    setWeightOpen(false);
-    showToast('Kilon kaydedildi');
-  };
-
   if (!account) return null;
   const firstName = account.firstName;
 
   return (
     <Screen tabBarInset>
       <AppHeader title={`Merhaba, ${firstName}`} subtitle={`${formatLong(today)} · ${teen ? 'genç modu' : GOAL_LABELS[data.goal].toLowerCase()}`} />
-
-      {/* Hikâye halkaları: takip ettiğin uzmanlar */}
-      <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 14, paddingHorizontal: 16, paddingBottom: 14 }} style={{ marginHorizontal: -16 }}>
-        {followed.map((pro) => (
-          <Pressable key={pro.id} onPress={() => router.push(`/professional/${pro.id}`)} style={{ alignItems: 'center', width: 70 }}>
-            <Avatar name={pro.name} size={56} story />
-            <Text variant="micro" tone="secondary" numberOfLines={1} style={{ marginTop: 6 }}>
-              {pro.name.replace('Dyt. ', '').split(' ')[0]}
-            </Text>
-          </Pressable>
-        ))}
-        <Pressable onPress={() => router.push('/discover')} style={{ alignItems: 'center', width: 70 }}>
-          <View style={{ width: 66, height: 66, borderRadius: 33, borderWidth: 1.5, borderStyle: 'dashed', borderColor: c.border, alignItems: 'center', justifyContent: 'center' }}>
-            <IconButton icon="add" label="Uzman bul" size={40} />
-          </View>
-          <Text variant="micro" tone="secondary" style={{ marginTop: 6 }}>
-            Uzman bul
-          </Text>
-        </Pressable>
-      </ScrollView>
 
       {teen ? (
         <Card variant="accent">
@@ -155,26 +127,44 @@ export function UserHome() {
             <IconButton icon="remove" label="250 ml azalt" size={38} onPress={() => addWater(account.id, today, -250)} />
           </View>
         </Card>
-        <Card onPress={() => { setWeightText(String(data.weightKg)); setWeightOpen(true); }} style={{ flex: 1, marginBottom: 0 }}>
+        {/* Kilo: sağlık bilgilerimdeki son ölçüm; ölçüm eklemek ve geçmiş için oraya gider */}
+        <Card onPress={() => router.push('/my-health')} style={{ flex: 1, marginBottom: 0 }}>
           <Text variant="caption" tone="secondary">
             Kilo
           </Text>
-          <Text variant="title">{data.weightKg.toLocaleString('tr-TR')} kg</Text>
-          <Tag label={weightDelta === 0 ? 'Değişmedi' : `${weightDelta > 0 ? '+' : ''}${weightDelta.toLocaleString('tr-TR')} kg`} kind={weightDelta <= 0 ? 'success' : 'neutral'} icon={weightDelta <= 0 ? 'trending-down' : 'trending-up'} />
-          <Text variant="micro" tone="muted" style={{ marginTop: 8 }}>
-            Güncellemek için dokun
-          </Text>
+          {latest ? (
+            <>
+              <Text variant="title">{latest.value.toLocaleString('tr-TR')} kg</Text>
+              {weightDelta !== null ? (
+                <Tag
+                  label={weightDelta === 0 ? 'Değişmedi' : `${weightDelta > 0 ? '+' : ''}${weightDelta.toLocaleString('tr-TR')} kg`}
+                  kind={weightDelta <= 0 ? 'success' : 'neutral'}
+                  icon={weightDelta <= 0 ? 'trending-down' : 'trending-up'}
+                />
+              ) : null}
+              <Text variant="micro" tone="muted" style={{ marginTop: 8 }}>
+                {new Date(latest.takenAt).toLocaleDateString('tr-TR', { day: 'numeric', month: 'long' })} · güncellemek için dokun
+              </Text>
+            </>
+          ) : (
+            <>
+              <Text variant="title">—</Text>
+              <Text variant="micro" tone="muted" style={{ marginTop: 8 }}>
+                {weights === null ? 'Yükleniyor' : 'Kilonu eklemek için dokun'}
+              </Text>
+            </>
+          )}
         </Card>
       </View>
 
       {plan ? (
-        <Card onPress={() => router.push('/nutrition')} variant="soft">
+        <Card onPress={() => router.push(`/my-plan/${plan.planId}`)} variant="soft">
           <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
-            <Avatar name="Dyt. Zeynep Arslan" size={42} story />
+            <Avatar name={plan.professional.name} size={42} />
             <View style={{ flex: 1 }}>
-              <Text variant="bodyStrong">Diyetisyeninden yeni plan</Text>
+              <Text variant="bodyStrong">Beslenme planın · sürüm {plan.number}</Text>
               <Text variant="caption" tone="secondary">
-                {plan.targetKcal} kcal hedefli plan hazır. Beslenme sekmesinden bak.
+                {plan.professional.name} · {plan.mealCount} öğün. Açmak için dokun.
               </Text>
             </View>
           </View>
@@ -199,46 +189,63 @@ export function UserHome() {
         })}
       </Card>
 
-      <SectionHeader title="Uzmanlardan ipuçları" />
-      {TIP_POSTS.map((post) => {
-        const pro = proById(post.proId);
-        if (!pro) return null;
-        const liked = data.likes.includes(post.id);
-        const saved = data.saves.includes(post.id);
-        return (
-          <Card key={post.id}>
-            <Pressable onPress={() => router.push(`/professional/${pro.id}`)} style={{ flexDirection: 'row', alignItems: 'center', gap: 10, marginBottom: 10 }}>
-              <Avatar name={pro.name} size={40} />
-              <View style={{ flex: 1 }}>
-                <Text variant="bodyStrong">{pro.name}</Text>
-                <Text variant="caption" tone="muted">
-                  {post.tag} · {post.minutesAgo < 60 ? `${post.minutesAgo} dk` : `${Math.round(post.minutesAgo / 60)} sa`}
-                </Text>
-              </View>
-              <Tag label="Doğrulanmış" kind="success" icon="checkmark-circle" />
-            </Pressable>
-            <Text variant="body">{post.text}</Text>
-            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 16, marginTop: 12 }}>
-              <Pressable onPress={() => toggleLike(account.id, post.id)} style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }} hitSlop={8}>
-                <IconButton icon={liked ? 'heart' : 'heart-outline'} label="Beğen" size={36} onPress={() => toggleLike(account.id, post.id)} />
-                <Text variant="caption" tone={liked ? 'danger' : 'secondary'} style={{ fontWeight: '700' }}>
-                  {post.likes + (liked ? 1 : 0)}
-                </Text>
-              </Pressable>
-              <View style={{ flex: 1 }} />
-              <IconButton icon={saved ? 'bookmark' : 'bookmark-outline'} label="Kaydet" size={36} onPress={() => toggleSave(account.id, post.id)} />
-            </View>
-          </Card>
-        );
-      })}
-
       {!teen ? <Notice kind="info" text="Değerler tahminidir. Kesin plan için bir diyetisyenle çalış." /> : null}
-      {!teen ? <ListRow icon="search-outline" title="Diyetisyen veya eğitmen bul" subtitle="Doğrulanmış uzmanlara uygulama içinden ulaş" onPress={() => router.push('/discover')} last /> : null}
 
-      <BottomSheet visible={weightOpen} onClose={() => setWeightOpen(false)} title="Kilonu güncelle">
-        <TextField label="Kilo (kg)" value={weightText} onChangeText={setWeightText} keyboardType="decimal-pad" />
-        <Button label="Kaydet" size="lg" block onPress={saveWeight} style={{ marginBottom: 8 }} />
-      </BottomSheet>
+      <DemoBlock>
+        {/* Takip edilen örnek uzmanlar */}
+        <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 14, paddingHorizontal: 16, paddingBottom: 14 }} style={{ marginHorizontal: -16 }}>
+          {followed.map((pro) => (
+            <Pressable key={pro.id} onPress={() => router.push(`/professional/${pro.id}`)} style={{ alignItems: 'center', width: 70 }}>
+              <Avatar name={pro.name} size={56} story />
+              <Text variant="micro" tone="secondary" numberOfLines={1} style={{ marginTop: 6 }}>
+                {pro.name.replace('Dyt. ', '').split(' ')[0]}
+              </Text>
+            </Pressable>
+          ))}
+          <Pressable onPress={() => router.push('/discover')} style={{ alignItems: 'center', width: 70 }}>
+            <View style={{ width: 66, height: 66, borderRadius: 33, borderWidth: 1.5, borderStyle: 'dashed', borderColor: c.border, alignItems: 'center', justifyContent: 'center' }}>
+              <IconButton icon="add" label="Uzman bul" size={40} />
+            </View>
+            <Text variant="micro" tone="secondary" style={{ marginTop: 6 }}>
+              Uzman bul
+            </Text>
+          </Pressable>
+        </ScrollView>
+
+        <SectionHeader title="Uzmanlardan ipuçları" />
+        {TIP_POSTS.map((post) => {
+          const pro = proById(post.proId);
+          if (!pro) return null;
+          const liked = data.likes.includes(post.id);
+          const saved = data.saves.includes(post.id);
+          return (
+            <Card key={post.id}>
+              <Pressable onPress={() => router.push(`/professional/${pro.id}`)} style={{ flexDirection: 'row', alignItems: 'center', gap: 10, marginBottom: 10 }}>
+                <Avatar name={pro.name} size={40} />
+                <View style={{ flex: 1 }}>
+                  <Text variant="bodyStrong">{pro.name}</Text>
+                  <Text variant="caption" tone="muted">
+                    {post.tag} · {post.minutesAgo < 60 ? `${post.minutesAgo} dk` : `${Math.round(post.minutesAgo / 60)} sa`}
+                  </Text>
+                </View>
+                <Tag label="Örnek" kind="neutral" />
+              </Pressable>
+              <Text variant="body">{post.text}</Text>
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 16, marginTop: 12 }}>
+                <Pressable onPress={() => toggleLike(account.id, post.id)} style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }} hitSlop={8}>
+                  <IconButton icon={liked ? 'heart' : 'heart-outline'} label="Beğen" size={36} onPress={() => toggleLike(account.id, post.id)} />
+                  <Text variant="caption" tone={liked ? 'danger' : 'secondary'} style={{ fontWeight: '700' }}>
+                    {post.likes + (liked ? 1 : 0)}
+                  </Text>
+                </Pressable>
+                <View style={{ flex: 1 }} />
+                <IconButton icon={saved ? 'bookmark' : 'bookmark-outline'} label="Kaydet" size={36} onPress={() => toggleSave(account.id, post.id)} />
+              </View>
+            </Card>
+          );
+        })}
+        {!teen ? <ListRow icon="search-outline" title="Diyetisyen veya eğitmen bul" subtitle="Örnek uzman listesi" onPress={() => router.push('/discover')} last /> : null}
+      </DemoBlock>
     </Screen>
   );
 }

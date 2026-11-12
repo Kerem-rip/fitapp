@@ -1,6 +1,7 @@
 // Programlar (bağımsız eğitmen): kendi programlarını hazırlar, danışanlarına atar.
 // Herkese açık yayın için admin onayı gerekir.
 import { BottomSheet, Button, Card, ListRow, Notice, Screen, ScreenHeader, SectionHeader, showToast, Stepper, Tag, Text, TextField } from '@fitapp/ui-mobile';
+import { DemoBlock } from '@/components/DemoBlock';
 import { useRouter } from 'expo-router';
 import { useState } from 'react';
 import { View } from 'react-native';
@@ -49,6 +50,8 @@ export function ProgramsScreen() {
   return (
     <Screen tabBarInset>
       <ScreenHeader title="Programlar" subtitle="Hazırla, danışanlarına ata" />
+      <Notice kind="info" text="Danışanına özel antrenman programını, danışanın dosyasındaki Program sekmesinden hazırlayıp onaylarsın. Hazır program şablonları sonraki sürümde gelecek." />
+      <DemoBlock>
 
       <Button label="Yeni program" icon="add" size="lg" block onPress={() => setOpen(true)} style={{ marginBottom: 12 }} />
 
@@ -115,6 +118,7 @@ export function ProgramsScreen() {
         />
         <Button label="Taslak olarak kaydet" size="lg" block onPress={save} style={{ marginBottom: 8 }} />
       </BottomSheet>
+      </DemoBlock>
     </Screen>
   );
 }

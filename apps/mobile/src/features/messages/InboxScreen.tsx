@@ -1,6 +1,7 @@
 // Mesaj kutusu. Uzmanlarda "Danışanlar" ve "Yeni mesajlar" ayrı durur, danışan mesajları kaybolmaz.
 // Herkes uzmanlara doğrudan yazabilir (istek gerekmez).
-import { Card, EmptyState, ListRow, Screen, ScreenHeader, Segmented, Tag, Text } from '@fitapp/ui-mobile';
+import { Card, EmptyState, ListRow, Notice, Screen, ScreenHeader, Segmented, Tag, Text } from '@fitapp/ui-mobile';
+import { DemoBlock } from '@/components/DemoBlock';
 import { useRouter } from 'expo-router';
 import { useMemo, useState } from 'react';
 import { View } from 'react-native';
@@ -31,6 +32,8 @@ export function InboxScreen({ tabBarInset = false, showBack = false }: { tabBarI
   return (
     <Screen tabBarInset={tabBarInset}>
       <ScreenHeader title="Mesajlar" onBack={showBack ? () => router.back() : undefined} />
+      <Notice kind="info" text="Mesajlaşma yakında gelecek. Şimdilik uzmanınla randevu ve plan üzerinden iletişimde kalabilirsin." />
+      <DemoBlock>
       {isPro ? (
         <Segmented<Seg>
           options={[
@@ -77,6 +80,7 @@ export function InboxScreen({ tabBarInset = false, showBack = false }: { tabBarI
           text={isPro ? 'Herkes sana doğrudan yazabilir.' : 'Bir uzmanın profilinden "Mesaj at" ile sohbet başlatabilirsin.'}
         />
       )}
+      </DemoBlock>
     </Screen>
   );
 }
