@@ -6,8 +6,9 @@ import { bearer, cleanupTestData, createTestApp, registerApprovedProfessional, r
 describe('Spor salonu: ekip, üyelik ve ödeme kayıtları (e2e)', () => {
   let app: INestApplication<App>;
   const http = () => request(app.getHttpServer());
-  const today = () => new Date().toISOString().slice(0, 10);
-  const dayOffset = (n: number) => new Date(Date.now() + n * 86_400_000).toISOString().slice(0, 10);
+  const today = () => dayOffset(0);
+  // Salon günleri Türkiye saatine göredir (UTC+3)
+  const dayOffset = (n: number) => new Date(Date.now() + 3 * 3_600_000 + n * 86_400_000).toISOString().slice(0, 10);
 
   beforeAll(async () => {
     app = await createTestApp();

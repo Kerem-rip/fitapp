@@ -6,6 +6,7 @@ import { AccountSection } from '@/components/AccountSection';
 import { formatLong } from '@/demo/dates';
 import { useAccount } from '@/demo/hooks';
 import { fullName, proByAccount } from '@/demo/selectors';
+import { RealGymInfo } from './RealGymInfo';
 import { RealPlans } from './RealPlans';
 import { useGym } from './useGym';
 import { useGymInfo } from './useGymInfo';
@@ -13,11 +14,24 @@ import { useGymInfo } from './useGymInfo';
 export function GymProfileScreen() {
   const router = useRouter();
   const account = useAccount();
-  const { can } = useGymInfo();
+  const { info, can, reload } = useGymInfo();
   const { gym, staff, lessons, today } = useGym();
   const pro = account ? proByAccount(account.id) : undefined;
 
-  if (!account || !gym) return null;
+  if (!account) return null;
+  // Gerçek salonu olan hesap: salon bilgileri, paketler ve hesap işlemleri (örnek vitrin sadece demo salonda görünür)
+  if (info && !gym) {
+    return (
+      <Screen tabBarInset>
+        <ScreenHeader title="Salon" subtitle={info.gym.name} />
+        <RealGymInfo info={info} canEdit={can('gym.edit')} canReport={can('reports.view')} onSaved={reload} />
+        {info ? <RealGymInfo info={info} canEdit={can('gym.edit')} canReport={can('reports.view')} onSaved={reload} /> : null}
+      {can('plans.manage') ? <RealPlans /> : null}
+        <AccountSection />
+      </Screen>
+    );
+  }
+  if (!gym) return null;
   const groupLessons = lessons.filter((l) => l.kind === 'group' && l.date >= today).sort((a, b) => (a.date + a.time).localeCompare(b.date + b.time)).slice(0, 5);
   const trainers = staff.filter((s) => s.role === 'trainer');
 
@@ -27,9 +41,9 @@ export function GymProfileScreen() {
 
       <Card>
         <View style={{ flexDirection: 'row', gap: 14, alignItems: 'center' }}>
-          <Avatar name={gym.name} size={72} story />
+          <Avatar name={info?.gym.name ?? gym.name} size={72} story />
           <View style={{ flex: 1, marginLeft: 8, gap: 6 }}>
-            <Text variant="title">{gym.name}</Text>
+            <Text variant="title">{info?.gym.name ?? gym.name}</Text>
             <Text variant="caption" tone="secondary">
               Spor salonu · {gym.district}
             </Text>
@@ -48,6 +62,7 @@ export function GymProfileScreen() {
         <Button label="Müşteriler nasıl görür" variant="ghost" block onPress={() => router.push('/professional/pro-fitmerkez')} style={{ marginTop: 14 }} />
       </Card>
 
+      {info ? <RealGymInfo info={info} canEdit={can('gym.edit')} canReport={can('reports.view')} onSaved={reload} /> : null}
       {can('plans.manage') ? <RealPlans /> : null}
 
       <SectionHeader title="Çalışma saatleri" />

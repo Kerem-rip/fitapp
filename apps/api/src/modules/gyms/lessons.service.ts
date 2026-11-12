@@ -6,7 +6,7 @@ import { Inject, Injectable } from '@nestjs/common';
 import { badRequest, conflict, forbidden, notFound } from '../../common/app-error.js';
 import { PrismaService } from '../../common/prisma/prisma.service.js';
 import type { GymBookingStatus, GymLessonKind } from '../../generated/prisma/enums.js';
-import { addDays, can, overlaps, pickCoverage, timeToMin, toDay, type Coverage } from './gym-rules.js';
+import { addDays, can, localDay, overlaps, pickCoverage, timeToMin, toDay, type Coverage } from './gym-rules.js';
 import { GymsService, type GymContext } from './gyms.service.js';
 
 const DAY = /^\d{4}-\d{2}-\d{2}$/;
@@ -161,7 +161,7 @@ export class LessonsService {
       throw forbidden('GYM_FORBIDDEN', 'Sadece kendi özel dersini oluşturabilirsin.');
     }
     if (!isValidDay(input.date)) throw badRequest('INVALID_DATE', 'Ders tarihi geçerli değil.');
-    if (input.date < addDays(toDay(new Date()), -1)) throw badRequest('INVALID_DATE', 'Geçmiş tarihe ders eklenemez.');
+    if (input.date < addDays(localDay(), -1)) throw badRequest('INVALID_DATE', 'Geçmiş tarihe ders eklenemez.');
     if (timeToMin(input.startTime) === null) throw badRequest('INVALID_TIME', 'Saati SS:DD biçiminde yaz.');
     if ((timeToMin(input.startTime) ?? 0) + input.durationMin > 24 * 60) throw badRequest('INVALID_TIME', 'Ders gece yarısını geçemez.');
 
@@ -282,7 +282,7 @@ export class LessonsService {
     if (b.status === 'CANCELLED') throw conflict('BOOKING_CANCELLED', 'Bu kayıt kaldırılmış.');
     if (b.lesson.status === 'CANCELLED') throw conflict('LESSON_CANCELLED', 'İptal edilmiş derste katılım işaretlenemez.');
     const day = toDay(b.lesson.date);
-    if (status !== 'BOOKED' && day > toDay(new Date())) throw badRequest('LESSON_IN_FUTURE', 'Henüz yapılmamış derste katılım işaretlenemez.');
+    if (status !== 'BOOKED' && day > localDay()) throw badRequest('LESSON_IN_FUTURE', 'Henüz yapılmamış derste katılım işaretlenemez.');
     if (b.status === status) return { booking: b, coverage: null };
 
     let coverage: Coverage | null = null;
@@ -336,7 +336,7 @@ export class LessonsService {
       take: 60,
     });
     const names = await this.names(ctx.gymId);
-    const today = toDay(new Date());
+    const today = localDay();
     const items = rows.map((r) => ({ bookingId: r.id, status: r.status, deducted: r.deducted, lesson: this.present(r.lesson, names) }));
     return {
       upcoming: items.filter((i) => i.lesson.date >= today && i.status === 'BOOKED').reverse(),

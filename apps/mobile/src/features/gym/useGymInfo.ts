@@ -9,16 +9,16 @@ export function useGymInfo() {
   const [info, setInfo] = useState<GymInfo | null>(null);
   const [loaded, setLoaded] = useState(false);
 
-  useFocusEffect(
-    useCallback(() => {
-      api
-        .gymMe()
-        .then(setInfo)
-        .catch(() => setInfo(null))
-        .finally(() => setLoaded(true));
-    }, []),
-  );
+  const reload = useCallback(() => {
+    api
+      .gymMe()
+      .then(setInfo)
+      .catch(() => setInfo(null))
+      .finally(() => setLoaded(true));
+  }, []);
+
+  useFocusEffect(reload);
 
   const can = useCallback((permission: string) => info?.permissions.includes(permission) ?? false, [info]);
-  return { info, loaded, can };
+  return { info, loaded, can, reload };
 }

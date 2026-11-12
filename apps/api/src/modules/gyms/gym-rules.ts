@@ -36,6 +36,13 @@ const DAY_MS = 86_400_000;
 export const toDay = (d: Date) => d.toISOString().slice(0, 10);
 export const parseDay = (s: string) => new Date(`${s}T00:00:00Z`);
 
+// Salonun günü Türkiye saatine göredir (UTC+3; Türkiye 2016'dan beri yaz saati uygulamıyor).
+// Sunucu saati UTC olduğu için gece 00:00–03:00 arası aksi halde bir önceki gün sayılırdı.
+const TR_OFFSET_MS = 3 * 60 * 60 * 1000;
+export const localDay = (at: Date = new Date()) => toDay(new Date(at.getTime() + TR_OFFSET_MS));
+// Türkiye saatiyle o günün başladığı an
+export const localDayStart = (day: string) => new Date(parseDay(day).getTime() - TR_OFFSET_MS);
+
 // "30 günlük" üyelik başladığı gün dahil 30 gün sürer: 1 Kasım → 30 Kasım
 export function membershipEnd(startDay: string, durationDays: number): string {
   return toDay(new Date(parseDay(startDay).getTime() + (durationDays - 1) * DAY_MS));

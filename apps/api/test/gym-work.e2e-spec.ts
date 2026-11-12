@@ -8,7 +8,8 @@ describe('Spor salonu: dersler, katılım, görevler ve vardiyalar (e2e)', () =>
   let app: INestApplication<App>;
   let prisma: PrismaService;
   const http = () => request(app.getHttpServer());
-  const dayOffset = (n: number) => new Date(Date.now() + n * 86_400_000).toISOString().slice(0, 10);
+  // Salon günleri Türkiye saatine göredir (UTC+3)
+  const dayOffset = (n: number) => new Date(Date.now() + 3 * 3_600_000 + n * 86_400_000).toISOString().slice(0, 10);
   const today = () => dayOffset(0);
 
   beforeAll(async () => {

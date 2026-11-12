@@ -4,7 +4,7 @@ import { Inject, Injectable } from '@nestjs/common';
 import { badRequest, conflict, notFound } from '../../common/app-error.js';
 import { PrismaService } from '../../common/prisma/prisma.service.js';
 import type { GymMemberStatus, PaymentMethod } from '../../generated/prisma/enums.js';
-import { balanceOf, can, daysBetween, membershipDue, membershipEnd, membershipState, summarizePayments, toDay, type PaymentRow } from './gym-rules.js';
+import { addDays, balanceOf, can, daysBetween, localDay, localDayStart, membershipDue, membershipEnd, membershipState, summarizePayments, toDay, type PaymentRow } from './gym-rules.js';
 import { GymsService, type GymContext } from './gyms.service.js';
 
 const EXPIRING_DAYS = 7;
@@ -61,7 +61,7 @@ export class MembersService {
   ) {}
 
   private today() {
-    return toDay(new Date());
+    return localDay();
   }
 
   private async member(ctx: GymContext, id: string) {
@@ -216,8 +216,8 @@ export class MembersService {
   async todayPanel(userId: string) {
     const ctx = await this.gyms.context(userId);
     const today = this.today();
-    const soon = toDay(new Date(Date.now() + EXPIRING_DAYS * 86_400_000));
-    const weekAgo = toDay(new Date(Date.now() - EXPIRING_DAYS * 86_400_000));
+    const soon = addDays(today, EXPIRING_DAYS);
+    const weekAgo = addDays(today, -EXPIRING_DAYS);
     const money = can(ctx.role, 'payments.view');
 
     const [activeMembers, staffCount, memberships] = await Promise.all([
@@ -250,7 +250,7 @@ export class MembersService {
     // Para bilgisi sadece sahibe ve resepsiyona
     let finance: { todayCollections: ReturnType<typeof summarizePayments>; debts: { memberId: string; fullName: string; balanceKurus: number }[] } | null = null;
     if (money) {
-      const start = new Date(`${today}T00:00:00Z`);
+      const start = localDayStart(today);
       const todays = await this.prisma.gymPayment.findMany({ where: { gymId: ctx.gymId, paidAt: { gte: start } }, select: { membershipId: true, amountKurus: true, method: true, voidedAt: true } });
       const members = await this.prisma.gymMember.findMany({
         where: { gymId: ctx.gymId, status: 'ACTIVE' },
@@ -281,12 +281,12 @@ export class MembersService {
     const ctx = await this.gyms.context(userId, 'reports.view');
     if (!isValidDay(from) || !isValidDay(to) || from > to) throw badRequest('INVALID_RANGE', 'Tarih aralığı geçerli değil.');
     const rows = await this.prisma.gymPayment.findMany({
-      where: { gymId: ctx.gymId, paidAt: { gte: new Date(`${from}T00:00:00Z`), lt: new Date(new Date(`${to}T00:00:00Z`).getTime() + 86_400_000) } },
+      where: { gymId: ctx.gymId, paidAt: { gte: localDayStart(from), lt: localDayStart(addDays(to, 1)) } },
       select: { paidAt: true, membershipId: true, amountKurus: true, method: true, voidedAt: true },
     });
     const byDay = new Map<string, PaymentRow[]>();
     for (const r of rows) {
-      const day = toDay(r.paidAt);
+      const day = localDay(r.paidAt);
       byDay.set(day, [...(byDay.get(day) ?? []), { ...r, voided: r.voidedAt !== null }]);
     }
     return {

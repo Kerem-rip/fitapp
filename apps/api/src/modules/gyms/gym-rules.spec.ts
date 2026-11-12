@@ -1,4 +1,4 @@
-import { addDays, balanceOf, can, membershipDue, membershipEnd, membershipState, overlaps, permissionsOf, pickCoverage, summarizePayments, timeToMin, weekdayOf, type CoverMembership, type PaymentRow } from './gym-rules.js';
+import { addDays, balanceOf, localDay, localDayStart, can, membershipDue, membershipEnd, membershipState, overlaps, permissionsOf, pickCoverage, summarizePayments, timeToMin, weekdayOf, type CoverMembership, type PaymentRow } from './gym-rules.js';
 
 describe('salon yetkileri', () => {
   it('sahip her şeyi yapar; resepsiyon üye ve ödeme kaydı yapar ama iptal ve rapor yapamaz', () => {
@@ -86,5 +86,12 @@ describe('dersler', () => {
     expect(pickCoverage('PRIVATE', '2026-11-10', [pack('p', '2026-12-31', 0)])).toEqual({ kind: 'NONE', reason: 'NO_SESSIONS_LEFT' });
     expect(pickCoverage('GROUP', '2026-12-05', [monthly])).toEqual({ kind: 'NONE', reason: 'NO_ACTIVE_MEMBERSHIP' });
     expect(pickCoverage('GROUP', '2026-11-10', [{ ...monthly, status: 'CANCELLED' }])).toEqual({ kind: 'NONE', reason: 'NO_ACTIVE_MEMBERSHIP' });
+  });
+});
+describe('salonun günü (Türkiye saati)', () => {
+  it('UTC gece 21:00 sonrası Türkiye\'de ertesi gündür; gün başlangıcı 21:00 UTC\'dir', () => {
+    expect(localDay(new Date('2026-11-12T20:59:00Z'))).toBe('2026-11-12');
+    expect(localDay(new Date('2026-11-12T21:30:00Z'))).toBe('2026-11-13');
+    expect(localDayStart('2026-11-13').toISOString()).toBe('2026-11-12T21:00:00.000Z');
   });
 });
