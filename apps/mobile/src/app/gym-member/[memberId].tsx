@@ -1,6 +1,6 @@
 // Salon üyesi ayrıntısı: üyelikler, ödeme kayıtları ve kalan tutar.
 // Ödemeler sadece kayıttır (nakit/kart/havale masada alınır). Kayıt silinmez; yanlışsa sahip gerekçeyle iptal eder.
-import type { GymMemberDetail, GymPaymentItem, MembershipItem, MembershipPlanItem, PaymentMethod } from '@fitapp/api-client';
+import type { GymMemberDetail, GymMemberLessons, GymPaymentItem, MembershipItem, MembershipPlanItem, PaymentMethod } from '@fitapp/api-client';
 import { BottomSheet, Button, Card, ListRow, Notice, Screen, ScreenHeader, SectionHeader, showToast, Tag, Text, TextField } from '@fitapp/ui-mobile';
 import { useFocusEffect, useLocalSearchParams, useRouter } from 'expo-router';
 import { useCallback, useEffect, useState } from 'react';
@@ -12,6 +12,13 @@ import { parseDateInput } from '@/features/health/labels';
 import { formatDate, formatTL, membershipTag, METHOD_LABELS, parseDayInput, parseTL } from '@/features/gym/labels';
 import { useGymInfo } from '@/features/gym/useGymInfo';
 
+const LESSON_STATUS = {
+  BOOKED: { label: 'Yazılı', kind: 'info' },
+  ATTENDED: { label: 'Katıldı', kind: 'success' },
+  NO_SHOW: { label: 'Gelmedi', kind: 'warning' },
+  CANCELLED: { label: 'Kaldırıldı', kind: 'neutral' },
+} as const;
+
 type ReasonTarget = { kind: 'membership'; item: MembershipItem } | { kind: 'payment'; item: GymPaymentItem };
 
 export default function GymMemberScreen() {
@@ -19,6 +26,7 @@ export default function GymMemberScreen() {
   const { memberId } = useLocalSearchParams<{ memberId: string }>();
   const { can } = useGymInfo();
   const [detail, setDetail] = useState<GymMemberDetail | null>(null);
+  const [lessons, setLessons] = useState<GymMemberLessons | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [selling, setSelling] = useState(false);
   const [paying, setPaying] = useState(false);
@@ -26,7 +34,9 @@ export default function GymMemberScreen() {
 
   const load = useCallback(async () => {
     try {
-      setDetail(await api.gymMember(memberId));
+      const [d, l] = await Promise.all([api.gymMember(memberId), api.gymMemberLessons(memberId)]);
+      setDetail(d);
+      setLessons(l);
       setError(null);
     } catch (e) {
       setError(errorText(e));
@@ -135,6 +145,25 @@ export default function GymMemberScreen() {
           </Card>
         );
       })}
+
+      {lessons && lessons.upcoming.length + lessons.history.length > 0 ? (
+        <>
+          <SectionHeader title="Dersler" />
+          <Card padded={false} style={{ paddingHorizontal: 16 }}>
+            {[...lessons.upcoming, ...lessons.history.slice(0, 10)].map((b, i, list) => (
+              <ListRow
+                key={b.bookingId}
+                icon={b.lesson.kind === 'GROUP' ? 'people-outline' : 'barbell-outline'}
+                title={`${formatDate(b.lesson.date)} · ${b.lesson.startTime} · ${b.lesson.title}`}
+                subtitle={b.status === 'ATTENDED' ? (b.deducted ? 'Katıldı · 1 ders hakkı düştü' : 'Katıldı') : b.lesson.trainer.name}
+                trailing={<Tag label={LESSON_STATUS[b.status].label} kind={LESSON_STATUS[b.status].kind} />}
+                onPress={() => router.push(`/gym-lesson/${b.lesson.id}`)}
+                last={i === list.length - 1}
+              />
+            ))}
+          </Card>
+        </>
+      ) : null}
 
       {payments ? (
         <>

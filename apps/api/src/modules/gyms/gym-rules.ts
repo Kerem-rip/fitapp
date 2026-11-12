@@ -18,6 +18,10 @@ export const PERMISSIONS = {
   'payments.record': ['OWNER', 'RECEPTION'],
   'payments.void': ['OWNER'],
   'reports.view': ['OWNER'],
+  // Her dersi oluşturma, iptal, üye yazma ve katılım işaretleme. Eğitmen bunları sadece kendi dersinde yapar (bkz. lessons.service).
+  'lessons.manage': ['OWNER', 'RECEPTION'],
+  'tasks.manage': ['OWNER'],
+  'shifts.manage': ['OWNER'],
 } as const satisfies Record<string, readonly GymRole[]>;
 
 export type Permission = keyof typeof PERMISSIONS;
@@ -86,4 +90,53 @@ export function summarizePayments(payments: readonly PaymentRow[]) {
   const byMethod = { CASH: 0, CARD: 0, TRANSFER: 0, OTHER: 0 };
   for (const p of valid) byMethod[p.method] += p.amountKurus;
   return { totalKurus: valid.reduce((sum, p) => sum + p.amountKurus, 0), count: valid.length, byMethod };
+}
+
+// ───────────── Dersler ─────────────
+
+export const addDays = (day: string, n: number) => toDay(new Date(parseDay(day).getTime() + n * DAY_MS));
+
+// "18:30" → 1110 (dakika); geçersizse null
+export function timeToMin(time: string): number | null {
+  const m = /^([01]\d|2[0-3]):([0-5]\d)$/.exec(time);
+  return m ? Number(m[1]) * 60 + Number(m[2]) : null;
+}
+
+// Aynı gün iki ders çakışıyor mu (bitiş anı ile başlangıç anı aynıysa çakışmaz)
+export function overlaps(a: { startTime: string; durationMin: number }, b: { startTime: string; durationMin: number }): boolean {
+  const as = timeToMin(a.startTime) ?? 0;
+  const bs = timeToMin(b.startTime) ?? 0;
+  return as < bs + b.durationMin && bs < as + a.durationMin;
+}
+
+// 0 = Pazartesi … 6 = Pazar
+export const weekdayOf = (day: string) => (parseDay(day).getUTCDay() + 6) % 7;
+
+export interface CoverMembership {
+  id: string;
+  status: 'ACTIVE' | 'CANCELLED';
+  startDate: string;
+  endDate: string;
+  sessionsLeft: number | null;
+}
+
+export type Coverage =
+  | { kind: 'SESSION'; membershipId: string } // Bu üyelikten 1 ders hakkı düşer
+  | { kind: 'UNLIMITED'; membershipId: string } // Sınırsız üyelik kapsar; hak düşmez
+  | { kind: 'NONE'; reason: 'NO_ACTIVE_MEMBERSHIP' | 'NO_SESSIONS_LEFT' };
+
+// Katılımın hangi üyelikten karşılanacağı:
+// - Grup dersi önce sınırsız üyelikten karşılanır (ders paketini harcamaz), yoksa ders hakkından düşer.
+// - Özel ders sadece ders hakkı olan üyelikten düşer.
+// - Birden çok ders paketi varsa önce süresi en erken biten kullanılır.
+// Uygun üyelik yoksa NONE döner; bu bir uyarıdır, karar salonundur.
+export function pickCoverage(kind: 'GROUP' | 'PRIVATE', day: string, memberships: readonly CoverMembership[]): Coverage {
+  const valid = memberships.filter((m) => m.status === 'ACTIVE' && m.startDate <= day && day <= m.endDate);
+  if (valid.length === 0) return { kind: 'NONE', reason: 'NO_ACTIVE_MEMBERSHIP' };
+  const unlimited = valid.find((m) => m.sessionsLeft === null);
+  if (kind === 'GROUP' && unlimited) return { kind: 'UNLIMITED', membershipId: unlimited.id };
+  const withSessions = valid.filter((m) => m.sessionsLeft !== null && m.sessionsLeft > 0).sort((a, b) => a.endDate.localeCompare(b.endDate));
+  if (withSessions[0]) return { kind: 'SESSION', membershipId: withSessions[0].id };
+  // Geçerli üyeliği var ama düşülecek ders hakkı yok (hak bitmiş ya da özel derste sadece sınırsız üyelik var)
+  return { kind: 'NONE', reason: 'NO_SESSIONS_LEFT' };
 }

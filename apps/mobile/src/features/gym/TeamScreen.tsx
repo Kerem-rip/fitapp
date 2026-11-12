@@ -7,6 +7,7 @@ import { ChipRow } from '@/components/ChipRow';
 import { inviteStaff, setShift } from '@/demo/actions';
 import { DAY_SHORT } from '@/demo/dates';
 import { WEEKDAY_FULL } from '@/demo/labels';
+import { RealShifts } from './RealShifts';
 import { RealStaffInvite, RealStaffList } from './RealStaff';
 import { useGym } from './useGym';
 import { useGymInfo } from './useGymInfo';
@@ -61,7 +62,7 @@ export function TeamScreen() {
 
       {seg === 'staff' && info ? <RealStaffList canManage={can('staff.manage')} /> : null}
       {seg === 'invite' && info ? <RealStaffInvite onInvited={() => setSeg('staff')} /> : null}
-      {info && seg === 'shifts' ? <Notice kind="info" text="Vardiyalar henüz örnek veriyle çalışıyor; sıradaki aşamada gerçek ekibe bağlanacak." /> : null}
+      {info && seg === 'shifts' ? <RealShifts manage={can('shifts.manage')} todayIndex={todayIndex} /> : null}
 
       {seg === 'staff' && !info ? (
         staff.length > 0 ? (
@@ -82,7 +83,7 @@ export function TeamScreen() {
         )
       ) : null}
 
-      {seg === 'shifts' ? (
+      {seg === 'shifts' && !info ? (
         <>
           <ChipRow
             options={DAY_SHORT.map((d, i) => ({ key: String(i), label: d }))}

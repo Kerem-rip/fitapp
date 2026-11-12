@@ -1117,11 +1117,16 @@ model Gym {
   phone     String?
   createdAt DateTime @default(now())
 
-  owner    User             @relation(fields: [ownerId], references: [id], onDelete: Cascade)
-  staff    GymStaffMember[]
-  plans    MembershipPlan[]
-  members  GymMember[]
-  payments GymPayment[]
+  owner       User             @relation(fields: [ownerId], references: [id], onDelete: Cascade)
+  staff       GymStaffMember[]
+  plans       MembershipPlan[]
+  members     GymMember[]
+  payments    GymPayment[]
+  lessons     GymLesson[]
+  bookings    GymBooking[]
+  sessionLogs GymSessionLog[]
+  tasks       GymTask[]
+  shifts      GymShift[]
 }
 
 enum GymStaffRole {
@@ -1191,6 +1196,7 @@ model GymMember {
   gym         Gym          @relation(fields: [gymId], references: [id], onDelete: Cascade)
   memberships Membership[]
   payments    GymPayment[]
+  bookings    GymBooking[]
 
   @@index([gymId, status])
 }
@@ -1255,6 +1261,120 @@ model GymPayment {
 
   @@index([gymId, paidAt])
   @@index([memberId])
+}
+
+enum GymLessonKind {
+  GROUP
+  PRIVATE
+}
+
+enum GymLessonStatus {
+  SCHEDULED
+  CANCELLED
+}
+
+// Salon dersi. Tarih ve saat salonun yerel saatidir (gün + "18:00"); saat dilimi dönüşümü yapılmaz.
+// Haftalık tekrarlanan dersler aynı seriesId'yi taşır; her hafta ayrı bir derstir.
+model GymLesson {
+  id           String          @id @default(uuid())
+  gymId        String
+  kind         GymLessonKind
+  title        String
+  trainerId    String // Dersi veren kişinin kullanıcı kimliği (salon sahibi ya da ekipteki eğitmen)
+  date         DateTime        @db.Date
+  startTime    String // "HH:MM"
+  durationMin  Int
+  capacity     Int // Özel derste 1
+  seriesId     String?
+  status       GymLessonStatus @default(SCHEDULED)
+  cancelReason String?
+  cancelledAt  DateTime?
+  createdById  String
+  createdAt    DateTime        @default(now())
+
+  gym      Gym          @relation(fields: [gymId], references: [id], onDelete: Cascade)
+  bookings GymBooking[]
+
+  @@index([gymId, date])
+  @@index([trainerId, date])
+}
+
+enum GymBookingStatus {
+  BOOKED
+  ATTENDED
+  NO_SHOW
+  CANCELLED
+}
+
+// Üyenin derse kaydı ve katılımı. "Katıldı" işaretlenince uygun üyelikten 1 ders hakkı düşer (deducted);
+// işaret geri alınırsa hak geri eklenir. Her değişiklik GymSessionLog'a yazılır.
+model GymBooking {
+  id           String           @id @default(uuid())
+  gymId        String
+  lessonId     String
+  memberId     String
+  status       GymBookingStatus @default(BOOKED)
+  membershipId String? // Katılımın düştüğü (ya da kapsadığı) üyelik
+  deducted     Boolean          @default(false)
+  markedById   String?
+  markedAt     DateTime?
+  createdById  String
+  createdAt    DateTime         @default(now())
+
+  gym    Gym       @relation(fields: [gymId], references: [id], onDelete: Cascade)
+  lesson GymLesson @relation(fields: [lessonId], references: [id], onDelete: Cascade)
+  member GymMember @relation(fields: [memberId], references: [id], onDelete: Cascade)
+
+  @@unique([lessonId, memberId])
+  @@index([memberId])
+}
+
+// Ders hakkı hareketleri: kim, ne zaman, hangi ders için düştü ya da geri eklendi. Sadece eklenir.
+model GymSessionLog {
+  id           String   @id @default(uuid())
+  gymId        String
+  membershipId String
+  bookingId    String?
+  delta        Int // -1 düştü, +1 geri eklendi
+  reason       String // ATTENDED, ATTENDANCE_UNDONE
+  byId         String
+  createdAt    DateTime @default(now())
+
+  gym Gym @relation(fields: [gymId], references: [id], onDelete: Cascade)
+
+  @@index([membershipId, createdAt])
+}
+
+// Ekip görevi: salon sahibi atar, görevli kişi tamamlar.
+model GymTask {
+  id          String    @id @default(uuid())
+  gymId       String
+  title       String
+  assigneeId  String // Kullanıcı kimliği
+  dueDate     DateTime? @db.Date
+  doneAt      DateTime?
+  doneById    String?
+  createdById String
+  createdAt   DateTime  @default(now())
+
+  gym Gym @relation(fields: [gymId], references: [id], onDelete: Cascade)
+
+  @@index([gymId, doneAt])
+  @@index([assigneeId, doneAt])
+}
+
+// Haftalık vardiya şablonu: kişi başına haftanın her günü için bir satır (kayıt yoksa izinli).
+model GymShift {
+  id        String @id @default(uuid())
+  gymId     String
+  userId    String
+  weekday   Int // 0 = Pazartesi … 6 = Pazar
+  startTime String // "HH:MM"
+  endTime   String
+
+  gym Gym @relation(fields: [gymId], references: [id], onDelete: Cascade)
+
+  @@unique([gymId, userId, weekday])
 }
 
 // Denetim kaydı: bir kişinin sağlık verisine kim, ne zaman, ne yaptı. Sadece eklenir; değiştirilmez.

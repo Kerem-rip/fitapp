@@ -4,12 +4,28 @@ import { useState } from 'react';
 import { ChipRow } from '@/components/ChipRow';
 import { addTask, toggleTask } from '@/demo/actions';
 import { useAccount } from '@/demo/hooks';
+import { RealTasks } from './RealTasks';
 import { useGym } from './useGym';
+import { useGymInfo } from './useGymInfo';
 
 type Filter = 'open' | 'done' | 'all';
 const DUES = ['Bugün', 'Yarın', 'Bu hafta'];
 
 export function GymTasksScreen({ mine = false }: { mine?: boolean }) {
+  const { info, can } = useGymInfo();
+  if (info) {
+    const manage = can('tasks.manage') && !mine;
+    return (
+      <Screen tabBarInset>
+        <ScreenHeader title={manage ? 'Görevler' : 'Görevlerim'} subtitle={manage ? 'Ekibe ata ve takip et' : 'Salon yönetiminin atadıkları'} />
+        <RealTasks manage={manage} mine={!manage} />
+      </Screen>
+    );
+  }
+  return <DemoTasksScreen mine={mine} />;
+}
+
+function DemoTasksScreen({ mine }: { mine: boolean }) {
   const account = useAccount();
   const { gym, staff, tasks, me, staffName } = useGym();
   const [filter, setFilter] = useState<Filter>('open');

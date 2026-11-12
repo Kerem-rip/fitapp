@@ -6,6 +6,7 @@ import { AppHeader } from '@/components/AppHeader';
 import { formatLong } from '@/demo/dates';
 import { useAccount } from '@/demo/hooks';
 import { RealGymToday } from './RealGymToday';
+import { RealTodayWork } from './RealTodayWork';
 import { shiftStart, useGym } from './useGym';
 import { useGymInfo } from './useGymInfo';
 
@@ -17,6 +18,16 @@ export function GymHome() {
 
   if (!account) return null;
 
+  if (info) {
+    return (
+      <Screen tabBarInset>
+        <AppHeader title={`Merhaba, ${account.firstName}`} subtitle={`${info.gym.name} · ${formatLong(today)}`} showMessages={false} />
+        <RealGymToday />
+        <RealTodayWork mine={false} userId={info.userId} links={{ team: '/(gym-manager)/team', tasks: '/(gym-manager)/tasks', lessons: '/(gym-manager)/members' }} />
+      </Screen>
+    );
+  }
+
   const onShift = staff
     .filter((s) => shiftStart(s.shifts[todayIndex]) !== null)
     .sort((a, b) => (shiftStart(a.shifts[todayIndex]) ?? '').localeCompare(shiftStart(b.shifts[todayIndex]) ?? ''));
@@ -26,11 +37,9 @@ export function GymHome() {
 
   return (
     <Screen tabBarInset>
-      <AppHeader title={`Merhaba, ${account.firstName}`} subtitle={`${info?.gym.name ?? gym?.name ?? 'Salon'} · ${formatLong(today)}`} showMessages={false} />
+      <AppHeader title={`Merhaba, ${account.firstName}`} subtitle={`${gym?.name ?? 'Salon'} · ${formatLong(today)}`} showMessages={false} />
 
-      {info ? <RealGymToday /> : <DemoSummary onShift={onShift.length} lessons={todaysLessons.length} openTasks={openTasks.length} staff={staff.length} expiring={expiring.length} />}
-
-      {info ? <Notice kind="info" text="Vardiya, görev ve ders bölümleri henüz örnek veriyle çalışıyor; sıradaki aşamada gerçek veriye bağlanacak." /> : null}
+      <DemoSummary onShift={onShift.length} lessons={todaysLessons.length} openTasks={openTasks.length} staff={staff.length} expiring={expiring.length} />
 
       <SectionHeader title="Bugünkü vardiyalar" action="Ekip" onAction={() => router.push('/(gym-manager)/team')} />
       <Card padded={false} style={{ paddingHorizontal: 16 }}>

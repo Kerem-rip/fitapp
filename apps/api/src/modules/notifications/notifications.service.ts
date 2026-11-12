@@ -35,6 +35,8 @@ function describe(type: string, d: Data, name: (id: unknown) => string): { title
       return { title: 'Ekibine yeni biri katıldı', text: `${name(d.clientId)} salon davetini kabul etti.` };
     case 'gym_staff_ended':
       return { title: 'Salon ekibinden çıkarıldın', text: `${String(d.gymName ?? 'Salon')} ekibindeki görevin sona erdi.` };
+    case 'gym_task_assigned':
+      return { title: 'Yeni görev', text: `${String(d.gymName ?? 'Salon')} yöneticisi sana bir görev verdi.` };
     case 'program_published':
       return { title: 'Antrenman programın güncellendi', text: `Antrenörün programının ${d.number}. sürümünü yayınladı.` };
     case 'appointment_created':

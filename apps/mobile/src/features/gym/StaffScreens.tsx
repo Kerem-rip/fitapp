@@ -13,9 +13,12 @@ import { ROLE_LABELS, WEEKDAY_FULL } from '@/demo/labels';
 import { fullName } from '@/demo/selectors';
 import { GYM_ROLE_LABELS } from './labels';
 import { RealGymToday } from './RealGymToday';
+import { RealLessons } from './RealLessons';
 import { RealMembers } from './RealMembers';
+import { RealTodayWork } from './RealTodayWork';
 import { useGym } from './useGym';
 import { useGymInfo } from './useGymInfo';
+import { shiftLabel, useGymTeam } from './useGymTeam';
 
 export function StaffHome() {
   const account = useAccount();
@@ -23,16 +26,23 @@ export function StaffHome() {
   const { gym, tasks, lessons, me, today, todayIndex } = useGym();
 
   if (!account) return null;
+  if (info) {
+    // Eğitmen kendi derslerini, resepsiyon salonun tüm derslerini görür
+    return (
+      <Screen tabBarInset>
+        <AppHeader title={`Merhaba, ${account.firstName}`} subtitle={`${info.gym.name} · ${formatLong(today)}`} showMessages={false} />
+        <RealGymToday />
+        <RealTodayWork mine={info.role === 'TRAINER'} userId={info.userId} links={{ tasks: '/(gym-staff)/tasks', lessons: '/(gym-staff)/lessons' }} />
+      </Screen>
+    );
+  }
   const shift = me?.shifts[todayIndex] ?? 'İzinli';
   const myTasks = tasks.filter((t) => t.assigneeId === me?.id && !t.done);
   const myLessons = lessons.filter((l) => l.trainerId === me?.id && l.date === today).sort((a, b) => a.time.localeCompare(b.time));
 
   return (
     <Screen tabBarInset>
-      <AppHeader title={`Merhaba, ${account.firstName}`} subtitle={`${info?.gym.name ?? gym?.name ?? 'Salon'} · ${formatLong(today)}`} showMessages={false} />
-
-      {info ? <RealGymToday /> : null}
-      {info ? <Notice kind="info" text="Vardiya, görev ve ders bölümleri henüz örnek veriyle çalışıyor." /> : null}
+      <AppHeader title={`Merhaba, ${account.firstName}`} subtitle={`${gym?.name ?? 'Salon'} · ${formatLong(today)}`} showMessages={false} />
 
       <View style={{ flexDirection: 'row', gap: 10, marginBottom: 12 }}>
         <StatTile label="Vardiya" value={shift === 'İzinli' ? 'İzinli' : shift.replace('–', '-')} icon="time-outline" />
@@ -122,6 +132,19 @@ export function StaffClients() {
 }
 
 export function StaffLessons() {
+  const { info } = useGymInfo();
+  if (info) {
+    return (
+      <Screen tabBarInset>
+        <ScreenHeader title={info.role === 'TRAINER' ? 'Derslerim' : 'Dersler'} subtitle={info.gym.name} />
+        <RealLessons mine={info.role === 'TRAINER'} />
+      </Screen>
+    );
+  }
+  return <DemoStaffLessons />;
+}
+
+function DemoStaffLessons() {
   const { lessons, me, today, staffName } = useGym();
   const [date, setDate] = useState(today);
   const mine = useMemo(() => lessons.filter((l) => l.trainerId === me?.id), [lessons, me?.id]);
@@ -155,8 +178,10 @@ export function StaffProfile() {
   const router = useRouter();
   const account = useAccount();
   const { info } = useGymInfo();
+  const { team } = useGymTeam();
   const { gym, me, todayIndex } = useGym();
   if (!account) return null;
+  const myShifts = info ? team.find((t) => t.user.id === info.userId)?.days : undefined;
 
   return (
     <Screen tabBarInset>
@@ -178,7 +203,13 @@ export function StaffProfile() {
             key={dayName}
             icon="time-outline"
             title={dayName}
-            trailing={<Tag label={me?.shifts[i] ?? 'İzinli'} kind={i === todayIndex ? 'accent' : (me?.shifts[i] === 'İzinli' ? 'neutral' : 'info')} />}
+            trailing={
+              info ? (
+                <Tag label={shiftLabel(myShifts?.[i])} kind={i === todayIndex ? 'accent' : myShifts?.[i] ? 'info' : 'neutral'} />
+              ) : (
+                <Tag label={me?.shifts[i] ?? 'İzinli'} kind={i === todayIndex ? 'accent' : me?.shifts[i] === 'İzinli' ? 'neutral' : 'info'} />
+              )
+            }
             last={i === WEEKDAY_FULL.length - 1}
           />
         ))}

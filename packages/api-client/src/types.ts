@@ -673,6 +673,8 @@ export type MembershipState = 'UPCOMING' | 'ACTIVE' | 'USED_UP' | 'EXPIRED' | 'C
 
 export interface GymInfo {
   gym: { id: string; name: string; address: string | null; city: string | null; phone: string | null };
+  // Giriş yapan kişi (kendi dersleri ve görevleri için)
+  userId: string;
   role: GymRole;
   permissions: string[];
 }
@@ -771,4 +773,68 @@ export interface GymPaymentsReport {
   to: string;
   total: PaymentSummary;
   days: (PaymentSummary & { day: string })[];
+}
+// Salon dersleri, katılım, görevler ve vardiyalar
+export type GymLessonKind = 'GROUP' | 'PRIVATE';
+export type GymBookingStatus = 'BOOKED' | 'ATTENDED' | 'NO_SHOW' | 'CANCELLED';
+
+// Ders hakkı uyarısı: engel değildir, karar salonundur
+export interface GymWarning {
+  code: 'NO_ACTIVE_MEMBERSHIP' | 'NO_SESSIONS_LEFT';
+  text: string;
+}
+
+export interface GymLessonItem {
+  id: string;
+  kind: GymLessonKind;
+  title: string;
+  trainer: { id: string; name: string };
+  // Salonun yerel günü ve saati
+  date: string;
+  startTime: string;
+  durationMin: number;
+  capacity: number;
+  seriesId: string | null;
+  status: 'SCHEDULED' | 'CANCELLED';
+  cancelReason: string | null;
+  booked?: number;
+  attended?: number;
+}
+
+export interface GymBookingItem {
+  id: string;
+  member: { id: string; fullName: string };
+  status: GymBookingStatus;
+  deducted: boolean;
+  markedAt: string | null;
+  warning: GymWarning | null;
+}
+
+export interface GymLessonDetail {
+  lesson: GymLessonItem;
+  // Sahip/resepsiyon ya da dersin eğitmeni
+  canManage: boolean;
+  bookings: GymBookingItem[];
+}
+
+export interface GymMemberLessons {
+  upcoming: { bookingId: string; status: GymBookingStatus; deducted: boolean; lesson: GymLessonItem }[];
+  history: { bookingId: string; status: GymBookingStatus; deducted: boolean; lesson: GymLessonItem }[];
+}
+
+export interface GymTaskItem {
+  id: string;
+  title: string;
+  assignee: { id: string; name: string };
+  dueDate: string | null;
+  done: boolean;
+  doneAt: string | null;
+  createdAt: string;
+}
+
+export interface GymShiftRow {
+  user: { id: string; name: string; username: string };
+  role: GymRole;
+  // 0 = Pazartesi … 6 = Pazar; null = izinli
+  days: ({ start: string; end: string } | null)[];
 }

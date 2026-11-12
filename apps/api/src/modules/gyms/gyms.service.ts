@@ -64,7 +64,7 @@ export class GymsService {
   async me(userId: string) {
     const ctx = await this.context(userId);
     const gym = await this.prisma.gym.findUniqueOrThrow({ where: { id: ctx.gymId }, select: { id: true, name: true, address: true, city: true, phone: true } });
-    return { gym, role: ctx.role, permissions: permissionsOf(ctx.role) };
+    return { gym, userId, role: ctx.role, permissions: permissionsOf(ctx.role) };
   }
 
   async update(userId: string, patch: { name?: string; address?: string | null; city?: string | null; phone?: string | null }) {
@@ -77,6 +77,21 @@ export class GymsService {
   }
 
   // ───────────── Ekip ─────────────
+
+  // Salonda çalışan herkes: sahip + aktif ekip (ders verecek, görev alacak, vardiya yazılacak kişiler)
+  async teamOf(gymId: string): Promise<{ userId: string; name: string; username: string; role: GymRole }[]> {
+    const gym = await this.prisma.gym.findUniqueOrThrow({
+      where: { id: gymId },
+      select: {
+        owner: { select: { id: true, firstName: true, lastName: true, username: true } },
+        staff: { where: { status: 'ACTIVE' }, orderBy: { joinedAt: 'asc' }, select: { role: true, user: { select: { id: true, firstName: true, lastName: true, username: true } } } },
+      },
+    });
+    return [
+      { userId: gym.owner.id, name: nameOf(gym.owner), username: gym.owner.username, role: 'OWNER' as const },
+      ...gym.staff.map((s) => ({ userId: s.user.id, name: nameOf(s.user), username: s.user.username, role: s.role })),
+    ];
+  }
 
   async listStaff(userId: string) {
     const ctx = await this.context(userId);
@@ -121,6 +136,7 @@ export class GymsService {
     const row = await this.prisma.gymStaffMember.findFirst({ where: { id, gymId: ctx.gymId, status: { in: ['INVITED', 'ACTIVE'] } } });
     if (!row) throw notFound('STAFF_NOT_FOUND', 'Ekip üyesi bulunamadı.');
     await this.prisma.gymStaffMember.update({ where: { id }, data: { status: 'ENDED', endedAt: new Date() } });
+    await this.prisma.gymShift.deleteMany({ where: { gymId: ctx.gymId, userId: row.userId } });
     if (row.status === 'ACTIVE') {
       await this.dropStaffRoleIfIdle(row.userId);
       await this.prisma.notification.create({ data: { userId: row.userId, type: 'gym_staff_ended', data: { gymName: ctx.gymName } } });
@@ -171,9 +187,10 @@ export class GymsService {
 
   // Personelin kendi isteğiyle ayrılması
   async leave(userId: string) {
-    const row = await this.prisma.gymStaffMember.findFirst({ where: { userId, status: 'ACTIVE' }, select: { id: true } });
+    const row = await this.prisma.gymStaffMember.findFirst({ where: { userId, status: 'ACTIVE' }, select: { id: true, gymId: true } });
     if (!row) throw notFound('NOT_STAFF', 'Bir salonun ekibinde değilsin.');
     await this.prisma.gymStaffMember.update({ where: { id: row.id }, data: { status: 'ENDED', endedAt: new Date() } });
+    await this.prisma.gymShift.deleteMany({ where: { gymId: row.gymId, userId } });
     await this.dropStaffRoleIfIdle(userId);
     return { id: row.id, status: 'ENDED' as const };
   }

@@ -25,6 +25,14 @@ import type {
   GoalStatus,
   GymInfo,
   GymInviteItem,
+  GymBookingItem,
+  GymLessonDetail,
+  GymLessonItem,
+  GymLessonKind,
+  GymMemberLessons,
+  GymShiftRow,
+  GymTaskItem,
+  GymWarning,
   GymMemberDetail,
   GymMemberListItem,
   GymPaymentItem,
@@ -454,6 +462,38 @@ export function createApiClient(config: ApiClientConfig) {
       request<GymPaymentItem>(`/gym/members/${memberId}/payments`, { method: 'POST', body: input, auth: true }),
     voidGymPayment: (id: string, reason: string) => request<GymPaymentItem>(`/gym/payments/${id}/void`, { method: 'POST', body: { reason }, auth: true }),
     gymPaymentsReport: (from: string, to: string) => request<GymPaymentsReport>('/gym/reports/payments', { auth: true, query: { from, to } }),
+    // Dersler ve katılım ("katıldı" ders hakkından düşer, "gelmedi" düşmez)
+    gymLessons: (from: string, to: string, mine = false) =>
+      request<GymLessonItem[]>('/gym/lessons', { auth: true, query: { from, to, ...(mine ? { mine: 'true' } : {}) } }),
+    createGymLesson: (input: {
+      kind: GymLessonKind;
+      title?: string;
+      trainerId: string;
+      date: string;
+      startTime: string;
+      durationMin: number;
+      capacity?: number;
+      memberId?: string;
+      repeatWeeks?: number;
+    }) => request<{ lessons: GymLessonItem[]; warning: GymWarning | null }>('/gym/lessons', { method: 'POST', body: input, auth: true }),
+    gymLesson: (id: string) => request<GymLessonDetail>(`/gym/lessons/${id}`, { auth: true }),
+    cancelGymLesson: (id: string, reason: string, wholeSeries = false) =>
+      request<{ cancelled: number }>(`/gym/lessons/${id}/cancel`, { method: 'POST', body: { reason, wholeSeries }, auth: true }),
+    bookGymLesson: (id: string, memberId: string) =>
+      request<{ booking: { id: string }; warning: GymWarning | null }>(`/gym/lessons/${id}/bookings`, { method: 'POST', body: { memberId }, auth: true }),
+    unbookGymLesson: (bookingId: string) => request<{ id: string }>(`/gym/bookings/${bookingId}/cancel`, { method: 'POST', auth: true }),
+    markGymBooking: (bookingId: string, status: 'BOOKED' | 'ATTENDED' | 'NO_SHOW') =>
+      request<{ booking: { id: string; status: GymBookingItem['status'] }; warning: GymWarning | null }>(`/gym/bookings/${bookingId}/mark`, { method: 'POST', body: { status }, auth: true }),
+    gymMemberLessons: (memberId: string) => request<GymMemberLessons>(`/gym/members/${memberId}/lessons`, { auth: true }),
+    // Görevler ve vardiyalar
+    gymTasks: (options: { status?: 'open' | 'done' | 'all'; mine?: boolean } = {}) =>
+      request<GymTaskItem[]>('/gym/tasks', { auth: true, query: { status: options.status ?? 'open', ...(options.mine ? { mine: 'true' } : {}) } }),
+    createGymTask: (input: { title: string; assigneeId: string; dueDate?: string }) => request<{ id: string }>('/gym/tasks', { method: 'POST', body: input, auth: true }),
+    removeGymTask: (id: string) => request<{ id: string }>(`/gym/tasks/${id}`, { method: 'DELETE', auth: true }),
+    setGymTaskDone: (id: string, done: boolean) => request<{ id: string }>(`/gym/tasks/${id}/done`, { method: 'POST', body: { done }, auth: true }),
+    gymShifts: () => request<GymShiftRow[]>('/gym/shifts', { auth: true }),
+    setGymShift: (userId: string, weekday: number, shift: { start: string; end: string } | null) =>
+      request<{ weekday: number }>(`/gym/shifts/${userId}/${weekday}`, { method: 'PUT', body: { shift }, auth: true }),
     myGymInvites: () => request<GymInviteItem[]>('/me/gym-invites', { auth: true }),
     acceptGymInvite: (id: string) => request<{ id: string; status: 'ACTIVE' }>(`/me/gym-invites/${id}/accept`, { method: 'POST', auth: true }),
     declineGymInvite: (id: string) => request<{ id: string; status: 'DECLINED' }>(`/me/gym-invites/${id}/decline`, { method: 'POST', auth: true }),

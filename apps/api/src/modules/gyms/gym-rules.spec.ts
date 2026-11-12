@@ -1,8 +1,11 @@
-import { balanceOf, can, membershipDue, membershipEnd, membershipState, permissionsOf, summarizePayments, type PaymentRow } from './gym-rules.js';
+import { addDays, balanceOf, can, membershipDue, membershipEnd, membershipState, overlaps, permissionsOf, pickCoverage, summarizePayments, timeToMin, weekdayOf, type CoverMembership, type PaymentRow } from './gym-rules.js';
 
 describe('salon yetkileri', () => {
   it('sahip her şeyi yapar; resepsiyon üye ve ödeme kaydı yapar ama iptal ve rapor yapamaz', () => {
-    expect(permissionsOf('OWNER')).toHaveLength(12);
+    expect(permissionsOf('OWNER')).toHaveLength(15);
+    expect(can('RECEPTION', 'lessons.manage')).toBe(true);
+    expect(can('RECEPTION', 'tasks.manage')).toBe(false);
+    expect(can('RECEPTION', 'shifts.manage')).toBe(false);
     expect(can('RECEPTION', 'payments.record')).toBe(true);
     expect(can('RECEPTION', 'payments.void')).toBe(false);
     expect(can('RECEPTION', 'reports.view')).toBe(false);
@@ -52,5 +55,36 @@ describe('bakiye ve tahsilat', () => {
 
   it('tahsilat özeti yönteme göre ayrılır', () => {
     expect(summarizePayments(payments)).toEqual({ totalKurus: 120_000, count: 2, byMethod: { CASH: 100_000, CARD: 0, TRANSFER: 20_000, OTHER: 0 } });
+  });
+});
+
+describe('dersler', () => {
+  it('saat ve çakışma: bitişe denk gelen başlangıç çakışmaz', () => {
+    expect(timeToMin('18:30')).toBe(1110);
+    expect(timeToMin('24:00')).toBeNull();
+    expect(overlaps({ startTime: '18:00', durationMin: 60 }, { startTime: '18:30', durationMin: 30 })).toBe(true);
+    expect(overlaps({ startTime: '18:00', durationMin: 60 }, { startTime: '19:00', durationMin: 60 })).toBe(false);
+    expect(addDays('2026-12-29', 7)).toBe('2027-01-05');
+    expect(weekdayOf('2026-11-16')).toBe(0); // Pazartesi
+    expect(weekdayOf('2026-11-22')).toBe(6); // Pazar
+  });
+
+  const monthly: CoverMembership = { id: 'aylik', status: 'ACTIVE', startDate: '2026-11-01', endDate: '2026-11-30', sessionsLeft: null };
+  const pack = (id: string, endDate: string, sessionsLeft: number): CoverMembership => ({ id, status: 'ACTIVE', startDate: '2026-11-01', endDate, sessionsLeft });
+
+  it('grup dersi önce sınırsız üyelikten karşılanır, ders paketini harcamaz', () => {
+    expect(pickCoverage('GROUP', '2026-11-10', [pack('p', '2026-12-31', 5), monthly])).toEqual({ kind: 'UNLIMITED', membershipId: 'aylik' });
+    expect(pickCoverage('GROUP', '2026-11-10', [pack('p', '2026-12-31', 5)])).toEqual({ kind: 'SESSION', membershipId: 'p' });
+  });
+
+  it('özel ders sadece ders hakkından düşer; önce süresi erken biten paket kullanılır', () => {
+    expect(pickCoverage('PRIVATE', '2026-11-10', [pack('gec', '2026-12-31', 5), pack('erken', '2026-11-20', 2), monthly])).toEqual({ kind: 'SESSION', membershipId: 'erken' });
+    expect(pickCoverage('PRIVATE', '2026-11-10', [monthly])).toEqual({ kind: 'NONE', reason: 'NO_SESSIONS_LEFT' });
+  });
+
+  it('hakkı bitmiş, süresi dolmuş ya da iptal edilmiş üyelik kapsamaz', () => {
+    expect(pickCoverage('PRIVATE', '2026-11-10', [pack('p', '2026-12-31', 0)])).toEqual({ kind: 'NONE', reason: 'NO_SESSIONS_LEFT' });
+    expect(pickCoverage('GROUP', '2026-12-05', [monthly])).toEqual({ kind: 'NONE', reason: 'NO_ACTIVE_MEMBERSHIP' });
+    expect(pickCoverage('GROUP', '2026-11-10', [{ ...monthly, status: 'CANCELLED' }])).toEqual({ kind: 'NONE', reason: 'NO_ACTIVE_MEMBERSHIP' });
   });
 });

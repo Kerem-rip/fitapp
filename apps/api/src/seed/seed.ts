@@ -116,6 +116,45 @@ async function main() {
       ],
     });
   }
+  // Demo salon işleri: iki üye, bugünkü dersler, görevler ve vardiyalar (sadece ilk kurulumda)
+  if ((await prisma.gymLesson.count({ where: { gymId: gym.id } })) === 0) {
+    const day = (n: number) => new Date(`${new Date(Date.now() + n * 86_400_000).toISOString().slice(0, 10)}T00:00:00Z`);
+    const plans = await prisma.membershipPlan.findMany({ where: { gymId: gym.id } });
+    const monthly = plans.find((p) => p.durationDays === 30 && p.sessionCount === null)!;
+    const pack = plans.find((p) => p.sessionCount !== null)!;
+    const sell = (memberId: string, plan: typeof monthly) =>
+      prisma.membership.create({
+        data: {
+          gymId: gym.id, memberId, planId: plan.id, planName: plan.name, startDate: day(-10), endDate: day(plan.durationDays - 11),
+          sessionsTotal: plan.sessionCount, sessionsLeft: plan.sessionCount, priceKurus: plan.priceKurus, createdById: 'acc-selim',
+        },
+      });
+    const selin = await prisma.gymMember.create({ data: { gymId: gym.id, fullName: 'Selin Demir', createdById: 'acc-selim' } });
+    const kaan = await prisma.gymMember.create({ data: { gymId: gym.id, fullName: 'Kaan Bulut', createdById: 'acc-selim' } });
+    await sell(selin.id, pack);
+    await sell(kaan.id, monthly);
+    const lesson = (data: { kind: 'GROUP' | 'PRIVATE'; title: string; trainerId: string; date: Date; startTime: string; capacity: number; members: string[] }) =>
+      prisma.gymLesson.create({
+        data: {
+          gymId: gym.id, kind: data.kind, title: data.title, trainerId: data.trainerId, date: data.date, startTime: data.startTime, durationMin: 60,
+          capacity: data.capacity, createdById: 'acc-selim',
+          bookings: { create: data.members.map((memberId) => ({ gymId: gym.id, memberId, createdById: 'acc-selim' })) },
+        },
+      });
+    await lesson({ kind: 'PRIVATE', title: 'Özel ders', trainerId: 'acc-deniz', date: day(0), startTime: '13:00', capacity: 1, members: [selin.id] });
+    await lesson({ kind: 'GROUP', title: 'Pilates', trainerId: 'acc-deniz', date: day(0), startTime: '18:00', capacity: 12, members: [kaan.id, selin.id] });
+    await lesson({ kind: 'GROUP', title: 'Fonksiyonel antrenman', trainerId: 'acc-selim', date: day(1), startTime: '19:00', capacity: 15, members: [kaan.id] });
+    await prisma.gymTask.createMany({
+      data: [
+        { gymId: gym.id, title: 'Ekipman bakımı', assigneeId: 'acc-deniz', dueDate: day(0), createdById: 'acc-selim' },
+        { gymId: gym.id, title: 'Grup dersi müziklerini hazırla', assigneeId: 'acc-deniz', dueDate: day(1), createdById: 'acc-selim' },
+      ],
+    });
+    await prisma.gymShift.createMany({
+      data: [0, 1, 2, 3, 4].map((weekday) => ({ gymId: gym.id, userId: 'acc-deniz', weekday, startTime: '12:00', endTime: '20:00' })),
+      skipDuplicates: true,
+    });
+  }
   console.log(`${USERS.length} demo hesabı ve demo salon hazır.`);
 }
 

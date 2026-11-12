@@ -4,6 +4,7 @@ import { useMemo, useState } from 'react';
 import { WeekStrip } from '@/components/WeekStrip';
 import { formatLong } from '@/demo/dates';
 import { LessonForm } from './LessonSheet';
+import { RealLessons } from './RealLessons';
 import { RealMembers } from './RealMembers';
 import { useGym } from './useGym';
 import { useGymInfo } from './useGymInfo';
@@ -32,7 +33,7 @@ export function MembersScreen() {
       <Segmented<Seg>
         options={[
           { key: 'members', label: 'Üyeler' },
-          { key: 'lessons', label: 'Özel dersler' },
+          { key: 'lessons', label: info ? 'Dersler' : 'Özel dersler' },
         ]}
         value={seg}
         onChange={setSeg}
@@ -59,6 +60,8 @@ export function MembersScreen() {
           </Card>
           <Notice kind="success" text="Üyenin sağlık verisini yalnızca üye paylaşırsa görürsün." />
         </>
+      ) : info ? (
+        <RealLessons />
       ) : (
         <>
           <WeekStrip selected={date} onSelect={setDate} marked={privateLessons.map((l) => l.date)} />

@@ -43,7 +43,7 @@ describe('Spor salonu: ekip, üyelik ve ödeme kayıtları (e2e)', () => {
       const me = await get(owner, 'me').expect(200);
       expect(me.body.gym).toMatchObject({ name: 'Test Salon', city: 'İzmir' });
       expect(me.body.role).toBe('OWNER');
-      expect(me.body.permissions).toHaveLength(12);
+      expect(me.body.permissions).toHaveLength(15);
       const profile = await http().get('/api/users/me').set(bearer(owner.accessToken)).expect(200);
       expect(profile.body.gym).toMatchObject({ name: 'Test Salon', role: 'OWNER' });
 
