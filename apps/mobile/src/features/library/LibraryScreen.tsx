@@ -1,14 +1,15 @@
 // Kütüphane: uygulamanın ücretsiz programları, hareketleri, yüz masajları ve beslenme rehberleri.
 // İçerik genel bilgidir; kişiye özel program uzmandan gelir (Programım sekmesi).
 import type { BodyAreaKey, LibraryItemCard, LibraryProgramCard, WorkoutCardSummary } from '@fitapp/api-client';
-import { Card, EmptyState, ListRow, Notice, Screen, Tag, Text } from '@fitapp/ui-mobile';
+import { Card, Chip, EmptyState, Icon, ListRow, Notice, Screen, Tag, Text, useTheme } from '@fitapp/ui-mobile';
 import { useFocusEffect, useRouter } from 'expo-router';
 import { useCallback, useEffect, useState } from 'react';
-import { View } from 'react-native';
+import { ScrollView, TextInput, View } from 'react-native';
 import { api } from '@/api/client';
 import { errorText } from '@/auth/actions';
 import { ChipRow } from '@/components/ChipRow';
 import { SocialHeader } from '@/components/social/SocialHeader';
+import { CardTile } from '@/features/workout/CardHero';
 import { RestrictionPicker } from '@/features/workout/RestrictionPicker';
 import { durationText, LEVEL_TEXT, programMeta } from './labels';
 
@@ -23,12 +24,15 @@ const SECTIONS: { key: Section; label: string }[] = [
 
 export function LibraryScreen() {
   const router = useRouter();
+  const { c } = useTheme();
   const [section, setSection] = useState<Section>('cards');
   const [data, setData] = useState<{ items: LibraryItemCard[]; programs: LibraryProgramCard[] } | null>(null);
   const [cards, setCards] = useState<WorkoutCardSummary[]>([]);
   const [avoid, setAvoid] = useState<BodyAreaKey[]>([]);
   const [cat, setCat] = useState<string>('all');
   const [showRestr, setShowRestr] = useState(false);
+  const [query, setQuery] = useState('');
+  const [short, setShort] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   useFocusEffect(
@@ -49,8 +53,15 @@ export function LibraryScreen() {
       .then((r) => setCards(r.cards))
       .catch((e) => setError(errorText(e)));
   }, [avoid]);
-  const cardCats = [...new Map(cards.map((c) => [c.category, c.categoryLabel])).entries()].map(([key, label]) => ({ key, label }));
-  const shownCards = cards.filter((c) => cat === 'all' || c.category === cat);
+  // Filtre çipleri: kısa süre, tümü ve hedef bölgeler (yalnızca var olanlar; karışıklık olmasın)
+  const areaChips = [...new Set(cards.flatMap((c) => c.areas))].map((a) => ({ key: a, label: a }));
+  const q = query.trim().toLocaleLowerCase('tr');
+  const shownCards = cards.filter(
+    (c) =>
+      (cat === 'all' || c.areas.includes(cat)) &&
+      (!short || c.estimatedMinutes <= 15) &&
+      (!q || `${c.title} ${c.region} ${c.categoryLabel} ${c.goal} ${c.areas.join(' ')}`.toLocaleLowerCase('tr').includes(q)),
+  );
 
   const items = (data?.items ?? []).filter((i) =>
     section === 'moves' ? i.kind === 'MOVE' : section === 'face' ? i.kind === 'FACE' : section === 'nutrition' ? i.kind === 'GUIDE' : false,
@@ -70,23 +81,27 @@ export function LibraryScreen() {
 
       {section === 'cards' ? (
         <>
-          <ChipRow options={[{ key: 'all', label: 'Hepsi' }, ...cardCats]} selected={[cat]} onToggle={setCat} />
-          <Text variant="caption" tone="secondary" style={{ marginBottom: 8 }} onPress={() => setShowRestr((v) => !v)}>
+          <Text variant="title" style={{ marginBottom: 10 }}>
+            Günlük Antrenmanlar
+          </Text>
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, backgroundColor: c.surfaceAlt, borderRadius: 16, paddingHorizontal: 14, height: 48, marginBottom: 12 }}>
+            <Icon name="search-outline" size={20} color={c.textMuted} />
+            <TextInput value={query} onChangeText={setQuery} placeholder="Antrenman ara" placeholderTextColor={c.textMuted} accessibilityLabel="Antrenman ara" style={{ flex: 1, fontSize: 15, color: c.text }} />
+          </View>
+          <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 8, paddingHorizontal: 16, paddingBottom: 12 }} style={{ marginHorizontal: -16 }}>
+            <Chip label="Kısa süre" icon="swap-vertical-outline" selected={short} onPress={() => setShort((v) => !v)} />
+            {[{ key: 'all', label: 'Tümü' }, ...areaChips].map((o) => (
+              <Chip key={o.key} label={o.label} selected={cat === o.key} onPress={() => setCat(o.key)} />
+            ))}
+          </ScrollView>
+          {shownCards.map((card) => (
+            <CardTile key={card.id} hero={card.hero} title={card.title} moves={card.moveCount} minutes={card.estimatedMinutes} onPress={() => router.push({ pathname: '/workout-card/[id]', params: { id: card.id, avoid: avoid.join(',') } })} />
+          ))}
+          {shownCards.length === 0 ? <EmptyState icon="search-outline" title="Antrenman bulunamadı" text="Aramayı ya da filtreyi değiştir." /> : null}
+          <Text variant="caption" tone="secondary" style={{ marginVertical: 8 }} onPress={() => setShowRestr((v) => !v)}>
             {showRestr ? '▾' : '▸'} Ağrı ya da sakatlığım var{avoid.length ? ` (${avoid.length})` : ''}
           </Text>
           {showRestr ? <RestrictionPicker value={avoid} onChange={setAvoid} /> : null}
-          <Card padded={false} style={{ paddingHorizontal: 16 }}>
-            {shownCards.map((c, idx) => (
-              <ListRow
-                key={c.id}
-                icon={c.setting === 'gym' ? 'barbell-outline' : 'home-outline'}
-                title={c.title}
-                subtitle={`${LEVEL_TEXT[c.level] ?? c.level} · ~${c.estimatedMinutes} dk · ${c.moveCount} hareket · ${c.region}`}
-                onPress={() => router.push({ pathname: '/workout-card/[id]', params: { id: c.id, avoid: avoid.join(',') } })}
-                last={idx === shownCards.length - 1}
-              />
-            ))}
-          </Card>
           <Notice kind="info" text="Yüz egzersizleri ve masajı için bilimsel kanıt sınırlıdır; bu yüzden hazır bir yüz antrenmanı yoktur." />
         </>
       ) : null}

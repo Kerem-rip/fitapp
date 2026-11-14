@@ -234,6 +234,25 @@ export const CARDS: WorkoutCardDef[] = [
     ['ankle-circles'], ['single-leg-balance', 'tree-pose', 'heel-toe-walk', 'single-leg-rdl|3x6/s 45'], ['child-pose|1x45s 0']),
 ];
 
+// Kartın görsel anahtarı, hedefi ve hedef bölgeleri (liste kartı ve filtre çipleri için)
+const HERO_RULES: [RegExp, string][] = [
+  [/^hip-/, 'hip'], [/^(legs-|dumbbell-lower)/, 'legs'], [/^chest-/, 'chest'], [/^back-/, 'back'], [/^shoulder-/, 'shoulder'], [/^arms-/, 'arms'], [/^core-/, 'core'],
+  [/^(fullbody|quick-10|chair-start|home-lower-mid)/, 'fullbody'], [/^posture-/, 'posture'], [/^yoga-/, 'yoga'], [/^pilates-/, 'pilates'],
+  [/^cardio-/, 'cardio'], [/^(mobility|daily-)/, 'mobility'], [/^sport-/, 'sport'],
+];
+const AREAS: Record<string, string[]> = {
+  hip: ['Kalça', 'Glute'], legs: ['Bacak'], chest: ['Göğüs', 'Arka kol'], back: ['Sırt', 'Kol'], shoulder: ['Omuz'], arms: ['Kol'], core: ['Karın', 'Core'],
+  fullbody: ['Tüm vücut'], posture: ['Boyun', 'Omuz', 'Üst sırt'], yoga: ['Yoga', 'Esneklik'], pilates: ['Pilates', 'Core'], cardio: ['Kardiyo'], mobility: ['Mobilite'], sport: ['Spor'],
+};
+const GOALS: Record<CardCategory, string> = {
+  fitness: 'Kas kazanmak', yoga: 'Esneklik ve rahatlama', pilates: 'Core ve duruş', posture: 'Duruşu iyileştirmek', cardio: 'Kondisyon ve yağ yakımı', mobility: 'Hareket kabiliyeti', sport: 'Performans',
+};
+export function cardMeta(c: WorkoutCardDef) {
+  const hero = HERO_RULES.find(([re]) => re.test(c.id))?.[1] ?? 'fullbody';
+  const goal = c.id === 'quick-10' ? 'Kısa ve etkili antrenman' : c.id === 'cardio-low' ? 'Yağ yakımı (eklem dostu)' : GOALS[c.category];
+  return { hero, goal, areas: AREAS[hero] ?? [] };
+}
+
 export const findCard = (id: string) => CARDS.find((c) => c.id === id);
 // Bir hareketin yer aldığı kartlar (hareket sayfasında "hangi antrenmanda" listesi)
 export const cardsWithItem = (itemId: string) => CARDS.filter((c) => c.sections.some((s) => s.items.some((i) => i.itemId === itemId)));
@@ -266,6 +285,8 @@ export interface ResolvedCardItem {
   durationSec: number;
   restAfterSec: number;
   verification: 'ok' | 'partial' | 'held' | 'none';
+  // Çalışan ana bölgeler (satırdaki küçük resim ve etiket için)
+  primary: string[];
   // Kısıt nedeniyle değiştirildiyse özgün hareket
   replacedFrom?: { id: string; title: string };
 }
@@ -301,6 +322,7 @@ export function resolveCard(card: WorkoutCardDef, avoid: BodyArea[], workText: (
           durationSec: workSeconds(work),
           restAfterSec: d.restAfterSec,
           verification: EVIDENCE[id]?.verification ?? 'none',
+          primary: item.primary ?? [],
           ...(replacedFrom ? { replacedFrom } : {}),
         });
       }

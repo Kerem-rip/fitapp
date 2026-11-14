@@ -10,7 +10,7 @@ import { dayDurationSec, dayIndexOn, nextDayFrom, scheduleDate, setSeconds, work
 import { BODY_AREAS, type BodyArea } from '../personal-plan/plan-types.js';
 import { EVIDENCE, FACE_EVIDENCE_WARNING, SOURCES } from './evidence.js';
 import { EXTRA_EN } from './extra-moves.js';
-import { CARDS, cardsWithItem, CATEGORY_TITLES, findCard, resolveCard, RESTRICTION_AREAS, RESTRICTION_LABELS, type WorkoutCardDef } from './workout-cards.js';
+import { CARDS, cardMeta, cardsWithItem, CATEGORY_TITLES, findCard, resolveCard, RESTRICTION_AREAS, RESTRICTION_LABELS, type WorkoutCardDef } from './workout-cards.js';
 
 // "KNEE,LOW_BACK" → geçerli bölge listesi (bilinmeyenler atılır)
 export const parseAvoid = (s: string): BodyArea[] => [...new Set(s.split(',').filter((a): a is BodyArea => (BODY_AREAS as readonly string[]).includes(a)))];
@@ -139,6 +139,7 @@ export class LibraryService {
       level: c.level,
       equipment: c.equipment,
       region: c.region,
+      ...cardMeta(c),
       estimatedMinutes: r.estimatedMinutes,
       moveCount: r.moveCount,
       // İlk ana hareketin kısa önizlemesi (video yokken hareket adı gösterilir)

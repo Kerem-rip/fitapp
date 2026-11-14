@@ -1080,6 +1080,10 @@ export interface WorkoutCardSummary {
   level: string;
   equipment: string[];
   region: string;
+  // Liste kartı görseli (demo görsel anahtarı), antrenman hedefi ve hedef bölgeler
+  hero: string;
+  goal: string;
+  areas: string[];
   estimatedMinutes: number;
   moveCount: number;
   previewItemId: string | null;
@@ -1095,6 +1099,7 @@ export interface WorkoutCardItem {
   durationSec: number;
   restAfterSec: number;
   verification: EvidenceStatus;
+  primary: string[];
   replacedFrom?: { id: string; title: string };
 }
 

@@ -33,6 +33,10 @@ Kütüphane > Antrenmanlar (kısıt seçici), kart detayı (`/workout-card/[id]`
 `extra-moves.ts`: ~110 ek hareket (ev, salon, yoga, pilates, postür, mobilite, kardiyo, spor). Kaynak taraması yapılmamıştır; arayüzde "Henüz taranmadı" etiketi görünür ve içerik sonradan incelenip gerekmeyenler çıkarılacaktır. Plan motoru meta verisi de buradan üretilir. Hamilelik/özel grup hareketleri eklenmedi.
 Kartlar (`workout-cards.ts`): 40'tan fazla kart; ortam ve ekipman hareketlerden çıkar; her kartta sıra numarası, set/tekrar/süre ve hareketler arası dinlenme (R2) açık yazılıdır. Görevlerim'de aynı sıralı liste görünür. Hareket sayfasında "Sıralı antrenmanda yap" listesi, hangi kartta yer aldığını gösterir.
 
+## Geçici demo görselleri
+
+`apps/mobile/assets/demo/` (14 fotoğraf, Wikimedia Commons; CC0 / CC BY / CC BY-SA) ve `features/workout/demoMedia.ts` (eşleme ve yazar/lisans kaydı; kart ekranında gösterilir). Gerçek yayından önce kendi çekimlerinle değiştirilmelidir. Hareket satırlarındaki küçük resimler geçici ikon karesidir.
+
 ## Eksikler
 
 Tek kaynaklı hareketler, hiçbir hareket için video/görsel, düşük etkili kardiyo kartı (kaynaklı hareket yok), WHO tam metni, birçok mevcut hareketin kaynak taraması.

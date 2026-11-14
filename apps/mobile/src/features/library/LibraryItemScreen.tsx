@@ -1,6 +1,6 @@
 // Kütüphane içeriği: hareket/masaj (yapılış, dikkat, "Görevime ekle") ya da beslenme rehberi (okuma kartı).
 import type { LibraryItemDetail } from '@fitapp/api-client';
-import { Button, Card, ListRow, Notice, Screen, ScreenHeader, SectionHeader, showToast, Tag, Text } from '@fitapp/ui-mobile';
+import { Button, Card, ListRow, Notice, Screen, ScreenHeader, SectionHeader, showToast, Tag, Text, useTheme } from '@fitapp/ui-mobile';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useEffect, useState } from 'react';
 import { View } from 'react-native';
@@ -8,6 +8,8 @@ import { api } from '@/api/client';
 import { errorText } from '@/auth/actions';
 import { ChipRow } from '@/components/ChipRow';
 import { dateKey, formatShort } from '@/demo/dates';
+import { HeroImage } from '@/features/workout/CardHero';
+import { DEMO_CREDITS, heroFor } from '@/features/workout/demoMedia';
 import { EvidenceBlock } from './EvidenceBlock';
 import { durationText, LEVEL_TEXT } from './labels';
 
@@ -16,6 +18,7 @@ const DAY_OPTIONS = [0, 1, 2, 3, 4, 5, 6].map((offset) => ({ key: dateKey(offset
 
 export function LibraryItemScreen() {
   const router = useRouter();
+  const { c, accent } = useTheme();
   const { id } = useLocalSearchParams<{ id: string }>();
   const [item, setItem] = useState<LibraryItemDetail | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -49,6 +52,19 @@ export function LibraryItemScreen() {
       {error ? <Notice kind="danger" text={error} /> : null}
       {item ? (
         <>
+          {item.kind === 'MOVE' ? (
+            <>
+              <HeroImage hero={heroFor(item)} height={200} />
+              <Text variant="micro" tone="muted" style={{ marginTop: 4, marginBottom: 10 }}>
+                Geçici demo görseli · {DEMO_CREDITS[heroFor(item)]?.author} · {DEMO_CREDITS[heroFor(item)]?.license} · Wikimedia Commons
+              </Text>
+              {item.evidence.nameEn ? (
+                <Text variant="caption" tone="secondary" style={{ marginBottom: 8 }}>
+                  {item.evidence.nameEn}
+                </Text>
+              ) : null}
+            </>
+          ) : null}
           <View style={{ flexDirection: 'row', gap: 6, flexWrap: 'wrap', marginBottom: 12 }}>
             <Tag label={LEVEL_TEXT[item.level] ?? item.level} kind="info" />
             {item.equipment ? <Tag label={item.equipment} /> : null}
@@ -82,19 +98,32 @@ export function LibraryItemScreen() {
                 </Text>
               </Card>
               {item.primary.length ? (
-                <Text variant="body" tone="secondary" style={{ marginBottom: 4 }}>
-                  Çalışan bölgeler: {[...item.primary, ...item.secondary].join(', ')}
-                </Text>
+                <>
+                  <SectionHeader title="Hedef bölge" />
+                  <View style={{ flexDirection: 'row', gap: 8, flexWrap: 'wrap' }}>
+                    {item.primary.map((m) => (
+                      <Tag key={m} label={m} kind="accent" />
+                    ))}
+                    {item.secondary.map((m) => (
+                      <Tag key={m} label={m} />
+                    ))}
+                  </View>
+                </>
               ) : null}
 
               <SectionHeader title="Nasıl yapılır" />
-              <Card>
-                {item.steps.map((s, i) => (
-                  <Text key={s} variant="body" style={{ marginBottom: 6 }}>
-                    {i + 1}. {s}
+              {item.steps.map((s, i) => (
+                <View key={s} style={{ flexDirection: 'row', gap: 12, backgroundColor: c.surfaceAlt, borderRadius: 16, padding: 12, marginBottom: 8 }}>
+                  <View style={{ width: 28, height: 28, borderRadius: 14, backgroundColor: c.surface, alignItems: 'center', justifyContent: 'center' }}>
+                    <Text variant="caption" style={{ color: accent }}>
+                      {i + 1}
+                    </Text>
+                  </View>
+                  <Text variant="body" style={{ flex: 1 }}>
+                    {s}
                   </Text>
-                ))}
-              </Card>
+                </View>
+              ))}
               {item.mistakes.length ? (
                 <>
                   <SectionHeader title="Sık yapılan hatalar" />
