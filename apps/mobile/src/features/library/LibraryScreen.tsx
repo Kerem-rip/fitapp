@@ -1,18 +1,20 @@
 // Kütüphane: uygulamanın ücretsiz programları, hareketleri, yüz masajları ve beslenme rehberleri.
 // İçerik genel bilgidir; kişiye özel program uzmandan gelir (Programım sekmesi).
-import type { LibraryItemCard, LibraryProgramCard } from '@fitapp/api-client';
+import type { BodyAreaKey, LibraryItemCard, LibraryProgramCard, WorkoutCardSummary } from '@fitapp/api-client';
 import { Card, EmptyState, ListRow, Notice, Screen, Tag, Text } from '@fitapp/ui-mobile';
 import { useFocusEffect, useRouter } from 'expo-router';
-import { useCallback, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { View } from 'react-native';
 import { api } from '@/api/client';
 import { errorText } from '@/auth/actions';
 import { ChipRow } from '@/components/ChipRow';
 import { SocialHeader } from '@/components/social/SocialHeader';
+import { RestrictionPicker } from '@/features/workout/RestrictionPicker';
 import { durationText, LEVEL_TEXT, programMeta } from './labels';
 
-type Section = 'programs' | 'moves' | 'face' | 'nutrition';
+type Section = 'cards' | 'programs' | 'moves' | 'face' | 'nutrition';
 const SECTIONS: { key: Section; label: string }[] = [
+  { key: 'cards', label: 'Antrenmanlar' },
   { key: 'programs', label: 'Programlar' },
   { key: 'moves', label: 'Hareketler' },
   { key: 'face', label: 'Yüz masajı' },
@@ -21,8 +23,11 @@ const SECTIONS: { key: Section; label: string }[] = [
 
 export function LibraryScreen() {
   const router = useRouter();
-  const [section, setSection] = useState<Section>('programs');
+  const [section, setSection] = useState<Section>('cards');
   const [data, setData] = useState<{ items: LibraryItemCard[]; programs: LibraryProgramCard[] } | null>(null);
+  const [cards, setCards] = useState<WorkoutCardSummary[]>([]);
+  const [avoid, setAvoid] = useState<BodyAreaKey[]>([]);
+  const [cat, setCat] = useState<string>('all');
   const [error, setError] = useState<string | null>(null);
 
   useFocusEffect(
@@ -36,6 +41,15 @@ export function LibraryScreen() {
         .catch((e) => setError(errorText(e)));
     }, []),
   );
+  // Kısıt seçimi değişince kart süreleri ve hareket sayıları yeniden gelir
+  useEffect(() => {
+    api
+      .workoutCards(avoid)
+      .then((r) => setCards(r.cards))
+      .catch((e) => setError(errorText(e)));
+  }, [avoid]);
+  const cardCats = [...new Map(cards.map((c) => [c.category, c.categoryLabel])).entries()].map(([key, label]) => ({ key, label }));
+  const shownCards = cards.filter((c) => cat === 'all' || c.category === cat);
 
   const items = (data?.items ?? []).filter((i) =>
     section === 'moves' ? i.kind === 'MOVE' : section === 'face' ? i.kind === 'FACE' : section === 'nutrition' ? i.kind === 'GUIDE' : false,
@@ -52,6 +66,30 @@ export function LibraryScreen() {
       <ChipRow options={SECTIONS} selected={[section]} onToggle={setSection} />
       <View style={{ height: 12 }} />
       {error ? <Notice kind="danger" text={error} /> : null}
+
+      {section === 'cards' ? (
+        <>
+          <ChipRow options={[{ key: 'all', label: 'Hepsi' }, ...cardCats]} selected={[cat]} onToggle={setCat} />
+          <RestrictionPicker value={avoid} onChange={setAvoid} />
+          {shownCards.map((c) => (
+            <Card key={c.id} onPress={() => router.push({ pathname: '/workout-card/[id]', params: { id: c.id, avoid: avoid.join(',') } })}>
+              <View style={{ flexDirection: 'row', gap: 6, marginBottom: 6, flexWrap: 'wrap' }}>
+                <Tag label={c.categoryLabel} />
+                <Tag label={LEVEL_TEXT[c.level] ?? c.level} kind="info" />
+                <Tag label={c.equipment.length ? c.equipment.join(', ') : 'Ekipmansız'} />
+              </View>
+              <Text variant="heading">{c.title}</Text>
+              <Text variant="body" tone="secondary" style={{ marginTop: 2 }}>
+                {c.summary}
+              </Text>
+              <Text variant="caption" tone="muted" style={{ marginTop: 6 }}>
+                ~{c.estimatedMinutes} dk · {c.moveCount} hareket · {c.region}
+              </Text>
+            </Card>
+          ))}
+          <Notice kind="info" text="Yüz egzersizleri ve masajı için bilimsel kanıt sınırlıdır; bu yüzden hazır bir yüz antrenmanı yoktur." />
+        </>
+      ) : null}
 
       {section === 'programs'
         ? data?.programs.map((p) => (
@@ -101,7 +139,7 @@ export function LibraryScreen() {
           ))
         : null}
 
-      {data && section !== 'programs' && items.length === 0 ? <EmptyState icon="albums-outline" title="Bu bölümde içerik yok" /> : null}
+      {data && section !== 'programs' && section !== 'cards' && items.length === 0 ? <EmptyState icon="albums-outline" title="Bu bölümde içerik yok" /> : null}
     </Screen>
   );
 }

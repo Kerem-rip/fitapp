@@ -1,0 +1,242 @@
+{
+  "_meta": {
+    "version": "pilot-0.1",
+    "date": "2026-11-14",
+    "note": "Arastirma kaydi. Uygulamaya ENTEGRE DEGIL. Sadece okunan kaynaklardan yazildi; kaynakta olmayan bilgi bos birakildi (null). verification: 'ok' = en az 2 kaynak, 'partial' = tek guvenilir kaynak veya ikinci kaynak zayif, 'held' = yayinlanmaz.",
+    "mediaDefault": { "status": "MISSING", "note": "Gorsel/video henuz yok. Wikimedia Commons'ta CC BY / CC BY-SA ornekler var (dosya bazinda lisans kontrolu gerekir); CC0 bulunmadi." }
+  },
+  "sources": {
+    "nhs-strength": { "publisher": "NHS (UK)", "url": "https://www.nhs.uk/live-well/exercise/strength-exercises/", "reviewed": "2024-02-28", "licence": "Open Government/NHS - metin yeniden kullanimi ayrica dogrulanacak", "read": true },
+    "ace-goblet": { "publisher": "ACE Fitness", "url": "https://www.acefitness.org/resources/everyone/exercise-library/362/goblet-squat/", "licence": "Telif hakkli; sadece referans", "read": true },
+    "ace-squatjump": { "publisher": "ACE Fitness", "url": "https://www.acefitness.org/resources/everyone/exercise-library/222/squat-jump/", "licence": "Telif hakkli; sadece referans", "read": true },
+    "ace-bridge": { "publisher": "ACE Fitness", "url": "https://www.acefitness.org/resources/everyone/exercise-library/49/glute-bridge/", "licence": "Telif hakkli; sadece referans", "read": true },
+    "ace-bridge-sl": { "publisher": "ACE Fitness", "url": "https://www.acefitness.org/resources/everyone/exercise-library/145/glute-bridge-single-leg-progression/", "licence": "Telif hakkli; sadece referans", "read": true },
+    "ace-shuffle": { "publisher": "ACE Fitness", "url": "https://www.acefitness.org/resources/everyone/exercise-library/181/lateral-shuffles/", "licence": "Telif hakkli; sadece referans", "read": true },
+    "cc-dog": { "publisher": "Cleveland Clinic", "url": "https://health.clevelandclinic.org/downward-dog-adho-mukha-svanasana", "licence": "Telif hakkli; sadece referans", "read": true },
+    "cc-posture": { "publisher": "Cleveland Clinic", "url": "https://health.clevelandclinic.org/posture-exercises", "licence": "Telif hakkli; tek klinisyen gorusu, calisma atfi yok", "read": true },
+    "cc-breathing": { "publisher": "Cleveland Clinic", "url": "https://my.clevelandclinic.org/health/articles/9445-diaphragmatic-breathing", "licence": "Telif hakkli; sadece referans", "read": true },
+    "ace-hundred": { "publisher": "ACE Fitness / Livestrong haberi", "url": "https://www.acefitness.org/about-ace/press-room/in-the-news/8421/how-to-do-the-pilates-hundred-exercise-to-build-major-core-strength-no-equipment-needed-livestrong/", "licence": "Telif hakkli; sadece referans", "read": true },
+    "harvard-bird-dog": { "publisher": "Harvard Health", "url": "https://www.harvardhealth.org/exercise-and-fitness/bird-dog-exercise-for-your-core-how-to-do-it-safely", "licence": "Telif hakkli", "read": true },
+    "harvard-pushup": { "publisher": "Harvard Health", "url": "https://www.harvardhealth.org/exercise-and-fitness/modify-your-push-ups-to-meet-your-fitness-level", "licence": "Telif hakkli", "read": true },
+    "nia-wall-pushup": { "publisher": "NIH / National Institute on Aging (Go4Life)", "url": "https://go4life.nia.nih.gov/exercise/wall-push-up/", "licence": "ABD kamu kurumu; yeniden kullanim dogrulanacak", "read": false, "note": "Sayfaya erisilemedi; arama ozetinden: 10-15 tekrar, dinlen, 2. set" },
+    "mayo-squat": { "publisher": "Mayo Clinic", "url": "https://www.mayoclinic.org/healthy-lifestyle/fitness/multimedia/squat/vid-20084663", "licence": "Telif hakkli", "read": false, "note": "403; arama ozetinden: sirt notr, karin sikik, dizler ayaklar uzerinde" },
+    "mayo-calf": { "publisher": "Mayo Clinic", "url": "https://www.mayoclinic.org/healthy-lifestyle/fitness/multimedia/calf-raise/vid-20084681", "licence": "Telif hakkli", "read": false, "note": "Arama ozetinden: 1 set 12-15 tekrar, denge icin sandalye" },
+    "nasm-goblet": { "publisher": "NASM", "url": "https://www.nasm.org/resource-center/blog/training/how-to-perform-goblet-squats", "licence": "Telif hakkli", "read": false, "note": "Arama ozetinden: dizler ayak ustunde, dusme/yuvarlanma hatalari" },
+    "hopkins-breath": { "publisher": "Johns Hopkins Medicine", "url": "https://www.hopkinsmedicine.org/breathlessness-clinic/breathing-techniques", "licence": "Telif hakkli", "read": false, "note": "403; arama ozetinden: burundan ~4 sn al, agizdan yavas ver" },
+    "nhs-cheshire-breath": { "publisher": "NHS (Cheshire trust brosuru)", "url": "https://www.cheshire-epaige.nhs.uk/wp-content/uploads/2018/11/Diaphragmatic-breathing-techniques.pdf", "licence": "NHS brosuru", "read": false, "note": "Arama ozetinden: Cleveland ile ayni siralama" },
+    "jama-face": { "publisher": "JAMA Dermatology 2018 (PMC5885810)", "url": "https://pmc.ncbi.nlm.nih.gov/articles/PMC5885810/", "licence": "AMA telif hakki; acik lisans yok", "read": true },
+    "harvard-face": { "publisher": "Harvard Health", "url": "https://www.harvardhealth.org/blog/can-facial-exercises-reverse-the-signs-of-aging-2019022016042", "licence": "Telif hakkli", "read": true },
+    "who-2020": { "publisher": "WHO", "url": "https://pmc.ncbi.nlm.nih.gov/articles/PMC7719906/", "licence": "CC BY-NC-SA 3.0 IGO (dogrulanacak)", "read": false, "note": "Tam metin henuz okunmadi; 150-300 dk orta siddet aerobik dogrulandi, kas guclendirme 'haftada >=2 gun' ikincil kaynaktan" }
+  },
+  "families": [
+    { "code": "squat", "titleTr": "Squat ailesi", "titleEn": "Squat family" },
+    { "code": "bridge", "titleTr": "Kalca koprusu ailesi", "titleEn": "Bridge family" },
+    { "code": "quadruped-core", "titleTr": "Dort ayak core ailesi", "titleEn": "Quadruped core family" },
+    { "code": "plank-based", "titleTr": "Plank temelli", "titleEn": "Plank-based" }
+  ],
+  "exercises": [
+    {
+      "code": "sit-to-stand", "nameTr": "Sandalyeden kalkma", "nameEn": "Sit-to-stand", "family": "squat", "variationOf": null,
+      "categories": ["fitness"], "regions": ["bacak", "kalca"], "equipment": ["sandalye"], "level": "BEGINNER",
+      "steps": ["Tekerleksiz, kolcaksiz saglam bir sandalyenin kenarina otur; ayaklar kalca genisliginde.", "Hafif one egil, bacaklarinla yavasca ayaga kalk.", "Yavasca geri otur."],
+      "technique": ["Bakis one; asagiya degil.", "Elleri sadece yonlendirmek icin kullan."],
+      "mistakes": null, "watch": ["Yavas yapmak daha iyi (NHS)."], "safety": ["Sandalye kaymamali."],
+      "alternatives": [{ "to": "mini-squat", "type": "HARDER" }],
+      "prescription": { "reps": "5 tekrar (NHS baslangic)", "sets": null, "restSec": null, "holdSec": null },
+      "sources": ["nhs-strength"], "verification": "partial", "media": { "status": "MISSING" }
+    },
+    {
+      "code": "mini-squat", "nameTr": "Mini squat (sandalye destekli)", "nameEn": "Mini-squat", "family": "squat", "variationOf": "sit-to-stand",
+      "categories": ["fitness", "daily"], "regions": ["bacak", "kalca"], "equipment": ["sandalye"], "level": "BEGINNER",
+      "steps": ["Sandalyenin arkasinda dur, elleri sirtliga koy; ayaklar kalca genisliginde.", "Dizleri rahat edebildigin kadar yavasca bük.", "Kalcalari sikarak kalk."],
+      "technique": ["Dizler one ve ayak bas parmaklarinin ustunde.", "Sirt dik.", "Sirt notr, karin sikik; dizler ayaklarin ustunde, ice/disa donmesin (Mayo, ozetten)."],
+      "mistakes": ["Dizlerin ice cokmesi (en sik hata, ikincil kaynaklar)"], "watch": ["90 dereceye inilemiyorsa inebildigin kadar in (Mayo, ozetten)."], "safety": ["Agri olursa derinligi azalt."],
+      "alternatives": [{ "to": "sit-to-stand", "type": "EASIER" }, { "to": "goblet-squat", "type": "HARDER" }],
+      "prescription": { "reps": "5 tekrar (NHS)", "sets": null, "restSec": null, "holdSec": null },
+      "sources": ["nhs-strength", "mayo-squat"], "verification": "ok", "media": { "status": "MISSING" }
+    },
+    {
+      "code": "goblet-squat", "nameTr": "Goblet squat", "nameEn": "Goblet squat", "family": "squat", "variationOf": "mini-squat",
+      "categories": ["fitness"], "regions": ["kalca", "bacak"], "equipment": ["dambil"], "level": "INTERMEDIATE",
+      "steps": ["Ayaklar omuz genisliginde.", "Dambili gogus onunde dik tut; dirsekler kaburgaya yakin, sirt dik.", "Kalca dizlerin altina inene kadar çök.", "Ayaklarla zemini iterek ayaga kalk."],
+      "technique": ["Sirt dik, dirsekler govdeye yakin.", "Dizler ayak uzerinde; derinlik belin yuvarlanmadigi yere kadar (NASM, ozetten)."],
+      "mistakes": ["Agirligin gogusten uzaklasmasi", "Dizlerin ice cokmesi", "Belin yuvarlanmasi", "Hizli dusup sekmek", "Topuklarin kalkmasi"], "watch": ["Dizlerin hafifce one gitmesi dogal olabilir (ikincil kaynaklar)."], "safety": ["Diz/bel agrisinda derinligi azalt veya mini squat'a don."],
+      "alternatives": [{ "to": "mini-squat", "type": "EASIER" }],
+      "prescription": { "reps": null, "sets": null, "restSec": null, "holdSec": null },
+      "sources": ["ace-goblet", "nasm-goblet"], "verification": "partial", "media": { "status": "MISSING" },
+      "gap": "NASM sayfasi okunamadi, arama ozetinden. Set/tekrar kaynakta yok."
+    },
+    {
+      "code": "squat-jump", "nameTr": "Zipla-squat", "nameEn": "Squat jump", "family": "squat", "variationOf": "goblet-squat",
+      "categories": ["cardio", "sport"], "regions": ["kalca", "bacak"], "equipment": [], "level": "INTERMEDIATE", "highImpact": true,
+      "steps": ["Ayaklar kalca genisliginde, kollar yanda; omuzlari asagi-geri, core sik.", "Kalcayi geri it, topuklar kalkmak uzereyken dur.", "Kisaca bekle, ayak bilegi-diz-kalca birlikte iterek zipla.", "Ayak ortasina yumusak in; topuga dogru yuvarlan, kalcayi geri-asagi alarak darbeyi sondur."],
+      "technique": ["Havada ayaklar ayni hizada ve paralel."],
+      "mistakes": ["Bel cukurlasmasi", "Dipte fazla beklemek", "Dizlerin cok one kaymasi", "Inista dizleri kilitlemek"],
+      "watch": ["Once squat ve inis mekanigi ogrenilmeli; kalca mentese hareketi ve inis oturmadan patlayici ziplamaya gecme."],
+      "safety": ["Diz/ayak bilegi sorunu olanlara ziplamali hareket verilmez (yuksek darbe isareti)."],
+      "alternatives": [{ "to": "mini-squat", "type": "EASIER" }],
+      "prescription": { "reps": null, "sets": null, "restSec": null, "holdSec": null },
+      "sources": ["ace-squatjump"], "verification": "partial", "media": { "status": "MISSING" },
+      "gap": "ACE bunu 'Beginner' etiketliyor ama oninkosullari var; uygulamada seviye INTERMEDIATE ve onkosullu tutuldu (karar sende)."
+    },
+    {
+      "code": "glute-bridge", "nameTr": "Kalca koprusu", "nameEn": "Glute bridge", "family": "bridge", "variationOf": null,
+      "categories": ["fitness", "mobility"], "regions": ["kalca", "karin"], "equipment": [], "level": "BEGINNER",
+      "steps": ["Sirtustu uzan; dizler bukuk, ayaklar kalca genisliginde ve duz.", "Karni hafifce sikarak beli yere yaklastir; bu sikiligi koru.", "Nefes ver, kalcalari sikarak kalcayi yukari kaldir; topuklarla it.", "Nefes alarak yavasca in."],
+      "technique": ["Bel cukurlasacak kadar yukari kalkma."],
+      "mistakes": ["Kalcayi cok yukari kaldirip bel cukurlasmasi"],
+      "watch": ["Karin sikiligi hareket boyunca korunmali."],
+      "safety": ["Asiri bel cukurlasmasindan kacin."],
+      "alternatives": [{ "to": "glute-bridge-single-leg", "type": "HARDER" }],
+      "prescription": { "reps": null, "sets": null, "restSec": null, "holdSec": null },
+      "sources": ["ace-bridge"], "verification": "partial", "media": { "status": "MISSING" }
+    },
+    {
+      "code": "glute-bridge-single-leg", "nameTr": "Tek bacakli kalca koprusu", "nameEn": "Single-leg glute bridge", "family": "bridge", "variationOf": "glute-bridge",
+      "categories": ["fitness"], "regions": ["kalca", "bacak"], "equipment": [], "level": "INTERMEDIATE",
+      "steps": ["Sirtustu, dizler bukuk; bir bacagi gogse cek, diger ayagi merkeze kaydir; karni sik.", "Nefes ver, yerdeki ayakla it ve ayni taraf kalcayi sikarak kalcayi kaldir.", "Nefes alarak kontrollu in; sonra taraf degistir."],
+      "technique": ["Kalcayi kasin kontrol edebildigi kadar kaldir."],
+      "mistakes": ["Kalcayi cok yukari itmek", "Karin sikiligini kaybetmek"],
+      "watch": null, "safety": ["Karin kaslari boyunca aktif kalmali (bel korumasi)."],
+      "alternatives": [{ "to": "glute-bridge", "type": "EASIER" }],
+      "prescription": { "reps": null, "sets": null, "restSec": null, "holdSec": null },
+      "sources": ["ace-bridge-sl"], "verification": "partial", "media": { "status": "MISSING" }
+    },
+    {
+      "code": "wall-press-up", "nameTr": "Duvar sinav", "nameEn": "Wall press-up", "family": "plank-based", "variationOf": null,
+      "categories": ["fitness", "daily"], "regions": ["gogus", "omuz", "kol"], "equipment": [], "level": "BEGINNER",
+      "steps": ["Duvardan bir kol boyu uzakta dur; eller gogus hizasinda duvarda, parmaklar yukari.", "Sirt dik; dirsekleri vucuda yakin bukerek duvara yaklas.", "Baslangica don."],
+      "technique": ["Bas-topuk duz cizgi (Harvard).", "Kontrollu in, dusme.", "Nefes al inerken, ver iterken; nefesi tutma (NIA, ozetten)."], "mistakes": ["Sirtin cokmesi veya cukurlasmasi (Mayo, ozetten)"], "watch": ["Duvardan uzaklasmak zorlastirir."], "safety": ["Bilek/omuz/eklemde agri olursa dur (Harvard).", "Eklem sorununda once saglik uzmani."],
+      "alternatives": [{ "to": "wall-press-up", "type": "HARDER", "note": "Ayaklari duvardan uzaklastir (Harvard); sonra dizde sinav" }],
+      "prescription": { "reps": "5-10 (NHS) / 10-15 (NIA, ozetten)", "sets": "3 set (NHS); NIA: dinlen, 2. set", "restSec": null, "holdSec": null, "note": "Kaynaklar araliklar konusunda farkli; kullaniciya 5-10 ile basla, bu kural motorda 'acik kural' olarak belirlenir." },
+      "sources": ["nhs-strength", "harvard-pushup", "nia-wall-pushup"], "verification": "ok", "media": { "status": "MISSING" }
+    },
+    {
+      "code": "bird-dog", "nameTr": "Kus-kopek", "nameEn": "Bird dog", "family": "quadruped-core", "variationOf": null,
+      "categories": ["fitness", "posture"], "regions": ["karin", "bel", "kalca"], "equipment": [], "level": "BEGINNER",
+      "steps": ["Eller omuz altinda, dizler kalca altinda dort ayak pozisyonu.", "Core'u hafif sik, normal nefes al.", "Karsi kol ve bacagi duz bir cizgide uzat; kalcalar yatay kalsin."],
+      "technique": ["Bas ve omurga notr; kalca ve omuzlar yere paralel.", "Kol ve bacak kabaca yere paralel olana kadar kaldir, kisaca tut.", "Sirta kucuk yastik koymak bel cukurlasmasini/kaymasini fark ettirir; ayna geri bildirim verir."],
+      "mistakes": ["Sirti cukurlastirmak", "Yukari bakmak", "Kalcayi cevirmek", "Kol/bacagi govdeden yukari kaldirmak", "Kontrol yerine hiza odaklanmak"],
+      "watch": ["Yer rahatsiz ediyorsa yatak uzerinde diz coker."],
+      "safety": ["Kotu form bel/boyun yaralanma riskini artirir; kontrollu yap. Akut bel agrisi veya fitikta saglik uzmani (ikincil kaynaklar)."],
+      "alternatives": [{ "to": "bird-dog", "type": "EASIER", "note": "Sadece bir kol veya sadece bir bacak (Harvard)" }, { "to": "bird-dog", "type": "HARDER", "note": "Kol-bacagi saat 2-8 / 10-4 capraz hareket ettir (Harvard)" }],
+      "prescription": { "reps": "10 tekrar bir cift, sonra 10 diger cift (Harvard)", "sets": null, "restSec": null, "holdSec": "Harvard belirtmiyor; ikincil kaynaklar 2-5 ve 5-10 sn arasinda celisiyor" },
+      "sources": ["harvard-bird-dog"], "verification": "partial",
+      "gap": "Harvard okundu; ikinci bagimsiz birincil kaynak yok (PT/fitness bloglari uyumlu ama zayif)."
+    },
+    {
+      "code": "mountain-climber", "nameTr": "Dag tirmanisi", "nameEn": "Mountain climber", "family": "plank-based", "variationOf": "bird-dog",
+      "categories": ["cardio"], "regions": ["karin", "omuz", "kalca"], "equipment": [], "level": "INTERMEDIATE",
+      "steps": ["Yuksek plank: eller omuz altinda, sirt duz, core ve kalca sikik.", "Bir diz gogse dogru, diger bacak geride; dengeli ritimle sirayla degistir."],
+      "technique": ["Bakis ellerin biraz onunde yerde."],
+      "mistakes": ["Kalcanin yukari kalkmasi", "Belin cokmesi veya yukari gelmesi", "Ayak parmaklarinda siçrama", "Cok hizli yapmak", "Omuzlarin kulaga cikmasi"], "watch": ["Form bozulursa dur, sifirla."],
+      "safety": ["Bilek/diz sorununda eller yuksekte ya da adim atma versiyonu.", "Baslangicta yavas tempo, eller yukseltilmis zemin, adim atma; alternatif: dead bug, bird dog, ayakta diz cekme (ikincil kaynaklar)."],
+      "alternatives": [{ "to": "bird-dog", "type": "EASIER" }],
+      "prescription": { "reps": null, "sets": "3 set", "restSec": "15-20 sn", "holdSec": "20-30 sn (tek blog kaynagi)" },
+      "sources": [], "verification": "held",
+      "gap": "Yalnizca blog ozetleri; ACE vb. birincil kaynak bulunamadi."
+    },
+    {
+      "code": "lateral-shuffle", "nameTr": "Yana kayma adimlari", "nameEn": "Lateral shuffles", "family": null, "variationOf": null,
+      "categories": ["sport", "cardio"], "regions": ["kalca", "bacak"], "equipment": ["huni (cone)"], "level": "BEGINNER",
+      "steps": ["Sporcu durusu: ayaklar kalca genisliginde, dizler bukuk, agirlik kalcada; karin sikik.", "Agirligi saga kaydir, sag ayagi kaldir, sol ayakla it ve yana ilerle.", "Ayaklar paralel, parmaklar one; hizli kisa adimlar.", "Son huniden sola geri don."],
+      "technique": ["Gogus dizlerin, burun parmaklarin ustunde.", "Ayaklar en az kalca genisliginde."],
+      "mistakes": null, "watch": null, "safety": ["Zemin kaygan olmamali (genel onlem, kaynakta yok)"],
+      "alternatives": [],
+      "prescription": { "reps": null, "sets": null, "restSec": null, "holdSec": null, "note": "Huniler yaklasik 5 yarda (~4,5 m) arayla" },
+      "sources": ["ace-shuffle"], "verification": "partial", "media": { "status": "MISSING" }
+    },
+    {
+      "code": "downward-dog", "nameTr": "Asagi bakan kopek", "nameEn": "Downward-facing dog", "family": null, "variationOf": null,
+      "categories": ["yoga"], "regions": ["omuz", "sirt", "bacak arkasi"], "equipment": ["mat"], "level": "BEGINNER",
+      "steps": ["Dort ayak: eller omuz genisliginde, dizler kalca altinda.", "Parmaklari ac, ellerle it, ayak parmaklarini altina kivir.", "Nefes ver, kalcayi yukari-geri kaldirip ters V yap.", "Sirt uzun, bas ve boyun kollar arasinda gevsek; bacaklar dik, topuklar rahat oldugu kadar yere.", "Sabit nefes al; cikarken dort ayak ya da cocuk durusuna in."],
+      "technique": ["Parmaklari ac, tum avuca bas.", "Topuklari zorla yere indirme."],
+      "mistakes": ["Sirti yuvarlamak", "Ayaklari cok acik koymak", "Bilege fazla yuklenmek"],
+      "watch": ["Bilek rahatsizliginda eldivenin topuguna kivrilmis havlu/mat kenari."],
+      "safety": ["Yuksek tansiyon, glokom, kalp sorunu, bas donmesi/bayilma oykusu varsa once uzmana danis.", "Asiri gerginlik hissedersen cik."],
+      "alternatives": [{ "to": "downward-dog", "type": "EASIER", "note": "Duvar versiyonu veya dizleri hafif bukme" }],
+      "prescription": { "holdSec": "10-15 sn (Cleveland); uzun tutmaktan kacin" },
+      "sources": ["cc-dog"], "verification": "partial", "media": { "status": "MISSING" }
+    },
+    {
+      "code": "pilates-hundred", "nameTr": "Pilates Hundred", "nameEn": "Pilates Hundred", "family": null, "variationOf": null,
+      "categories": ["pilates"], "regions": ["karin", "core"], "equipment": ["mat"], "level": "INTERMEDIATE",
+      "steps": ["Matta sirtustu; bacak ve kollari uzat, omuz ve basi kaldir.", "Kollari 100'e kadar pompala."],
+      "technique": ["5 sayida nefes al, 5 sayida ver (burundan al, agizdan ver)."],
+      "mistakes": null, "watch": ["Kardiyo etkisi olacak kadar nabzi yukseltmesi beklenmez.", "Kolay versiyon: ayaklar yerde dizler bukuk veya bacaklar 90 derece (tabletop); bas yerde (boyun altina havlu) (ikincil kaynaklar).", "Bel cukurlasiyorsa dizleri bukulu tut; bacagi 45 dereceye uzatmak ancak omurga notrse."],
+      "safety": ["Hamilelikte kacin (diastasis recti riski).", "Boyun/omuz/kalca sorununda uyarla; omurga fleksiyonu guvenli degilse basi kaldirma.", "Agri olursa dur."],
+      "alternatives": [],
+      "prescription": { "holdSec": "yaklasik 2 dk'dan az" },
+      "sources": ["ace-hundred"], "verification": "held",
+      "gap": "Tek haber kaynagi; adim adim talimat ve kademe yok. Birincil kaynak (egitmen/egitim kurumu) gerekli."
+    },
+    {
+      "code": "chin-tuck", "nameTr": "Cene geri cekme", "nameEn": "Chin tuck", "family": null, "variationOf": null,
+      "categories": ["posture"], "regions": ["boyun"], "equipment": [], "level": "BEGINNER",
+      "steps": ["Omuzlar geride, ayaklar yerde otur.", "Cenesini yukari/asagi egmeden duz geri cek; parmak uclariyla yonlendirebilirsin.", "Birkac saniye tut."],
+      "technique": ["Goz hizasi degismesin.", "Duvar kontrolu: sirt duvarda, ense duvara degene kadar basi geri cek."],
+      "mistakes": ["Cenesini asagi/yukari egmek (kafa duz geri kaymali)"], "watch": ["Dizilimi tek basina duzeltmez; gogus/ust sirt mobilitesi ile birlikte (ikincil)."],
+      "safety": ["Agri surer ya da egzersizler yardim etmezse doktor/fizyoterapist.", "Kola yayilan agri veya bas agrisi artarsa dur; bas donmesinde menzili azalt (ikincil)."],
+      "alternatives": [{ "to": "chin-tuck", "type": "EASIER", "note": "Sirtustu, bas yastikta (ikincil)" }],
+      "prescription": { "holdSec": "Cleveland: birkac sn; klinik bloglar: 3-5 sn", "reps": "10 tekrar, gunde 2 (bir klinik blog) / 3x10 (bir baska); kaynaklar celisiyor" },
+      "sources": ["cc-posture"], "verification": "partial",
+      "gap": "Cleveland tek klinisyen gorusu; ikinci kaynaklar PT klinik bloglari (okunmadi). Calisma atfi yok. Dozaj kurali acik kural olarak bizim tarafimizdan belirlenmeli."
+    },
+    {
+      "code": "wall-angel", "nameTr": "Duvar meleği", "nameEn": "Wall angel", "family": null, "variationOf": null,
+      "categories": ["posture"], "regions": ["omuz", "sirt"], "equipment": [], "level": "BEGINNER",
+      "steps": ["Basin, kürek kemiklerin, kalcan ve bacak arkan duvara degsin; kollar yanda, avuclar disa.", "Kollari yanlardan yukari kaydir; el sirtlari duvarda.", "Ustte biraz bekle, yavasca indir."],
+      "technique": ["Vucudun geri kalani duruşunu korusun."],
+      "mistakes": null, "watch": ["Yerde uzanarak da yapilabilir."], "safety": null,
+      "alternatives": [],
+      "prescription": { "holdSec": "birkac sn" },
+      "sources": ["cc-posture"], "verification": "held",
+      "gap": "Tek kaynak, tekrar/set yok."
+    },
+    {
+      "code": "diaphragmatic-breathing", "nameTr": "Diyafram nefesi", "nameEn": "Diaphragmatic breathing", "family": null, "variationOf": null,
+      "categories": ["daily", "yoga"], "regions": ["karin", "gogus"], "equipment": [], "level": "BEGINNER",
+      "steps": ["Sirtustu, dizler bukuk, bas desteklenmis; bir el ust gogüste, biri kaburga altinda.", "Burundan yavasca al; karin kalksin, ust gogus mumkun oldugunca sabit.", "Karin kaslarini sikarak buzulmus dudaklarla ver."],
+      "technique": ["Alisinca sandalyede oturarak yap."],
+      "mistakes": ["Ust gogsun kalkmasi (hedef: karin hareket etsin)"], "watch": ["Ilk basta yorucu gelebilir.", "Ilk denemelerde bas donmesi olabilir (Mayo Connect, hasta blogu)."],
+      "safety": ["KOAH, astim ya da anksiyete varsa once saglik uzmani.", "Tek basina tedavi degildir."],
+      "alternatives": [{ "to": "diaphragmatic-breathing", "type": "EASIER", "note": "Once sirtustu, alisinca oturarak" }],
+      "prescription": { "note": "5-10 dk, gunde 3-4 kez (Cleveland); Mayo Connect 5-10 dk/gun; Hopkins: burundan ~4 sn al (ozetten)" },
+      "sources": ["cc-breathing", "nhs-cheshire-breath", "hopkins-breath"], "verification": "ok",
+      "gap": "Faydalar icin calisma ozeti yok; fayda iddialari uygulamada kullanilmaz."
+    },
+    {
+      "code": "calf-raise", "nameTr": "Parmak ucuna kalkma", "nameEn": "Calf raise", "family": null, "variationOf": null,
+      "categories": ["daily", "fitness"], "regions": ["bacak", "ayak bilegi"], "equipment": ["sandalye"], "level": "BEGINNER",
+      "steps": ["Sandalyenin arkasinda, elleri sirtliga koy, ayaklar yerde.", "Iki topugu rahat oldugu kadar yavas ve kontrollu kaldir.", "Yavasca in."],
+      "technique": ["Yavas ve kontrollu (NHS).", "Sirt ve dizler dik (Mayo, ozetten)."], "mistakes": null, "watch": null, "safety": ["Denge icin sandalye/duvar kullan."],
+      "alternatives": [{ "to": "calf-raise", "type": "HARDER", "note": "Destek olmadan (NHS); dambil ile (Mayo)" }],
+      "prescription": { "reps": "5 (NHS baslangic); 12-15 (Mayo, ozetten)", "sets": "1 set (Mayo)" },
+      "sources": ["nhs-strength", "mayo-calf"], "verification": "ok", "media": { "status": "MISSING" }
+    },
+    {
+      "code": "facial-exercises", "nameTr": "Yuz egzersizleri", "nameEn": "Facial exercises", "family": null, "variationOf": null,
+      "categories": ["face"], "regions": ["yuz"], "equipment": [], "level": "BEGINNER",
+      "steps": null, "technique": null, "mistakes": null, "watch": null,
+      "safety": null, "alternatives": [],
+      "evidenceNote": "Tek pilot calisma (JAMA Dermatology 2018): 27 kadin, kontrol grubu yok, 11 kisi birakti, 16 analiz edildi, 20 hafta; yanak dolgunlugunda iyilesme, tahmini yas ~50,8 -> 48,1. Harvard: 'jury is still out'. Surekli sonuc, hangi egzersiz ve ne kadar sure bilinmiyor. Yuz masaji icin okunan hicbir kaynakta kanit yok.",
+      "appCopy": "Yuz egzersizleri icin kanit sinirlidir; sonuc garanti edilmez. Gunluk SPF 30+ gunes koruyucu cilt yaslanmasina karsi cok daha guclu kanita sahiptir.",
+      "sources": ["jama-face", "harvard-face"], "verification": "held",
+      "gap": "Hareket adimlari yayinlanmaz: calisma protokolu hareketleri detayli vermiyor, kaynaksiz adim yazilmadi."
+    }
+  ],
+  "cardTemplates": {
+    "note": "Set/tekrar/dinlenme sayilari bos birakildi; yalnizca kaynakta gecenler yazildi. Kategori sablonlari taslak.",
+    "fitness": ["Hazirlik/isinma", "Ana hareketler (buyuk kaliptan kucuge)", "Aksesuar", "Soguma/esneme"],
+    "yoga-pilates": ["Nefes/merkezleme", "Isinma akisi", "Ana durus/akis", "Soguma ve gevseme"],
+    "posture": ["Farkindalik", "Mobilite", "Guclendirme", "Gunluk hatirlatma"],
+    "face": ["Kanit uyarisi", "Hafif yuz hareketleri (kaynak bulunursa)", "Gunes korumasi hatirlatmasi"],
+    "cardio": ["Isinma", "Aralikli/surekli blok", "Soguma"],
+    "sport": ["Isinma", "Beceri/cabukluk blogu", "Soguma"],
+    "daily": ["Kisa mikro-molalar", "Basit guc/denge"]
+  },
+  "mediaLicensing": {
+    "finding": "Wikimedia Commons'ta squat icin CC BY 2.0, CC BY-SA 3.0/4.0 dosyalar var; CC0/public domain bulunmadi. Kullanmadan once her dosyanin lisans sablonu, yazar adi ve share-alike gerekliligi kontrol edilmeli. ACE, Cleveland Clinic, NHS gorselleri kullanilmaz (telif).",
+    "plan": "Cogu hareket icin kendi cekimimiz/cizimimiz veya lisansli kutuphane; su an hepsi MISSING."
+  }
+}

@@ -97,7 +97,7 @@ export function MyProgramScreen() {
     meals: meals.filter((m) => slotOf(m.time) === slot).sort((a, b) => (a.time ?? '').localeCompare(b.time ?? '')),
   })).filter((s) => s.meals.length > 0);
   const hasExpert = plans.length > 0 || trainerPrograms.length > 0;
-  const hasTasks = (day?.programs.length ?? 0) + (day?.tasks.length ?? 0) + (day?.personalPlan ? 1 : 0) > 0;
+  const hasTasks = (day?.programs.length ?? 0) + (day?.tasks.length ?? 0) + (day?.cards.length ?? 0) + (day?.personalPlan ? 1 : 0) > 0;
 
   return (
     <Screen tabBarInset>
@@ -199,6 +199,31 @@ export function MyProgramScreen() {
           ))}
         </Card>
       ) : null}
+      {/* Takvime eklenen antrenman kartları ("Hemen Başla" ile oynatılır) */}
+      {day?.cards.map((t) => (
+        <Card key={t.id}>
+          <View style={{ flexDirection: 'row', gap: 6, marginBottom: 6, flexWrap: 'wrap' }}>
+            <Tag label="Antrenman kartı" kind="accent" />
+            <Tag label={t.card.categoryLabel} />
+            {t.done ? <Tag label={`${t.completedMoves ?? 0}/${t.totalMoves ?? t.moveCount} hareket yapıldı`} kind="success" /> : null}
+          </View>
+          <Text variant="heading">{t.card.title}</Text>
+          <Text variant="caption" tone="secondary" style={{ marginBottom: 8 }}>
+            ~{t.estimatedMinutes} dk · {t.moveCount} hareket
+          </Text>
+          <View style={{ flexDirection: 'row', gap: 8, alignItems: 'center' }}>
+            <Button label={t.done ? 'Tekrar başla' : 'Hemen Başla'} size="sm" disabled={future} onPress={() => router.push({ pathname: '/workout-play/[id]', params: { id: t.card.id, avoid: t.avoid.join(',') } })} />
+            <Button label="Kaldır" size="sm" variant="ghost" onPress={async () => {
+              try {
+                await api.removeWorkoutCardTask(t.id);
+                void load(date);
+              } catch (e) {
+                showToast(errorText(e), 'warning');
+              }
+            }} />
+          </View>
+        </Card>
+      ))}
       {day?.programs.map((p) => (
         <Card key={p.enrollmentId}>
           <Pressable onPress={() => router.push(`/library-program/${p.program.id}`)}>

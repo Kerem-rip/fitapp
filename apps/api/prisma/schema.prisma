@@ -54,6 +54,7 @@ model User {
   passwordReset      PasswordReset?
   libraryEnrollments LibraryEnrollment[]
   libraryTasks       LibraryTask[]
+  workoutCardTasks   WorkoutCardTask[]
   profile            Profile?
 
   following     Follow[]        @relation("follower")
@@ -1832,6 +1833,26 @@ model LibraryTask {
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@unique([userId, itemId, date])
+  @@index([userId, date])
+}
+
+// Takvime eklenen antrenman kartı (workout-cards.ts CARDS[].id); "Hemen Başla" bitince doneAt dolar
+model WorkoutCardTask {
+  id             String    @id @default(uuid())
+  userId         String
+  cardId         String
+  date           DateTime  @db.Date
+  // Kısıt seçimiyle eklendiyse alan adları (virgülle); boşsa kısıt yok
+  avoid          String    @default("")
+  doneAt         DateTime?
+  // Tamamlama kaydı: kaç hareket yapıldı, kaç hareket vardı
+  completedMoves Int?
+  totalMoves     Int?
+  createdAt      DateTime  @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, cardId, date])
   @@index([userId, date])
 }
 

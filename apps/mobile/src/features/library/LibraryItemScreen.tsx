@@ -8,6 +8,7 @@ import { api } from '@/api/client';
 import { errorText } from '@/auth/actions';
 import { ChipRow } from '@/components/ChipRow';
 import { dateKey, formatShort } from '@/demo/dates';
+import { EvidenceBlock } from './EvidenceBlock';
 import { durationText, LEVEL_TEXT } from './labels';
 
 // Görev bugüne ya da önümüzdeki birkaç güne eklenebilir
@@ -109,6 +110,8 @@ export function LibraryItemScreen() {
               {item.warnings.map((w) => (
                 <Notice key={w} kind="warning" text={w} />
               ))}
+
+              {item.kind === 'MOVE' || item.kind === 'FACE' ? <EvidenceBlock item={item} /> : null}
 
               <SectionHeader title="Görevime ekle" />
               <ChipRow options={DAY_OPTIONS} selected={[day]} onToggle={setDay} />

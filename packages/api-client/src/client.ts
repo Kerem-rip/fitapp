@@ -62,8 +62,11 @@ import type {
   FollowState,
   UserCard,
   LibraryEnrollmentItem,
+  BodyAreaKey,
   LibraryItemCard,
   LibraryItemDetail,
+  WorkoutCardDetail,
+  WorkoutCardSummary,
   LibraryProgramCard,
   LibraryProgramDetail,
   MyProgramDay,
@@ -483,6 +486,16 @@ export function createApiClient(config: ApiClientConfig) {
       request<{ id: string; itemId: string; date: string }>('/me/library/tasks', { method: 'POST', body: date ? { itemId, date } : { itemId }, auth: true }),
     removeLibraryTask: (id: string) => request<{ id: string }>(`/me/library/tasks/${id}`, { method: 'DELETE', auth: true }),
     setLibraryTaskDone: (id: string, done: boolean) => request<{ id: string }>(`/me/library/tasks/${id}/done`, { method: 'POST', body: { done }, auth: true }),
+    workoutCards: (avoid: string[] = []) =>
+      request<{ restrictions: { key: BodyAreaKey; label: string }[]; cards: WorkoutCardSummary[] }>(`/workout-cards${avoid.length ? `?avoid=${avoid.join(',')}` : ''}`, { auth: true }),
+    workoutCard: (id: string, avoid: string[] = []) =>
+      request<WorkoutCardDetail>(`/workout-cards/${encodeURIComponent(id)}${avoid.length ? `?avoid=${avoid.join(',')}` : ''}`, { auth: true }),
+    addWorkoutCardTask: (cardId: string, date?: string, avoid: string[] = []) =>
+      request<{ id: string; cardId: string; date: string }>('/me/workout-cards/tasks', { method: 'POST', body: { cardId, ...(date ? { date } : {}), ...(avoid.length ? { avoid } : {}) }, auth: true }),
+    removeWorkoutCardTask: (id: string) => request<{ id: string }>(`/me/workout-cards/tasks/${id}`, { method: 'DELETE', auth: true }),
+    resetWorkoutCardTask: (id: string) => request<{ id: string }>(`/me/workout-cards/tasks/${id}/reset`, { method: 'POST', auth: true }),
+    completeWorkoutCard: (cardId: string, completedMoves: number, totalMoves: number, avoid: string[] = []) =>
+      request<{ id: string }>(`/me/workout-cards/${encodeURIComponent(cardId)}/complete`, { method: 'POST', body: { completedMoves, totalMoves, ...(avoid.length ? { avoid } : {}) }, auth: true }),
     myProgramDay: (date: string) => request<MyProgramDay>(`/me/program?date=${date}`, { auth: true }),    requestDeletion: (password: string) =>
       request<{ deletionScheduledFor: string; graceDays: number }>('/users/me/delete', { method: 'POST', body: { password }, auth: true }),
     consents: () => request<{ type: string; textVersion: string; grantedAt: string }[]>('/consents', { auth: true }),

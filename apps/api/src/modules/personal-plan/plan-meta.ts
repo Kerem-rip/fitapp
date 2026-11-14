@@ -37,6 +37,9 @@ const cat = (category: PlanCategory, subcategory: string) => [{ category, subcat
 export const PLAN_META: Record<string, PlanMeta> = {
   // ── Fitness ve Güç ──
   squat: { categories: cat('STRENGTH', 'lower_body'), settings: HOME, equipment: [], pattern: 'SQUAT', roles: ['MAIN'], level: 1, stress: ['KNEE'], alternatives: ['glute-bridge', 'step-up'], progressTo: 'goblet-squat', met: 5 },
+  'sit-to-stand': { categories: cat('STRENGTH', 'lower_body'), settings: ALL, equipment: [], pattern: 'SQUAT', roles: ['MAIN'], level: 1, stress: ['KNEE'], alternatives: ['glute-bridge', 'calf-raise'], progressTo: 'mini-squat', met: 3.5 },
+  'mini-squat': { categories: cat('STRENGTH', 'lower_body'), settings: ALL, equipment: [], pattern: 'SQUAT', roles: ['MAIN'], level: 1, stress: ['KNEE'], alternatives: ['sit-to-stand', 'glute-bridge'], progressTo: 'squat', regressTo: 'sit-to-stand', met: 4 },
+  'squat-jump': { categories: cat('CARDIO_FAT_BURN', 'high_intensity'), settings: ALL, equipment: [], pattern: 'CARDIO', roles: ['MAIN'], level: 2, stress: ['KNEE', 'ANKLE', 'LOW_BACK'], highImpact: true, alternatives: ['step-jacks', 'march-in-place'], regressTo: 'step-jacks', met: 8 },
   'goblet-squat': { categories: cat('STRENGTH', 'lower_body'), settings: EQUIPPED, equipment: ['DUMBBELL'], pattern: 'SQUAT', roles: ['MAIN'], level: 2, stress: ['KNEE', 'LOW_BACK'], alternatives: ['squat', 'step-up'], regressTo: 'squat', met: 5 },
   lunge: { categories: cat('STRENGTH', 'lower_body'), settings: HOME, equipment: [], pattern: 'LUNGE', roles: ['MAIN'], level: 2, stress: ['KNEE', 'ANKLE'], alternatives: ['step-up', 'glute-bridge'], regressTo: 'step-up', met: 5 },
   'step-up': { categories: cat('STRENGTH', 'lower_body'), settings: HOME, equipment: ['STEP'], pattern: 'LUNGE', roles: ['MAIN'], level: 1, stress: ['KNEE'], alternatives: ['glute-bridge', 'calf-raise'], progressTo: 'lunge', met: 5 },

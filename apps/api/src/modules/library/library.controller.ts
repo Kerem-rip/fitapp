@@ -2,7 +2,13 @@
 import { Body, Controller, Delete, Get, HttpCode, Inject, Param, Post, Query, UseGuards } from '@nestjs/common';
 import { z } from 'zod';
 import { AuthGuard, CurrentUser, type AuthUser } from '../auth/auth.guard.js';
-import { LibraryService } from './library.service.js';
+import { BODY_AREAS, type BodyArea } from '../personal-plan/plan-types.js';
+import { LibraryService, parseAvoid } from './library.service.js';
+
+const avoidQuery = z.object({ avoid: z.string().max(100).optional() });
+const avoidList = z.array(z.enum(BODY_AREAS)).max(BODY_AREAS.length);
+const cardTaskSchema = z.object({ cardId: z.string().min(1).max(60), date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'Tarih YYYY-AA-GG olmalı').optional(), avoid: avoidList.optional() });
+const completeSchema = z.object({ avoid: avoidList.optional(), completedMoves: z.number().int().min(0).max(60), totalMoves: z.number().int().min(1).max(60) });
 
 const day = z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'Tarih YYYY-AA-GG olmalı');
 const joinSchema = z.object({ startDate: day.optional() });
@@ -25,6 +31,42 @@ export class LibraryController {
   @Get('library/items/:id')
   item(@Param('id') id: string) {
     return this.library.item(id);
+  }
+
+  // GET /api/workout-cards?avoid=KNEE,LOW_BACK → antrenman kartları (kısıtlı bölgeyi yükleyen hareketler değiştirilir)
+  @Get('workout-cards')
+  cards(@Query({ schema: avoidQuery }) q: { avoid?: string }) {
+    return this.library.cards(parseAvoid(q.avoid ?? ''));
+  }
+
+  @Get('workout-cards/:id')
+  card(@Param('id') id: string, @Query({ schema: avoidQuery }) q: { avoid?: string }) {
+    return this.library.card(id, parseAvoid(q.avoid ?? ''));
+  }
+
+  // POST /api/me/workout-cards/tasks { cardId, date?, avoid? } → "Takvime ekle"
+  @Post('me/workout-cards/tasks')
+  @HttpCode(201)
+  addCardTask(@CurrentUser() user: AuthUser, @Body({ schema: cardTaskSchema }) body: { cardId: string; date?: string; avoid?: BodyArea[] }) {
+    return this.library.addCardTask(user.userId, body.cardId, body.date, body.avoid ?? []);
+  }
+
+  @Delete('me/workout-cards/tasks/:id')
+  removeCardTask(@CurrentUser() user: AuthUser, @Param('id') id: string) {
+    return this.library.removeCardTask(user.userId, id);
+  }
+
+  @Post('me/workout-cards/tasks/:id/reset')
+  @HttpCode(200)
+  resetCardTask(@CurrentUser() user: AuthUser, @Param('id') id: string) {
+    return this.library.resetCardTask(user.userId, id);
+  }
+
+  // POST /api/me/workout-cards/:cardId/complete → "Hemen Başla" bitti; bugünün tamamlama kaydı
+  @Post('me/workout-cards/:cardId/complete')
+  @HttpCode(200)
+  completeCard(@CurrentUser() user: AuthUser, @Param('cardId') cardId: string, @Body({ schema: completeSchema }) body: { avoid?: BodyArea[]; completedMoves: number; totalMoves: number }) {
+    return this.library.completeCard(user.userId, cardId, body.avoid ?? [], body.completedMoves, body.totalMoves);
   }
 
   @Get('library/programs/:id')

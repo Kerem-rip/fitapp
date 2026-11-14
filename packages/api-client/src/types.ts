@@ -972,12 +972,29 @@ export interface LibraryItemCard {
   title: string;
   summary: string;
   level: string;
+  // Kaynak doğrulaması: ok (≥2 kaynak), partial, held (yetersiz), none (henüz taranmadı)
+  verification?: EvidenceStatus;
   workText?: string;
   durationSec?: number;
   minutes?: number;
 }
 
+export type EvidenceStatus = 'ok' | 'partial' | 'held' | 'none';
+
+export interface LibraryItemEvidence {
+  verification: EvidenceStatus;
+  nameEn: string | null;
+  family: string | null;
+  variationOf: { id: string; title: string } | null;
+  note: string | null;
+  sources: { publisher: string; url: string; read: boolean }[];
+  alternatives: { id: string; title: string; type: 'EASIER' | 'HARDER' | 'EQUIVALENT' | 'NO_EQUIPMENT' }[];
+}
+
 export interface LibraryItemDetail extends LibraryItemCard {
+  evidence: LibraryItemEvidence;
+  media: { status: 'MISSING' | 'LICENSED' };
+  work: { sets: number; reps?: number; seconds?: number; perSide?: boolean; restSec: number } | null;
   equipment: string | null;
   videoUrl: string | null;
   primary: string[];
@@ -1038,6 +1055,7 @@ export interface MyProgramDay {
   date: string;
   // Kişisel 28 günlük program görevleri (kaynağı ayrı tutulur)
   personalPlan: PlanDayTasks | null;
+  cards: WorkoutCardTask[];
   programs: (Omit<LibraryProgramDay, 'steps'> & {
     enrollmentId: string;
     program: { id: string; title: string; totalDays: number };
@@ -1045,6 +1063,56 @@ export interface MyProgramDay {
     doneCount: number;
   })[];
   tasks: { id: string; item: { id: string; title: string; kind: LibraryItemKind }; workText: string; durationSec: number; done: boolean }[];
+}
+
+// ───── Antrenman kartları ─────
+
+export type BodyAreaKey = 'NECK' | 'SHOULDER' | 'WRIST' | 'LOW_BACK' | 'HIP' | 'KNEE' | 'ANKLE';
+
+export interface WorkoutCardSummary {
+  id: string;
+  title: string;
+  summary: string;
+  category: string;
+  categoryLabel: string;
+  setting: 'home' | 'gym';
+  level: string;
+  equipment: string[];
+  region: string;
+  estimatedMinutes: number;
+  moveCount: number;
+  previewItemId: string | null;
+}
+
+export interface WorkoutCardItem {
+  itemId: string;
+  title: string;
+  workText: string;
+  work: { sets: number; reps?: number; seconds?: number; perSide?: boolean; restSec: number };
+  durationSec: number;
+  restAfterSec: number;
+  verification: EvidenceStatus;
+  replacedFrom?: { id: string; title: string };
+}
+
+export interface WorkoutCardDetail extends WorkoutCardSummary {
+  prep: string[];
+  basis: string[];
+  sections: { kind: 'PREP' | 'WARMUP' | 'MAIN' | 'FINISH'; title: string; items: WorkoutCardItem[] }[];
+  swapped: { from: string; fromTitle: string; to: string | null; toTitle: string | null; area: string }[];
+  avoid: BodyAreaKey[];
+  disclaimer: string;
+}
+
+export interface WorkoutCardTask {
+  id: string;
+  card: { id: string; title: string; categoryLabel: string };
+  avoid: BodyAreaKey[];
+  estimatedMinutes: number;
+  moveCount: number;
+  done: boolean;
+  completedMoves: number | null;
+  totalMoves: number | null;
 }
 
 // ───── Gönderiler ─────

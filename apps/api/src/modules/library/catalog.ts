@@ -3,6 +3,8 @@
 // Kimlikler (id) kalıcıdır: kayıtlı programlar ve görevler bunlara bağlıdır, değiştirilmemeli.
 // Tüm içerik genel bilgidir; tanı veya kişiye özel tedavi değildir.
 
+import { CONTENT } from './evidence.js';
+
 export type ItemKind = 'MOVE' | 'FACE' | 'GUIDE';
 export type ItemCategory = 'home' | 'fitness' | 'posture' | 'face' | 'nutrition' | 'cardio' | 'mobility';
 export type Level = 'beginner' | 'intermediate' | 'advanced';
@@ -260,6 +262,17 @@ export const ITEMS: LibraryItem[] = [
   move('standing-break', 'Ayağa kalk ve hareket et', 'cardio', 'beginner', 'Ekipmansız', time(1, 180, 0), ['Bacak'], [],
     ['Oturduğun yerden kalk, 3 dakika boyunca ayakta gez ya da yerinde yürü.', 'Omuzlarını ve boynunu gevşet.', 'Su iç.'],
     ['Telefona gömülmek'], ['Hafif bir harekettir; yorulmadan yapılabilir.']),
+  // ── Kaynaklı yeni hareketler (docs/research/exercise-pilot.json; kanıt katmanı evidence.ts) ──
+  move('sit-to-stand', 'Sandalyeden kalkma', 'home', 'beginner', 'Sandalye', reps(2, 5, 45), ['Ön bacak', 'Kalça'], ['Karın'],
+    ['Tekerleksiz, kolçaksız sağlam bir sandalyenin kenarına otur; ayaklar kalça genişliğinde.', 'Hafif öne eğil, bacaklarınla yavaşça ayağa kalk.', 'Yavaşça geri otur.'],
+    ['Bakışı aşağı çevirmek', 'Ellerle itmek (sadece yönlendirmek için kullan)'], ['Sandalyenin kaymadığından emin ol.']),
+  move('mini-squat', 'Mini squat (sandalye destekli)', 'home', 'beginner', 'Sandalye', reps(2, 5, 45), ['Ön bacak', 'Kalça'], ['Karın'],
+    ['Sandalyenin arkasında dur, elleri sırtlığa koy; ayaklar kalça genişliğinde.', 'Dizleri rahat edebildiğin kadar yavaşça bük; dizler ayak başparmaklarının üzerinde, sırt dik.', 'Kalçalarını sıkarak kalk.'],
+    ['Dizlerin içe çökmesi'], ['Ağrı olursa derinliği azalt.']),
+  move('squat-jump', 'Zıpla-squat', 'cardio', 'intermediate', 'Ekipmansız', reps(3, 8, 45), ['Kalça', 'Ön bacak'], ['Karın', 'Baldır'],
+    ['Ayaklar kalça genişliğinde, kollar yanda; omuzlar aşağı-geride, karın sıkı.', 'Kalçayı geri it, topuklar kalkmak üzereyken dur.', 'Kısaca bekle; ayak bileği, diz ve kalçayla birlikte iterek zıpla.', 'Ayak ortasına yumuşak in, topuğa doğru yuvarlan; kalçayı geri-aşağı alarak darbeyi sönümle.'],
+    ['Bel çukurlaşması', 'Dipte fazla beklemek', 'Dizlerin çok öne kayması', 'İnişte dizleri kilitlemek'],
+    ['Yüksek etkili harekettir: diz, ayak bileği ya da bel sorunun varsa yapma.', 'Önce squat ve iniş tekniğini öğren; küçük zıplamalarla başla.']),
 
   // ── Beslenme rehberleri (okuma kartları; kişiye özel plan için diyetisyene yönlendirir) ──
   guide('akdeniz', 'Akdeniz tipi beslenme', 4, 'Sebze, baklagil, zeytinyağı ve balık ağırlıklı, sürdürülmesi kolay bir beslenme düzeni.', [
@@ -376,6 +389,16 @@ export const PROGRAMS: LibraryProgram[] = [
     ),
   },
 ];
+
+// Kaynaklı içerik taslak metinlerin üzerine yazılır (tek kayıt, her yerde aynı hareket)
+for (const item of ITEMS) {
+  const o = CONTENT[item.id];
+  if (!o) continue;
+  if (o.steps) item.steps = o.steps;
+  if (o.mistakes) item.mistakes = o.mistakes;
+  if (o.warnings) item.warnings = o.warnings;
+  if (o.work) item.work = o.work;
+}
 
 export const findItem = (id: string) => ITEMS.find((i) => i.id === id);
 export const findProgram = (id: string) => PROGRAMS.find((p) => p.id === id);
