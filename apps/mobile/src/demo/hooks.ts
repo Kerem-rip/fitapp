@@ -41,6 +41,18 @@ export function useEnsureConsent(): () => boolean {
   };
 }
 
+const PRO_ROLES = new Set(['dietitian', 'trainer', 'gymManager', 'gymStaff']);
+export const isProRole = (roleKey: DemoAccount['roleKey'] | undefined) => roleKey !== undefined && PRO_ROLES.has(roleKey);
+
+// Hangi arayüz açık: profesyonel olmayan hesap her zaman sosyal; profesyonel son kullandığı (ilk girişte sosyal)
+export function useSurface(): 'social' | 'pro' {
+  return useDemo((s) => {
+    const account = s.session ? s.accounts.find((a) => a.id === s.session!.accountId) : undefined;
+    if (!account || !isProRole(account.roleKey)) return 'social';
+    return s.ui.surfaces?.[account.id] ?? 'social';
+  });
+}
+
 export function roleTheme(roleKey: DemoAccount['roleKey'] | undefined): RoleTheme {
   return roleKey ?? 'user';
 }

@@ -1,1 +1,1 @@
-export { UserHome as default } from '@/features/home/UserHome';
+export { FeedScreen as default } from '@/features/social/FeedScreen';

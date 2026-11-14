@@ -94,6 +94,25 @@ export class AuthService {
     });
   }
 
+  // Açık oturumlar (cihazlar). Yenileme anahtarı her kullanımda döndüğü için cihaz adı ve ilk giriş zamanı gösterilir.
+  async listSessions(userId: string, currentSessionId: string) {
+    const rows = await this.prisma.session.findMany({
+      where: { userId, revokedAt: null, expiresAt: { gt: new Date() } },
+      orderBy: { createdAt: 'desc' },
+      select: { id: true, deviceName: true, createdAt: true },
+    });
+    return rows.map((s) => ({ id: s.id, deviceName: s.deviceName, lastActiveAt: s.createdAt.toISOString(), current: s.id === currentSessionId }));
+  }
+
+  async revokeSession(userId: string, sessionId: string) {
+    const r = await this.prisma.session.updateMany({ where: { id: sessionId, userId, revokedAt: null }, data: { revokedAt: new Date() } });
+    return { revoked: r.count };
+  }
+
+  async revokeOtherSessions(userId: string, currentSessionId: string) {
+    const r = await this.prisma.session.updateMany({ where: { userId, revokedAt: null, id: { not: currentSessionId } }, data: { revokedAt: new Date() } });
+    return { revoked: r.count };
+  }
   // Yeni oturum açar (giriş ve kayıt tamamlanınca kullanılır)
   async issueSession(userId: string, deviceName?: string) {
     const refreshToken = randomBytes(48).toString('base64url');

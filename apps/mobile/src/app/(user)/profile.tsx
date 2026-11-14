@@ -1,1 +1,1 @@
-export { UserProfile as default } from '@/features/profile/UserProfile';
+export { ProfileScreen as default } from '@/features/social/ProfileScreen';

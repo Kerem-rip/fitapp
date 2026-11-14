@@ -1,7 +1,6 @@
-// Profilim (bireysel ve genç kullanıcı): profil, "Profilini doldur" (sunucudaki gerçek sağlık bilgileri), gizlilik, KVKK izinleri, danışan paylaşımı.
+// Ayarlar ve gizlilik (☰ menüden): hesap bilgileri, "Profilini doldur" (sunucudaki gerçek sağlık bilgileri), gizlilik, KVKK izinleri, danışan paylaşımı.
 // Hiçbir bilgi zorunlu değildir ve otomatik soru sorulmaz; isteyen buradan doldurur.
 import {
-  Avatar,
   BottomSheet,
   Button,
   Card,
@@ -9,7 +8,6 @@ import {
   Notice,
   ProgressBar,
   Screen,
-  ScreenHeader,
   SectionHeader,
   showToast,
   SwitchRow,
@@ -22,11 +20,12 @@ import { useState } from 'react';
 import { View } from 'react-native';
 import { AccountSection } from '@/components/AccountSection';
 import { ConfirmSheet } from '@/components/ConfirmSheet';
-import { errorText, saveProfile, setConsentRemote, setPrivateRemote } from '@/auth/actions';
+import { api } from '@/api/client';
+import { errorText, refreshMe, saveProfile, setConsentRemote, setPrivateRemote } from '@/auth/actions';
+import { useAuth } from '@/auth/auth-store';
 import { DEMO_TOOLS } from '@/config/features';
 import { endClientLink, setSharing, simulateParentalApproval } from '@/demo/actions';
 import { useAccount, useDemoState, useUserData } from '@/demo/hooks';
-import { ROLE_LABELS } from '@/demo/labels';
 import { fullName, proByAccount } from '@/demo/selectors';
 import { useHealthProfile } from '@/features/health/useHealthProfile';
 
@@ -36,14 +35,13 @@ export function UserProfile() {
   const data = useUserData();
   const state = useDemoState();
   const health = useHealthProfile();
+  const me = useAuth().me;
   const [editOpen, setEditOpen] = useState(false);
   const [endTarget, setEndTarget] = useState<string | null>(null);
 
   // Profil düzenleme alanları
   const [firstName, setFirstName] = useState('');
   const [lastName, setLastName] = useState('');
-  const [username, setUsername] = useState('');
-  const [bio, setBio] = useState('');
   const [editError, setEditError] = useState<string | undefined>();
 
   if (!account) return null;
@@ -52,15 +50,13 @@ export function UserProfile() {
   const openEdit = () => {
     setFirstName(account.firstName);
     setLastName(account.lastName);
-    setUsername(account.username);
-    setBio(account.bio);
     setEditError(undefined);
     setEditOpen(true);
   };
 
   const saveEdit = async () => {
     try {
-      await saveProfile({ firstName: firstName.trim(), lastName: lastName.trim(), username: username.trim().toLowerCase(), bio: bio.trim() });
+      await saveProfile({ firstName: firstName.trim(), lastName: lastName.trim() });
       setEditOpen(false);
       showToast('Profilin güncellendi');
     } catch (e) {
@@ -77,6 +73,14 @@ export function UserProfile() {
     setPrivateRemote(value).catch((e) => showToast(errorText(e), 'warning'));
   };
 
+  // Mesaj gizliliği ve çevrimiçi durumu
+  const socialSetting = (patch: { dmPolicy?: 'EVERYONE' | 'FOLLOWING'; showActivity?: boolean }) => {
+    api
+      .updateMe(patch)
+      .then(() => refreshMe())
+      .catch((e) => showToast(errorText(e), 'warning'));
+  };
+
   const consentToggle = (key: 'health_data' | 'marketing', value: boolean) => {
     setConsentRemote(key, value)
       .then(() => {
@@ -89,36 +93,13 @@ export function UserProfile() {
   const endPro = endLink ? state.accounts.find((a) => a.id === endLink.proId) : undefined;
 
   return (
-    <Screen tabBarInset>
-      <ScreenHeader title="Profil" subtitle={ROLE_LABELS[account.roleKey]} />
-
-      <Card>
-        <View style={{ flexDirection: 'row', gap: 14, alignItems: 'center' }}>
-          <Avatar name={fullName(account)} size={72} story />
-          <View style={{ flex: 1, marginLeft: 8 }}>
-            <Text variant="title">{fullName(account)}</Text>
-            <Text variant="caption" tone="secondary">
-              @{account.username}
-            </Text>
-            <View style={{ flexDirection: 'row', gap: 6, marginTop: 6 }}>
-              <Tag label={data.isPrivate ? 'Gizli hesap' : 'Açık hesap'} kind={data.isPrivate ? 'neutral' : 'accent'} icon={data.isPrivate ? 'lock-closed' : 'earth'} />
-              {teen ? <Tag label="Genç modu" kind="accent" /> : null}
-            </View>
-          </View>
-        </View>
-        <Text variant="body" tone={account.bio ? 'primary' : 'muted'} style={{ marginTop: 12 }}>
-          {account.bio || 'Kendini kısaca tanıt.'}
-        </Text>
-        <View style={{ flexDirection: 'row', gap: 10, marginTop: 14 }}>
-          <View style={{ flex: 1 }}>
-            <Button label="Düzenle" variant="secondary" block icon="create-outline" onPress={openEdit} />
-          </View>
-          <View style={{ flex: 1 }}>
-            <Button label="Başkaları nasıl görür" variant="ghost" block onPress={() => router.push('/preview')} />
-          </View>
-        </View>
+    <Screen>
+      <SectionHeader title="Hesap bilgileri" />
+      <Card padded={false} style={{ paddingHorizontal: 16 }}>
+        <ListRow icon="person-outline" title="Ad ve soyad" subtitle={fullName(account)} onPress={openEdit} />
+        <ListRow icon="at-outline" title="Kullanıcı adı, fotoğraf ve biyografi" subtitle={`@${account.username} · Profil › Profili düzenle`} onPress={() => router.push('/profile-edit')} last />
       </Card>
-
+      {teen ? <Tag label="Genç modu" kind="accent" /> : null}
       {teen ? (
         <Card variant="soft">
           <Text variant="heading" style={{ marginBottom: 4 }}>
@@ -209,8 +190,24 @@ export function UserProfile() {
           description="Kampanya ve haber iletileri."
           value={data.consents.marketing}
           onChange={(v) => consentToggle('marketing', v)}
-          last
         />
+        <SwitchRow
+          icon="chatbubbles-outline"
+          title="Sadece takip ettiklerim mesaj göndersin"
+          description="Kapalıyken herkes yazabilir; takip etmediklerin İstekler kutusuna düşer."
+          value={me?.dmPolicy === 'FOLLOWING'}
+          onChange={(v) => socialSetting({ dmPolicy: v ? 'FOLLOWING' : 'EVERYONE' })}
+        />
+        <SwitchRow
+          icon="radio-button-on-outline"
+          title="Çevrimiçi ve son görülme bilgim görünsün"
+          description="Kapatırsan başkalarınınkini de göremezsin."
+          value={me?.showActivity ?? true}
+          onChange={(v) => socialSetting({ showActivity: v })}
+        />
+        <ListRow icon="ban-outline" title="Engellenenler ve sessize alınanlar" onPress={() => router.push('/blocked')} />
+        <ListRow icon="phone-portrait-outline" title="Açık oturumlar" subtitle="Hesabına giriş yapılmış cihazlar" onPress={() => router.push('/sessions')} />
+        <ListRow icon="shield-outline" title="Kaldırılan içeriklerim" onPress={() => router.push('/moderation-notices')} last />
       </Card>
 
       <SectionHeader title="Paylaşım ve erişim" />
@@ -285,11 +282,10 @@ export function UserProfile() {
 
       <AccountSection />
 
-      <BottomSheet visible={editOpen} onClose={() => setEditOpen(false)} title="Profili düzenle">
+      <BottomSheet visible={editOpen} onClose={() => setEditOpen(false)} title="Ad ve soyad">
         <TextField label="Ad" value={firstName} onChangeText={setFirstName} autoCapitalize="words" />
         <TextField label="Soyad" value={lastName} onChangeText={setLastName} autoCapitalize="words" />
-        <TextField label="Kullanıcı adı" value={username} onChangeText={(t) => { setUsername(t); setEditError(undefined); }} error={editError} />
-        <TextField label="Hakkında" value={bio} onChangeText={setBio} multiline maxLength={200} />
+        {editError ? <Notice kind="warning" text={editError} /> : null}
         <Button label="Kaydet" size="lg" block onPress={saveEdit} style={{ marginBottom: 8 }} />
       </BottomSheet>
 

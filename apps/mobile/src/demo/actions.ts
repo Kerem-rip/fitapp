@@ -1,4 +1,4 @@
-﻿// Demo verisini değiştiren işlemler (öğün, randevu, mesaj, görev...). Giriş/kayıt/hesap işlemleri sunucudadır.
+// Demo verisini değiştiren işlemler (öğün, randevu, mesaj, görev...). Giriş/kayıt/hesap işlemleri sunucudadır.
 // Sunucuya taşındıkça bunlar API çağrılarına dönüşecek.
 import type { MealSlot } from '@fitapp/shared';
 import { dateKey, isoNow, newId } from './dates';
@@ -95,6 +95,11 @@ export function simulateParentalApproval(accountId: string) {
 
 export function setTheme(pref: DemoState['ui']['themePref']) {
   setState((s) => ({ ...s, ui: { ...s.ui, themePref: pref } }));
+}
+
+// Hesap değiştir: sosyal arayüz ↔ profesyonel panel (oturum aynı kalır)
+export function setSurface(accountId: string, surface: 'social' | 'pro') {
+  setState((s) => ({ ...s, ui: { ...s.ui, surfaces: { ...(s.ui.surfaces ?? {}), [accountId]: surface } } }));
 }
 
 export function setOnboarding(answers: OnboardingAnswers | null) {

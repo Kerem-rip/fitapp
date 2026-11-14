@@ -47,18 +47,33 @@ model User {
   // Hesap silme: talep tarihi. 30 gün sonra kalıcı silinir; bu sürede giriş yaparsa iptal olur.
   deletionRequestedAt DateTime?
 
-  roles            UserRole[]
-  consents         Consent[]
-  parentalConsents ParentalConsent[]
-  sessions         Session[]
-  passwordReset    PasswordReset?
-  profile          Profile?
+  roles              UserRole[]
+  consents           Consent[]
+  parentalConsents   ParentalConsent[]
+  sessions           Session[]
+  passwordReset      PasswordReset?
+  libraryEnrollments LibraryEnrollment[]
+  libraryTasks       LibraryTask[]
+  profile            Profile?
 
-  following   Follow[] @relation("follower")
-  followers   Follow[] @relation("followed")
-  blocking    Block[]  @relation("blocker")
-  blockedBy   Block[]  @relation("blocked")
-  reportsMade Report[] @relation("reporter")
+  following     Follow[]        @relation("follower")
+  followers     Follow[]        @relation("followed")
+  blocking      Block[]         @relation("blocker")
+  blockedBy     Block[]         @relation("blocked")
+  muting        Mute[]          @relation("muter")
+  mutedBy       Mute[]          @relation("muted")
+  posts         Post[]
+  postLikes     PostLike[]
+  postSaves     PostSave[]
+  postComments  PostComment[]
+  postMentions  PostMention[]
+  stories       Story[]
+  storyViews    StoryView[]
+  storyVotes    StoryPollVote[]
+  storyAnswers  StoryAnswer[]
+  closeFriends  CloseFriend[]   @relation("closeOwner")
+  closeFriendOf CloseFriend[]   @relation("closeFriend")
+  reportsMade   Report[]        @relation("reporter")
 
   onboardingAnswers OnboardingAnswer[]
   goals             UserGoal[]
@@ -112,9 +127,16 @@ model User {
   remindersOwned    ClientReminder[] @relation("reminderOwner")
   remindersAbout    ClientReminder[] @relation("reminderSubject")
 
-  programsOwned TrainingProgram[] @relation("programOwner")
-  programsAbout TrainingProgram[] @relation("programSubject")
-  workoutLogs   WorkoutLog[]      @relation("workoutSubject")
+  programsOwned           TrainingProgram[]        @relation("programOwner")
+  programsAbout           TrainingProgram[]        @relation("programSubject")
+  workoutLogs             WorkoutLog[]             @relation("workoutSubject")
+  dmMembers               DmMember[]
+  dmMessages              DmMessage[]
+  dmHiddens               DmHidden[]
+  moderatorBranches       ModeratorBranch[]
+  moderationAppeals       ModerationAppeal[]
+  notificationPreferences NotificationPreference[]
+  pushDevices             PushDevice[]
 }
 
 model UserRole {
@@ -189,12 +211,30 @@ model PasswordReset {
 // ═══════════════════════════════════════════════════════════════
 
 model Profile {
-  userId    String  @id
-  bio       String?
-  avatarId  String? // File.id
-  isPrivate Boolean @default(true) // Normal kullanıcılar varsayılan gizli hesap
+  userId       String    @id
+  bio          String?
+  avatarId     String? // File.id (herkese açık görsel)
+  isPrivate    Boolean   @default(true) // Normal kullanıcılar varsayılan gizli hesap; doğrulanmış profesyoneller her zaman açık
+  // Sosyal profil
+  displayName  String? // Görünen ad; boşsa ad soyad kullanılır
+  city         String?
+  goals        String? // Spor hedefleri (serbest metin)
+  links        Json? // [{ label, url }] en fazla 3
+  sports       String[]  @default([]) // SportBranch.id listesi (spor ilgi alanları)
+  // Mesaj gizliliği: EVERYONE → herkes yazabilir (takip etmediğin kişiler istek kutusuna düşer); FOLLOWING → sadece takip ettiklerin
+  dmPolicy     DmPolicy  @default(EVERYONE)
+  // Çevrimiçi / son görülme bilgisini paylaş (kapalıysa başkalarınınkini de görmez)
+  showActivity Boolean   @default(true)
+  lastSeenAt   DateTime?
 
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+// Spor branşları (ilgi alanı, keşfet filtresi). Uygulamanın sabit listesidir; geçişle eklenir.
+model SportBranch {
+  id        String @id // "fitness", "kosu"...
+  name      String
+  sortOrder Int    @default(0)
 }
 
 enum FollowStatus {
@@ -226,11 +266,27 @@ model Block {
   @@id([blockerId, blockedId])
 }
 
+// Sessize alma: takip sürer ama kişinin paylaşımları akışta ve hikâyelerde görünmez. Karşı taraf bilmez.
+model Mute {
+  muterId   String
+  mutedId   String
+  createdAt DateTime @default(now())
+
+  muter User @relation("muter", fields: [muterId], references: [id], onDelete: Cascade)
+  muted User @relation("muted", fields: [mutedId], references: [id], onDelete: Cascade)
+
+  @@id([muterId, mutedId])
+}
+
 enum ReportTargetType {
   USER
   MESSAGE
   REVIEW
   PROGRAM
+  POST
+  COMMENT
+  STORY
+  DM_MESSAGE
 }
 
 enum ReportStatus {
@@ -241,19 +297,76 @@ enum ReportStatus {
 
 // Şikayetler admin panelinde incelenir
 model Report {
-  id         String           @id @default(uuid())
-  reporterId String
-  targetType ReportTargetType
-  targetId   String
-  reason     String
-  details    String?
-  status     ReportStatus     @default(OPEN)
-  reviewedBy String? // Admin User.id
-  reviewedAt DateTime?
-  createdAt  DateTime         @default(now())
+  id             String           @id @default(uuid())
+  reporterId     String
+  targetType     ReportTargetType
+  targetId       String
+  reason         String
+  details        String?
+  status         ReportStatus     @default(OPEN)
+  reviewedBy     String? // Admin User.id
+  reviewedAt     DateTime?
+  createdAt      DateTime         @default(now())
+  // Şikâyet edilen içeriğin sahibi ve onun spor branşları (branş moderatörleri sadece kendi branşlarını görür)
+  targetUserId   String?
+  branches       String[]         @default([])
+  resolutionNote String?
 
   reporter User @relation("reporter", fields: [reporterId], references: [id], onDelete: Cascade)
 
+  @@index([status, createdAt])
+  @@index([targetType, targetId])
+}
+
+// Moderatörün sorumlu olduğu spor branşları (kayıt yoksa genel moderatördür: tüm şikâyetleri görür)
+model ModeratorBranch {
+  userId  String
+  sportId String
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@id([userId, sportId])
+}
+
+// Moderasyon kayıt defteri: kim, neyi, neden kaldırdı / geri getirdi / inceledi. Silinmez.
+model ModerationAction {
+  id           String   @id @default(uuid())
+  moderatorId  String
+  // VIEW_REPORTED_MESSAGE, REMOVE, RESTORE, DISMISS, APPEAL_ACCEPTED, APPEAL_REJECTED
+  action       String
+  targetType   String
+  targetId     String
+  targetUserId String?
+  reportId     String?
+  note         String?
+  createdAt    DateTime @default(now())
+
+  @@index([targetType, targetId])
+  @@index([moderatorId, createdAt])
+}
+
+enum AppealStatus {
+  OPEN
+  ACCEPTED
+  REJECTED
+}
+
+// İtiraz: içeriği kaldırılan kişi bir kez itiraz edebilir; kabul edilirse içerik geri gelir
+model ModerationAppeal {
+  id         String       @id @default(uuid())
+  userId     String
+  targetType String
+  targetId   String
+  text       String
+  status     AppealStatus @default(OPEN)
+  reviewedBy String?
+  reviewedAt DateTime?
+  note       String?
+  createdAt  DateTime     @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([targetType, targetId])
   @@index([status, createdAt])
 }
 
@@ -1486,6 +1599,9 @@ model Notification {
   id        String    @id @default(uuid())
   userId    String
   type      String // "new_message", "follow_request", "client_offer"...
+  // Bildirim merkezi: PRO (uzman, randevu, plan, salon) ya da SOCIAL (takip, beğeni, yorum, bahsetme)
+  center    String    @default("PRO")
+  actorId   String? // Sosyal bildirimde eylemi yapan kişi
   data      Json
   readAt    DateTime?
   createdAt DateTime  @default(now())
@@ -1493,6 +1609,37 @@ model Notification {
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([userId, readAt])
+  @@index([userId, center, createdAt])
+}
+
+// Bildirim tercihleri (kayıt yoksa hepsi açık, sessiz saat yok). Anlık bildirim (push) sadece kişi izin verirse.
+model NotificationPreference {
+  userId      String  @id
+  likes       Boolean @default(true)
+  comments    Boolean @default(true)
+  follows     Boolean @default(true)
+  mentions    Boolean @default(true)
+  stories     Boolean @default(true)
+  messages    Boolean @default(true)
+  pushEnabled Boolean @default(false)
+  // Sessiz saatler (Türkiye saatiyle, 0-23). İkisi de doluysa bu aralıkta anlık bildirim gönderilmez.
+  quietFrom   Int?
+  quietTo     Int?
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+// Anlık bildirim için cihaz kaydı (kişi izin verince eklenir, çıkışta silinir)
+model PushDevice {
+  id        String   @id @default(uuid())
+  userId    String
+  token     String   @unique
+  platform  String // ios, android, web
+  createdAt DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
 }
 
 // Yüklenen dosyalar (fotoğraf, belge, video). Dosyanın kendisi depolama servisinde durur.
@@ -1503,11 +1650,17 @@ model File {
   mimeType   String
   sizeBytes  Int
   isPrivate  Boolean  @default(true)
+  // Sosyal medya için: AVATAR, POST, STORY, MESSAGE, GROUP (boşsa eski belge/fotoğraf kayıtları)
+  purpose    String?
   createdAt  DateTime @default(now())
 
   owner                 User?                  @relation(fields: [ownerId], references: [id], onDelete: SetNull)
   progressPhotos        ProgressPhoto[]
   professionalDocuments ProfessionalDocument[]
+  postMedia             PostMedia[]
+  stories               Story[]
+  dmMessages            DmMessage[]
+  dmGroups              DmConversation[]
 }
 
 // ═══════════════════════════════════════════════════════════════
@@ -1623,4 +1776,371 @@ model DocumentAccessLog {
   document ApplicationDocument @relation(fields: [documentId], references: [id], onDelete: Cascade)
 
   @@index([documentId])
+}
+
+// ═══════════════════════════════════════════════════════════════
+// İÇERİK KÜTÜPHANESİ — katılınan ücretsiz programlar ve görevler (içeriğin kendisi kodda: modules/library/catalog.ts)
+// ═══════════════════════════════════════════════════════════════
+
+enum LibraryEnrollmentStatus {
+  ACTIVE
+  COMPLETED
+  LEFT
+}
+
+// "Programa katıl": program günleri başlangıç tarihinden itibaren haftaya yayılır ve Programım'da gün gün görünür
+model LibraryEnrollment {
+  id        String                  @id @default(uuid())
+  userId    String
+  programId String // catalog.ts PROGRAMS[].id
+  startDate DateTime                @db.Date
+  status    LibraryEnrollmentStatus @default(ACTIVE)
+  createdAt DateTime                @default(now())
+  endedAt   DateTime?
+
+  user        User                @relation(fields: [userId], references: [id], onDelete: Cascade)
+  completions LibraryCompletion[]
+
+  @@index([userId, status])
+}
+
+// Program gününde yapılan hareket (tamamlandı işareti)
+model LibraryCompletion {
+  id           String   @id @default(uuid())
+  enrollmentId String
+  dayIndex     Int
+  stepIndex    Int
+  doneAt       DateTime @default(now())
+
+  enrollment LibraryEnrollment @relation(fields: [enrollmentId], references: [id], onDelete: Cascade)
+
+  @@unique([enrollmentId, dayIndex, stepIndex])
+}
+
+// Tek bir hareketi belirli bir günün görevlerine ekleme ("Görevime ekle")
+model LibraryTask {
+  id        String    @id @default(uuid())
+  userId    String
+  itemId    String // catalog.ts ITEMS[].id
+  date      DateTime  @db.Date
+  doneAt    DateTime?
+  createdAt DateTime  @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, itemId, date])
+  @@index([userId, date])
+}
+
+// ═══════════════════════════════════════════════════════════════
+// GÖNDERİLER — metin, en fazla 5 fotoğraf (video 6. aşamada), beğeni, yorum, kaydetme, alıntı, etiket
+// Görünürlük hesabın gizliliğine bağlıdır: açık hesap herkese, gizli hesap kabul edilmiş takipçilere.
+// ═══════════════════════════════════════════════════════════════
+
+model Post {
+  id           String    @id @default(uuid())
+  authorId     String
+  text         String?
+  quotedPostId String? // Alıntılanan gönderi (silinirse alıntı "görüntülenemiyor" olur)
+  pinnedAt     DateTime? // Profilde en üstte (en fazla 3)
+  editedAt     DateTime?
+  deletedAt    DateTime? // Kişi sildi
+  removedAt    DateTime? // Moderasyon kaldırdı
+  createdAt    DateTime  @default(now())
+
+  author   User          @relation(fields: [authorId], references: [id], onDelete: Cascade)
+  quoted   Post?         @relation("quote", fields: [quotedPostId], references: [id], onDelete: SetNull)
+  quotes   Post[]        @relation("quote")
+  media    PostMedia[]
+  likes    PostLike[]
+  saves    PostSave[]
+  comments PostComment[]
+  hashtags PostHashtag[]
+  mentions PostMention[]
+
+  @@index([authorId, createdAt])
+  @@index([createdAt])
+}
+
+enum PostMediaKind {
+  IMAGE
+  VIDEO
+}
+
+model PostMedia {
+  id         String        @id @default(uuid())
+  postId     String
+  fileId     String
+  kind       PostMediaKind @default(IMAGE)
+  sortOrder  Int           @default(0)
+  // Video süresi (ms); fotoğrafta boş
+  durationMs Int?
+
+  post Post @relation(fields: [postId], references: [id], onDelete: Cascade)
+  file File @relation(fields: [fileId], references: [id], onDelete: Cascade)
+
+  @@unique([fileId])
+  @@index([postId, sortOrder])
+}
+
+model PostLike {
+  postId    String
+  userId    String
+  createdAt DateTime @default(now())
+
+  post Post @relation(fields: [postId], references: [id], onDelete: Cascade)
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@id([postId, userId])
+  @@index([userId, createdAt])
+}
+
+model PostSave {
+  postId    String
+  userId    String
+  createdAt DateTime @default(now())
+
+  post Post @relation(fields: [postId], references: [id], onDelete: Cascade)
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@id([postId, userId])
+  @@index([userId, createdAt])
+}
+
+// Yorum ve yanıt (tek seviye: yanıtın yanıtı aynı yorumun altına eklenir)
+model PostComment {
+  id        String    @id @default(uuid())
+  postId    String
+  authorId  String
+  parentId  String?
+  text      String
+  createdAt DateTime  @default(now())
+  deletedAt DateTime?
+  removedAt DateTime?
+
+  post    Post          @relation(fields: [postId], references: [id], onDelete: Cascade)
+  author  User          @relation(fields: [authorId], references: [id], onDelete: Cascade)
+  parent  PostComment?  @relation("replies", fields: [parentId], references: [id], onDelete: Cascade)
+  replies PostComment[] @relation("replies")
+
+  @@index([postId, parentId, createdAt])
+}
+
+model PostHashtag {
+  postId String
+  tag    String // küçük harf, # olmadan
+
+  post Post @relation(fields: [postId], references: [id], onDelete: Cascade)
+
+  @@id([postId, tag])
+  @@index([tag])
+}
+
+model PostMention {
+  postId String
+  userId String
+
+  post Post @relation(fields: [postId], references: [id], onDelete: Cascade)
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@id([postId, userId])
+}
+
+// ═══════════════════════════════════════════════════════════════
+// HİKÂYELER — 24 saat görünür, sonra sadece sahibinin arşivinde kalır
+// Kitle: herkes (hesap gizliyse kabul edilmiş takipçiler), sadece takipçiler ya da yakın arkadaşlar.
+// Çıkartmalar: anket, soru, emoji tepkisi, bahsetme, bağlantı, elle yazılan konum, başarı paylaşımı.
+// ═══════════════════════════════════════════════════════════════
+
+enum StoryAudience {
+  EVERYONE
+  FOLLOWERS
+  CLOSE_FRIENDS
+}
+
+model Story {
+  id           String         @id @default(uuid())
+  authorId     String
+  fileId       String? // Fotoğraf ya da video (metin hikâyesinde boş)
+  mediaKind    PostMediaKind?
+  durationMs   Int?
+  text         String? // Metin hikâyesi ya da fotoğraf üstü yazı
+  background   String? // Metin hikâyesinin arka plan rengi (uygulamanın sabit listesinden)
+  audience     StoryAudience  @default(EVERYONE)
+  poll         Json? // { question, options: [a, b] }
+  question     String? // Soru çıkartması (izleyenler yanıtlar, sadece sahibi görür)
+  mentions     String[]       @default([]) // Bahsedilen kişilerin kimlikleri
+  linkUrl      String?
+  linkLabel    String?
+  locationText String? // Elle yazılan konum (cihaz konumu kullanılmaz)
+  achievement  Json? // { kind, title } — sunucuda doğrulanan başarı (sağlık ölçümü içermez)
+  createdAt    DateTime       @default(now())
+  expiresAt    DateTime
+  deletedAt    DateTime?
+  removedAt    DateTime?
+
+  author  User            @relation(fields: [authorId], references: [id], onDelete: Cascade)
+  file    File?           @relation(fields: [fileId], references: [id], onDelete: SetNull)
+  views   StoryView[]
+  votes   StoryPollVote[]
+  answers StoryAnswer[]
+
+  @@index([authorId, expiresAt])
+  @@index([expiresAt])
+}
+
+model StoryView {
+  storyId  String
+  viewerId String
+  viewedAt DateTime @default(now())
+  reaction String? // Emoji tepkisi
+
+  story  Story @relation(fields: [storyId], references: [id], onDelete: Cascade)
+  viewer User  @relation(fields: [viewerId], references: [id], onDelete: Cascade)
+
+  @@id([storyId, viewerId])
+}
+
+model StoryPollVote {
+  storyId String
+  userId  String
+  option  Int
+  votedAt DateTime @default(now())
+
+  story Story @relation(fields: [storyId], references: [id], onDelete: Cascade)
+  user  User  @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@id([storyId, userId])
+}
+
+model StoryAnswer {
+  id        String   @id @default(uuid())
+  storyId   String
+  userId    String
+  text      String
+  createdAt DateTime @default(now())
+
+  story Story @relation(fields: [storyId], references: [id], onDelete: Cascade)
+  user  User  @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([storyId, createdAt])
+}
+
+// Yakın arkadaşlar listesi (hikâye kitlesi için; listedekiler listede olduklarını görmez)
+model CloseFriend {
+  ownerId   String
+  friendId  String
+  createdAt DateTime @default(now())
+
+  owner  User @relation("closeOwner", fields: [ownerId], references: [id], onDelete: Cascade)
+  friend User @relation("closeFriend", fields: [friendId], references: [id], onDelete: Cascade)
+
+  @@id([ownerId, friendId])
+}
+
+// ═══════════════════════════════════════════════════════════════
+// SOSYAL MESAJLAR (DM) VE GRUPLAR — uzman–danışan yazışmasından tamamen ayrıdır
+// Takip etmediğin birinden gelen ilk mesaj "İstekler"e düşer; kabul edilene kadar fotoğraf/video gönderilemez.
+// ═══════════════════════════════════════════════════════════════
+
+enum DmPolicy {
+  EVERYONE
+  FOLLOWING
+}
+
+enum DmConversationKind {
+  DIRECT
+  GROUP
+}
+
+model DmConversation {
+  id            String             @id @default(uuid())
+  kind          DmConversationKind
+  directKey     String?            @unique // İki kişilik sohbette sıralı kullanıcı kimlikleri (tek sohbet)
+  title         String?
+  avatarFileId  String?
+  createdById   String
+  createdAt     DateTime           @default(now())
+  lastMessageAt DateTime           @default(now())
+
+  avatar   File?       @relation(fields: [avatarFileId], references: [id], onDelete: SetNull)
+  members  DmMember[]
+  messages DmMessage[]
+
+  @@index([lastMessageAt])
+}
+
+enum DmMemberRole {
+  MEMBER
+  ADMIN
+}
+
+enum DmMemberStatus {
+  ACTIVE
+  REQUEST // Mesaj isteği: alıcı henüz kabul etmedi
+  LEFT
+  REMOVED
+}
+
+model DmMember {
+  conversationId  String
+  userId          String
+  role            DmMemberRole   @default(MEMBER)
+  status          DmMemberStatus @default(ACTIVE)
+  joinedAt        DateTime       @default(now())
+  lastReadAt      DateTime?
+  lastDeliveredAt DateTime?
+  clearedAt       DateTime? // "Sohbeti sil": bu tarihten önceki mesajlar bu kişide görünmez
+  mutedUntil      DateTime?
+
+  conversation DmConversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  user         User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@id([conversationId, userId])
+  @@index([userId, status])
+}
+
+enum DmMessageKind {
+  TEXT
+  IMAGE
+  VIDEO
+  VOICE
+  POST // Paylaşılan gönderi
+  STORY_REPLY // Hikâyeye yanıt
+  SYSTEM // Gruba eklendi, ayrıldı, ad değişti...
+}
+
+model DmMessage {
+  id             String        @id @default(uuid())
+  conversationId String
+  senderId       String
+  kind           DmMessageKind
+  text           String?
+  fileId         String?
+  durationMs     Int?
+  replyToId      String?
+  postId         String?
+  storyId        String?
+  createdAt      DateTime      @default(now())
+  unsentAt       DateTime? // Gönderen geri aldı (herkesten silinir)
+
+  conversation DmConversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  sender       User           @relation(fields: [senderId], references: [id], onDelete: Cascade)
+  file         File?          @relation(fields: [fileId], references: [id], onDelete: SetNull)
+  replyTo      DmMessage?     @relation("dmReply", fields: [replyToId], references: [id], onDelete: SetNull)
+  replies      DmMessage[]    @relation("dmReply")
+  hiddenFor    DmHidden[]
+
+  @@index([conversationId, createdAt])
+}
+
+// "Benden sil": mesaj sadece bu kişide gizlenir
+model DmHidden {
+  messageId String
+  userId    String
+
+  message DmMessage @relation(fields: [messageId], references: [id], onDelete: Cascade)
+  user    User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@id([messageId, userId])
 }

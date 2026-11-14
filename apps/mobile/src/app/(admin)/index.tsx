@@ -44,6 +44,9 @@ export default function AdminHome() {
         subtitle="Profesyonel hesap onayı"
         trailing={<Button label="Çıkış" variant="ghost" size="sm" onPress={() => void signOut()} />}
       />
+      <Card padded={false} style={{ paddingHorizontal: 16 }}>
+        <ListRow icon="shield-outline" title="Moderasyon" subtitle="Şikâyetler ve itirazlar" onPress={() => router.push('/moderation')} last />
+      </Card>
       <Segmented
         options={STATUS_OPTIONS}
         value={status}

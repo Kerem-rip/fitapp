@@ -6,8 +6,8 @@ import { useState } from 'react';
 import { View } from 'react-native';
 import { deleteAccount, errorText, showApplicationStatus, signOut } from '@/auth/actions';
 import { useAuth } from '@/auth/auth-store';
-import { setTheme } from '@/demo/actions';
-import { useAccount, useDemoState } from '@/demo/hooks';
+import { setSurface, setTheme } from '@/demo/actions';
+import { isProRole, useAccount, useDemoState, useSurface } from '@/demo/hooks';
 
 type ThemePref = 'system' | 'light' | 'dark';
 
@@ -16,6 +16,7 @@ export function AccountSection() {
   const account = useAccount();
   const state = useDemoState();
   const applicationStatus = useAuth().me?.application?.status;
+  const surface = useSurface();
   const [deleteOpen, setDeleteOpen] = useState(false);
   const [password, setPassword] = useState('');
   const [error, setError] = useState<string | null>(null);
@@ -51,6 +52,17 @@ export function AccountSection() {
 
       <SectionHeader title="Hesap" />
       <Card padded={false} style={{ paddingHorizontal: 16 }}>
+        {isProRole(account.roleKey) && surface === 'pro' ? (
+          <ListRow
+            icon="swap-horizontal-outline"
+            title="Sosyal arayüze geç"
+            subtitle="Akış, paylaşımların ve takip ettiklerin (aynı hesap)"
+            onPress={() => {
+              setSurface(account.id, 'social');
+              router.replace('/');
+            }}
+          />
+        ) : null}
         <ListRow icon="notifications-outline" title="Bildirimler" onPress={() => router.push('/notifications')} />
         {applicationStatus === 'PENDING' || applicationStatus === 'REJECTED' ? (
           <ListRow

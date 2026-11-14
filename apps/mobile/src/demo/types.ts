@@ -316,5 +316,7 @@ export interface DemoState {
   ui: {
     themePref: 'system' | 'light' | 'dark';
     onboarding: OnboardingAnswers | null;
+    // Profesyonel hesabın son kullandığı arayüz (hesap başına); yoksa sosyal
+    surfaces?: Record<string, 'social' | 'pro'>;
   };
 }

@@ -30,6 +30,19 @@ export interface Me {
   // Son profesyonel başvurusu (yoksa null)
   application: ApplicationSummary | null;
   bio: string | null;
+  // Sosyal profil (görünen ad boşsa ad soyad)
+  displayName: string;
+  customDisplayName: string | null;
+  avatarUrl: string | null;
+  city: string | null;
+  goals: string | null;
+  links: ProfileLink[];
+  sports: SportRef[];
+  // Sadece doğrulanmış mesleki yetkiden
+  badges: Badge[];
+  isProfessional: boolean;
+  dmPolicy: DmPolicy;
+  showActivity: boolean;
   isPrivate: boolean;
   // Salondaki görevi (sahip ya da ekip); yoksa null
   gym: { id: string; name: string; role: GymRole } | null;
@@ -555,13 +568,32 @@ export interface ReminderItem {
   cancelledAt: string | null;
 }
 
+export type NotificationCenter = 'SOCIAL' | 'PRO';
+
 export interface AppNotificationItem {
   id: string;
   type: string;
+  center: NotificationCenter;
   title: string;
   text: string;
   read: boolean;
   createdAt: string;
+  // Dokununca gidilecek yer (sosyal bildirimlerde)
+  actorUsername: string | null;
+  postId: string | null;
+  storyId: string | null;
+}
+
+export interface NotificationPreferences {
+  likes: boolean;
+  comments: boolean;
+  follows: boolean;
+  mentions: boolean;
+  stories: boolean;
+  messages: boolean;
+  pushEnabled: boolean;
+  quietFrom: number | null;
+  quietTo: number | null;
 }
 
 // ───────────── Egzersiz programı ve antrenman kayıtları ─────────────
@@ -868,4 +900,380 @@ export interface FoodDay {
 export interface ClientFoodView {
   shared: { meals: boolean; water: boolean };
   days: FoodDay[];
+}
+// ───────────── Sosyal ─────────────
+
+export interface SportRef {
+  id: string;
+  name: string;
+}
+
+export interface ProfileLink {
+  label: string;
+  url: string;
+}
+
+export interface Badge {
+  kind: 'DIETITIAN' | 'TRAINER' | 'GYM';
+  label: string;
+}
+
+export interface SocialProfile {
+  id: string;
+  username: string;
+  isMe: boolean;
+  bio: string | null;
+  isPrivate: boolean;
+  displayName: string;
+  avatarUrl: string | null;
+  city: string | null;
+  goals: string | null;
+  links: ProfileLink[];
+  sports: SportRef[];
+  badges: Badge[];
+  isProfessional: boolean;
+  counts: { followers: number; following: number; posts: number };
+  // Kendi profilinde null
+  relation: FollowRelation | null;
+  // Gönderi, hikâye ve takip listelerini görebilir mi (açık hesap, kendisi ya da kabul edilmiş takipçi)
+  canSeeContent: boolean;
+}
+
+export type FollowState = 'NONE' | 'PENDING' | 'ACCEPTED';
+
+export interface FollowRelation {
+  following: FollowState;
+  followsMe: boolean;
+  requestedMe: boolean;
+  muted: boolean;
+}
+
+export interface UserCard {
+  id: string;
+  username: string;
+  displayName: string;
+  avatarUrl: string | null;
+  badges: Badge[];
+}
+
+export interface CursorPage<T> {
+  items: T[];
+  nextCursor: string | null;
+}
+// ───── İçerik kütüphanesi ve Programım ─────
+
+export type LibraryItemKind = 'MOVE' | 'FACE' | 'GUIDE';
+
+export interface LibraryItemCard {
+  id: string;
+  kind: LibraryItemKind;
+  category: string;
+  categoryLabel: string;
+  title: string;
+  summary: string;
+  level: string;
+  workText?: string;
+  durationSec?: number;
+  minutes?: number;
+}
+
+export interface LibraryItemDetail extends LibraryItemCard {
+  equipment: string | null;
+  primary: string[];
+  secondary: string[];
+  steps: string[];
+  mistakes: string[];
+  warnings: string[];
+  sections: { heading: string; text: string }[];
+}
+
+export interface LibraryProgramCard {
+  id: string;
+  title: string;
+  description: string;
+  category: string;
+  categoryLabel: string;
+  level: string;
+  weeks: number;
+  daysPerWeek: number;
+  totalDays: number;
+  access: 'FREE';
+  minutesPerDay: number;
+}
+
+export interface LibraryStep {
+  index: number;
+  item: { id: string; title: string; kind: LibraryItemKind };
+  workText: string;
+  sets: number;
+  setSec: number;
+  restSec: number;
+  durationSec: number;
+  restAfterSec: number;
+}
+
+export interface LibraryProgramDay {
+  dayIndex: number;
+  title: string;
+  durationSec: number;
+  steps: LibraryStep[];
+}
+
+export interface LibraryProgramDetail extends LibraryProgramCard {
+  preview: LibraryProgramDay[];
+  enrollment: { id: string; startDate: string } | null;
+}
+
+export interface LibraryEnrollmentItem {
+  id: string;
+  status: 'ACTIVE' | 'COMPLETED';
+  startDate: string;
+  program: LibraryProgramCard;
+  progress: { done: number; total: number };
+  next: { dayIndex: number; date: string } | null;
+}
+
+export interface MyProgramDay {
+  date: string;
+  programs: (Omit<LibraryProgramDay, 'steps'> & {
+    enrollmentId: string;
+    program: { id: string; title: string; totalDays: number };
+    steps: (LibraryStep & { done: boolean })[];
+    doneCount: number;
+  })[];
+  tasks: { id: string; item: { id: string; title: string; kind: LibraryItemKind }; workText: string; durationSec: number; done: boolean }[];
+}
+
+// ───── Gönderiler ─────
+
+export interface PostMediaItem {
+  id: string;
+  kind: 'IMAGE' | 'VIDEO';
+  url: string;
+  // Video süresi (ms)
+  durationMs?: number | null;
+}
+
+export interface PostView {
+  id: string;
+  author: UserCard;
+  text: string | null;
+  media: PostMediaItem[];
+  createdAt: string;
+  editedAt: string | null;
+  pinned: boolean;
+  isMine: boolean;
+  liked: boolean;
+  saved: boolean;
+  counts: { likes: number; comments: number };
+  mentions: string[];
+  quoted:
+    | { id: string; available: true; author: UserCard; text: string | null; createdAt: string; media: PostMediaItem[] }
+    | { id: string; available: false }
+    | null;
+}
+
+export interface CommentView {
+  id: string;
+  parentId: string | null;
+  text: string;
+  createdAt: string;
+  author: UserCard;
+  isMine: boolean;
+  canDelete: boolean;
+  replyCount: number;
+}
+
+// ───── Akış ve Keşfet ─────
+
+export type FeedMode = 'for_you' | 'following';
+export type SearchType = 'all' | 'users' | 'posts' | 'tags' | 'pros' | 'gyms';
+
+export interface SearchResult {
+  users: UserCard[];
+  pros: (UserCard & { title: string | null; city: string | null; specialties: string[] })[];
+  gyms: { id: string; name: string; city: string | null; owner: UserCard }[];
+  tags: { tag: string; posts: number }[];
+  posts: PostView[];
+}
+
+// ───── Hikâyeler ─────
+
+export type StoryAudience = 'EVERYONE' | 'FOLLOWERS' | 'CLOSE_FRIENDS';
+export type StoryBackground = 'sunset' | 'ocean' | 'forest' | 'night' | 'berry';
+
+export interface StoryItem {
+  id: string;
+  author: UserCard;
+  isMine: boolean;
+  media: PostMediaItem | null;
+  text: string | null;
+  background: StoryBackground | null;
+  audience?: StoryAudience;
+  createdAt: string;
+  expiresAt: string;
+  viewed: boolean;
+  myReaction: string | null;
+  poll: { question: string; options: string[]; myVote: number | null; results: number[] | null } | null;
+  question: string | null;
+  mentions: string[];
+  link: { url: string; label: string | null } | null;
+  location: string | null;
+  achievement: { kind: string; title: string } | null;
+  counts?: { views: number; answers: number };
+}
+
+export interface StoryTrayItem {
+  author: UserCard;
+  isMe: boolean;
+  count: number;
+  hasUnseen: boolean;
+  latestAt: string;
+}
+
+export interface StoryAchievement {
+  kind: 'LIBRARY_PROGRAM_COMPLETED' | 'LIBRARY_DAY_DONE';
+  enrollmentId: string;
+  dayIndex?: number;
+  title: string;
+}
+
+export interface StoryInput {
+  mediaId?: string | null;
+  text?: string | null;
+  background?: StoryBackground | null;
+  audience?: StoryAudience;
+  poll?: { question: string; options: [string, string] } | null;
+  question?: string | null;
+  mentions?: string[];
+  link?: { url: string; label?: string | null } | null;
+  location?: string | null;
+  achievement?: Omit<StoryAchievement, 'title'> | null;
+}
+
+// ───── Sosyal mesajlar (DM) ─────
+
+export type DmKind = 'TEXT' | 'IMAGE' | 'VIDEO' | 'VOICE' | 'POST' | 'STORY_REPLY' | 'SYSTEM';
+export type DmPolicy = 'EVERYONE' | 'FOLLOWING';
+export type Presence = { online: boolean | null; lastSeenAt: string | null };
+
+export interface DmConversationItem {
+  id: string;
+  kind: 'DIRECT' | 'GROUP';
+  title: string;
+  avatarUrl: string | null;
+  other: (UserCard & Presence) | null;
+  memberCount: number;
+  lastMessage: { preview: string; at: string; mine: boolean };
+  unread: number;
+  muted: boolean;
+}
+
+export interface DmConversationDetail {
+  id: string;
+  kind: 'DIRECT' | 'GROUP';
+  title: string;
+  avatarUrl: string | null;
+  myRole: 'ADMIN' | 'MEMBER';
+  myStatus: 'ACTIVE' | 'REQUEST';
+  pendingRequest: boolean;
+  muted: boolean;
+  members: (UserCard & Partial<Presence> & { role: 'ADMIN' | 'MEMBER'; isMe: boolean })[];
+}
+
+export interface DmMessageItem {
+  id: string;
+  kind: DmKind;
+  sender: UserCard;
+  isMine: boolean;
+  text: string | null;
+  unsent: boolean;
+  media: { id: string; url: string; kind: DmKind; durationMs: number | null } | null;
+  replyTo: { id: string; username: string; preview: string } | null;
+  post: PostView | { id: string; available: false } | null;
+  story: { id: string; available: true; media: PostMediaItem | null; text: string | null } | { id: string; available: false } | null;
+  createdAt: string;
+  status: 'sent' | 'delivered' | 'seen' | null;
+  seenBy?: number;
+}
+
+export interface DmSendInput {
+  text?: string | null;
+  mediaId?: string | null;
+  replyToId?: string | null;
+  postId?: string | null;
+  storyId?: string | null;
+}
+
+export type DmEvent =
+  | { seq: number; type: 'message' | 'unsent'; conversationId: string; messageId: string }
+  | { seq: number; type: 'read' | 'delivered'; conversationId: string; userId: string; at: string }
+  | { seq: number; type: 'conversation'; conversationId: string };
+
+// ───── Şikâyet, moderasyon ve oturumlar ─────
+
+export type ReportReason = 'SPAM' | 'HARASSMENT' | 'HATE' | 'NUDITY' | 'VIOLENCE' | 'SELF_HARM' | 'MISINFORMATION' | 'IMPERSONATION' | 'OTHER';
+export type ReportTarget = 'POST' | 'COMMENT' | 'STORY' | 'USER' | 'DM_MESSAGE';
+export type ContentTarget = 'POST' | 'COMMENT' | 'STORY';
+
+export interface ModerationNotice {
+  targetType: ContentTarget;
+  targetId: string;
+  preview: string;
+  removedAt: string;
+  appeal: { status: 'OPEN' | 'ACCEPTED' | 'REJECTED'; note: string | null } | null;
+}
+
+export interface ModerationContent {
+  text: string | null;
+  mediaCount: number;
+  createdAt: string;
+  deleted: boolean;
+  removed: boolean;
+}
+
+export interface ModerationReportItem {
+  id: string;
+  targetType: ReportTarget;
+  targetId: string;
+  reason: ReportReason;
+  details: string | null;
+  status: 'OPEN' | 'ACTION_TAKEN' | 'DISMISSED';
+  createdAt: string;
+  targetUsername: string | null;
+  sameTargetReports: number;
+  resolutionNote: string | null;
+}
+
+export interface ModerationReportDetail {
+  id: string;
+  targetType: ReportTarget;
+  targetId: string;
+  reason: ReportReason;
+  details: string | null;
+  status: 'OPEN' | 'ACTION_TAKEN' | 'DISMISSED';
+  createdAt: string;
+  owner: { id: string; username: string } | null;
+  reporterUsername: string | null;
+  content: ModerationContent | null;
+  resolutionNote: string | null;
+}
+
+export interface ModerationAppealItem {
+  id: string;
+  targetType: ContentTarget;
+  targetId: string;
+  text: string;
+  status: 'OPEN' | 'ACCEPTED' | 'REJECTED';
+  note: string | null;
+  createdAt: string;
+  username: string;
+  content: ModerationContent | null;
+}
+
+export interface SessionItem {
+  id: string;
+  deviceName: string | null;
+  lastActiveAt: string;
+  current: boolean;
 }

@@ -13,6 +13,11 @@ import { ConsentsModule } from './modules/consents/consents.module.js';
 import { EmailModule } from './modules/email/email.module.js';
 import { FilesModule } from './modules/files/files.module.js';
 import { HealthModule } from './modules/health/health.module.js';
+import { DmModule } from './modules/dm/dm.module.js';
+import { LibraryModule } from './modules/library/library.module.js';
+import { MediaModule } from './modules/media/media.module.js';
+import { ModerationModule } from './modules/moderation/moderation.module.js';
+import { SocialModule } from './modules/social/social.module.js';
 import { GymsModule } from './modules/gyms/gyms.module.js';
 import { NotificationsModule } from './modules/notifications/notifications.module.js';
 import { RegistrationModule } from './modules/registration/registration.module.js';
@@ -28,6 +33,7 @@ import { UsersModule } from './modules/users/users.module.js';
     AuthCoreModule,
     EmailModule,
     FilesModule,
+    MediaModule,
     HealthModule,
     AuthModule,
     RegistrationModule,
@@ -39,6 +45,10 @@ import { UsersModule } from './modules/users/users.module.js';
     ClientsModule,
     NotificationsModule,
     GymsModule,
+    SocialModule,
+    LibraryModule,
+    DmModule,
+    ModerationModule,
   ],
   providers: [{ provide: APP_GUARD, useClass: ThrottlerGuard }],
 })

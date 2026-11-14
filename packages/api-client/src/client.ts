@@ -23,6 +23,42 @@ import type {
   FindingsResponse,
   GoalItem,
   GoalStatus,
+  ProfileLink,
+  SocialProfile,
+  CursorPage,
+  ContentTarget,
+  ModerationAppealItem,
+  ModerationNotice,
+  ModerationReportDetail,
+  ModerationReportItem,
+  ReportReason,
+  ReportTarget,
+  SessionItem,
+  NotificationCenter,
+  NotificationPreferences,
+  DmConversationDetail,
+  DmConversationItem,
+  DmEvent,
+  DmMessageItem,
+  DmSendInput,
+  StoryAchievement,
+  StoryInput,
+  StoryItem,
+  StoryTrayItem,
+  FeedMode,
+  SearchResult,
+  SearchType,
+  CommentView,
+  PostView,
+  FollowState,
+  UserCard,
+  LibraryEnrollmentItem,
+  LibraryItemCard,
+  LibraryItemDetail,
+  LibraryProgramCard,
+  LibraryProgramDetail,
+  MyProgramDay,
+  SportRef,
   ClientFoodView,
   FoodDay,
   MealEntryItem,
@@ -278,9 +314,154 @@ export function createApiClient(config: ApiClientConfig) {
 
     // ───────────── Hesabım ─────────────
     me: () => request<Me>('/users/me', { auth: true }),
-    updateMe: (patch: { firstName?: string | null; lastName?: string | null; username?: string; bio?: string | null; isPrivate?: boolean }) =>
+    updateMe: (patch: {
+      firstName?: string | null;
+      lastName?: string | null;
+      username?: string;
+      bio?: string | null;
+      isPrivate?: boolean;
+      displayName?: string | null;
+      city?: string | null;
+      goals?: string | null;
+      links?: ProfileLink[];
+      sports?: string[];
+      dmPolicy?: 'EVERYONE' | 'FOLLOWING';
+      showActivity?: boolean;
+    }) =>
       request<Me>('/users/me', { method: 'PATCH', body: patch, auth: true }),
-    requestDeletion: (password: string) =>
+    uploadAvatar(file: UploadFile) {
+      const form = new FormData();
+      appendFile(form, 'file', file);
+      return request<Me>('/users/me/avatar', { method: 'POST', form, auth: true, timeoutMs: UPLOAD_TIMEOUT_MS });
+    },
+    removeAvatar: () => request<Me>('/users/me/avatar', { method: 'DELETE', auth: true }),
+    // Sosyal
+    socialSports: () => request<SportRef[]>('/social/sports', { auth: true }),
+    socialProfile: (username: string) => request<SocialProfile>(`/social/profiles/${encodeURIComponent(username)}`, { auth: true }),
+    // Takip, istekler, engelleme, sessize alma
+    follow: (userId: string) => request<{ following: FollowState }>(`/social/users/${userId}/follow`, { method: 'POST', auth: true }),
+    unfollow: (userId: string) => request<{ following: FollowState }>(`/social/users/${userId}/follow`, { method: 'DELETE', auth: true }),
+    removeFollower: (userId: string) => request<{ removed: boolean }>(`/social/users/${userId}/follower`, { method: 'DELETE', auth: true }),
+    followers: (userId: string, cursor?: string) =>
+      request<CursorPage<UserCard & { isMe: boolean; following: FollowState }>>(`/social/users/${userId}/followers`, { auth: true, query: cursor ? { cursor } : undefined }),
+    following: (userId: string, cursor?: string) =>
+      request<CursorPage<UserCard & { isMe: boolean; following: FollowState }>>(`/social/users/${userId}/following`, { auth: true, query: cursor ? { cursor } : undefined }),
+    followRequests: (cursor?: string) => request<CursorPage<UserCard & { requestedAt: string }>>('/social/follow-requests', { auth: true, query: cursor ? { cursor } : undefined }),
+    followRequestCount: () => request<{ count: number }>('/social/follow-requests/count', { auth: true }),
+    acceptFollow: (userId: string) => request<{ accepted: boolean }>(`/social/follow-requests/${userId}/accept`, { method: 'POST', auth: true }),
+    declineFollow: (userId: string) => request<{ declined: boolean }>(`/social/follow-requests/${userId}/decline`, { method: 'POST', auth: true }),
+    block: (userId: string) => request<{ blocked: boolean }>(`/social/users/${userId}/block`, { method: 'POST', auth: true }),
+    unblock: (userId: string) => request<{ blocked: boolean }>(`/social/users/${userId}/block`, { method: 'DELETE', auth: true }),
+    blocks: () => request<UserCard[]>('/social/blocks', { auth: true }),
+    mute: (userId: string) => request<{ muted: boolean }>(`/social/users/${userId}/mute`, { method: 'POST', auth: true }),
+    unmute: (userId: string) => request<{ muted: boolean }>(`/social/users/${userId}/mute`, { method: 'DELETE', auth: true }),
+    mutes: () => request<UserCard[]>('/social/mutes', { auth: true }),    // Gönderiler
+    uploadPostMedia(file: UploadFile) {
+      const form = new FormData();
+      appendFile(form, 'file', file);
+      return request<{ id: string; url: string; kind: 'IMAGE' | 'VIDEO'; durationMs: number | null }>('/social/media', { method: 'POST', form, auth: true, timeoutMs: UPLOAD_TIMEOUT_MS });
+    },
+    createPost: (input: { text?: string | null; mediaIds?: string[]; quotedPostId?: string | null }) => request<PostView>('/social/posts', { method: 'POST', body: input, auth: true }),
+    post: (id: string) => request<PostView>(`/social/posts/${id}`, { auth: true }),
+    editPost: (id: string, text: string | null) => request<PostView>(`/social/posts/${id}`, { method: 'PATCH', body: { text }, auth: true }),
+    deletePost: (id: string) => request<{ deleted: boolean }>(`/social/posts/${id}`, { method: 'DELETE', auth: true }),
+    pinPost: (id: string, pinned: boolean) => request<{ pinned: boolean }>(`/social/posts/${id}/pin`, { method: pinned ? 'POST' : 'DELETE', auth: true }),
+    likePost: (id: string, liked: boolean) => request<{ liked: boolean; likes: number }>(`/social/posts/${id}/like`, { method: liked ? 'POST' : 'DELETE', auth: true }),
+    postLikers: (id: string, cursor?: string) => request<CursorPage<UserCard>>(`/social/posts/${id}/likes`, { auth: true, query: cursor ? { cursor } : undefined }),
+    savePost: (id: string, saved: boolean) => request<{ saved: boolean }>(`/social/posts/${id}/save`, { method: saved ? 'POST' : 'DELETE', auth: true }),
+    savedPosts: (cursor?: string) => request<CursorPage<PostView>>('/social/saved', { auth: true, query: cursor ? { cursor } : undefined }),
+    userPosts: (userId: string, cursor?: string) => request<CursorPage<PostView> & { pinned: PostView[] }>(`/social/users/${userId}/posts`, { auth: true, query: cursor ? { cursor } : undefined }),
+    comments: (postId: string, cursor?: string) => request<CursorPage<CommentView>>(`/social/posts/${postId}/comments`, { auth: true, query: cursor ? { cursor } : undefined }),
+    replies: (postId: string, commentId: string, cursor?: string) =>
+      request<CursorPage<CommentView>>(`/social/posts/${postId}/comments/${commentId}/replies`, { auth: true, query: cursor ? { cursor } : undefined }),
+    addComment: (postId: string, text: string, parentId?: string | null) => request<CommentView>(`/social/posts/${postId}/comments`, { method: 'POST', body: { text, parentId }, auth: true }),
+    deleteComment: (id: string) => request<{ deleted: boolean }>(`/social/comments/${id}`, { method: 'DELETE', auth: true }),    // Akış ve Keşfet
+    feed: (mode: FeedMode, cursor?: string) => request<CursorPage<PostView>>('/social/feed', { auth: true, query: { mode, ...(cursor ? { cursor } : {}) } }),
+    suggestions: () => request<(UserCard & { reason: string })[]>('/social/suggestions', { auth: true }),
+    explore: () => request<{ posts: PostView[]; tags: { tag: string; posts: number }[] }>('/social/explore', { auth: true }),
+    search: (params: { q?: string; type?: SearchType; sport?: string; city?: string }) =>
+      request<SearchResult>('/social/search', { auth: true, query: Object.fromEntries(Object.entries(params).filter(([, v]) => v)) as Record<string, string> }),
+    tagPosts: (tag: string, cursor?: string) =>
+      request<CursorPage<PostView> & { tag: string; count: number }>(`/social/tags/${encodeURIComponent(tag)}/posts`, { auth: true, query: cursor ? { cursor } : undefined }),    // Hikâyeler
+    uploadStoryMedia(file: UploadFile) {
+      const form = new FormData();
+      appendFile(form, 'file', file);
+      return request<{ id: string; url: string; kind: 'IMAGE' | 'VIDEO'; durationMs: number | null }>('/social/stories/media', { method: 'POST', form, auth: true, timeoutMs: UPLOAD_TIMEOUT_MS });
+    },
+    createStory: (input: StoryInput) => request<StoryItem>('/social/stories', { method: 'POST', body: input, auth: true }),
+    storyTray: () => request<StoryTrayItem[]>('/social/stories/tray', { auth: true }),
+    userStories: (userId: string) => request<StoryItem[]>(`/social/users/${userId}/stories`, { auth: true }),
+    deleteStory: (id: string) => request<{ deleted: boolean }>(`/social/stories/${id}`, { method: 'DELETE', auth: true }),
+    viewStory: (id: string) => request<{ viewed: boolean }>(`/social/stories/${id}/view`, { method: 'POST', auth: true }),
+    reactStory: (id: string, emoji: string | null) => request<{ reaction: string | null }>(`/social/stories/${id}/react`, { method: 'POST', body: { emoji }, auth: true }),
+    voteStory: (id: string, option: number) => request<NonNullable<StoryItem['poll']>>(`/social/stories/${id}/vote`, { method: 'POST', body: { option }, auth: true }),
+    answerStory: (id: string, text: string) => request<{ answered: boolean }>(`/social/stories/${id}/answer`, { method: 'POST', body: { text }, auth: true }),
+    storyInsights: (id: string) =>
+      request<{ views: { person: UserCard; viewedAt: string; reaction: string | null }[]; answers: { id: string; person: UserCard; text: string; createdAt: string }[] }>(`/social/stories/${id}/insights`, { auth: true }),
+    storyArchive: (cursor?: string) => request<CursorPage<StoryItem>>('/social/stories/archive', { auth: true, query: cursor ? { cursor } : undefined }),
+    storyAchievements: () => request<StoryAchievement[]>('/social/stories/achievements', { auth: true }),
+    closeFriends: () => request<UserCard[]>('/social/close-friends', { auth: true }),
+    setCloseFriend: (userId: string, on: boolean) => request<{ closeFriend: boolean }>(`/social/close-friends/${userId}`, { method: on ? 'POST' : 'DELETE', auth: true }),    // Sosyal mesajlar (DM) ve gruplar
+    dmConversations: (box: 'inbox' | 'requests' = 'inbox') => request<DmConversationItem[]>('/social/dm/conversations', { auth: true, query: { box } }),
+    dmUnread: () => request<{ unread: number; requests: number }>('/social/dm/unread', { auth: true }),
+    dmOpenDirect: (userId: string) => request<DmConversationDetail>(`/social/dm/direct/${userId}`, { method: 'POST', auth: true }),
+    dmConversation: (id: string) => request<DmConversationDetail>(`/social/dm/conversations/${id}`, { auth: true }),
+    dmMessages: (id: string, cursor?: string) => request<CursorPage<DmMessageItem>>(`/social/dm/conversations/${id}/messages`, { auth: true, query: cursor ? { cursor } : undefined }),
+    dmSend: (id: string, input: DmSendInput) => request<DmMessageItem>(`/social/dm/conversations/${id}/messages`, { method: 'POST', body: input, auth: true }),
+    dmSendToUser: (userId: string, input: DmSendInput) => request<{ conversationId: string; message: DmMessageItem }>(`/social/dm/users/${userId}/messages`, { method: 'POST', body: input, auth: true }),
+    dmUploadMedia(file: UploadFile) {
+      const form = new FormData();
+      appendFile(form, 'file', file);
+      return request<{ id: string; url: string; kind: 'IMAGE' | 'VIDEO' | 'VOICE'; durationMs: number | null }>('/social/dm/media', { method: 'POST', form, auth: true, timeoutMs: UPLOAD_TIMEOUT_MS });
+    },
+    dmRead: (id: string) => request<{ readAt: string }>(`/social/dm/conversations/${id}/read`, { method: 'POST', auth: true }),
+    dmAccept: (id: string) => request<{ status: string }>(`/social/dm/conversations/${id}/accept`, { method: 'POST', auth: true }),
+    dmDecline: (id: string) => request<{ status: string }>(`/social/dm/conversations/${id}/decline`, { method: 'POST', auth: true }),
+    dmClear: (id: string) => request<{ cleared: boolean }>(`/social/dm/conversations/${id}/clear`, { method: 'POST', auth: true }),
+    dmMute: (id: string, muted: boolean) => request<{ muted: boolean }>(`/social/dm/conversations/${id}/mute`, { method: 'POST', body: { muted }, auth: true }),
+    dmUnsend: (messageId: string) => request<{ unsent: boolean }>(`/social/dm/messages/${messageId}/unsend`, { method: 'POST', auth: true }),
+    dmHide: (messageId: string) => request<{ hidden: boolean }>(`/social/dm/messages/${messageId}`, { method: 'DELETE', auth: true }),
+    dmCreateGroup: (title: string, memberIds: string[]) => request<DmConversationDetail>('/social/dm/groups', { method: 'POST', body: { title, memberIds }, auth: true }),
+    dmAddMembers: (id: string, memberIds: string[]) => request<DmConversationDetail>(`/social/dm/conversations/${id}/members`, { method: 'POST', body: { memberIds }, auth: true }),
+    dmRemoveMember: (id: string, userId: string) => request<DmConversationDetail>(`/social/dm/conversations/${id}/members/${userId}`, { method: 'DELETE', auth: true }),
+    dmSetAdmin: (id: string, userId: string, admin: boolean) => request<DmConversationDetail>(`/social/dm/conversations/${id}/members/${userId}`, { method: 'PATCH', body: { admin }, auth: true }),
+    dmRename: (id: string, title: string) => request<DmConversationDetail>(`/social/dm/conversations/${id}`, { method: 'PATCH', body: { title }, auth: true }),
+    dmGroupPhoto(id: string, file: UploadFile) {
+      const form = new FormData();
+      appendFile(form, 'file', file);
+      return request<DmConversationDetail>(`/social/dm/conversations/${id}/photo`, { method: 'POST', form, auth: true, timeoutMs: UPLOAD_TIMEOUT_MS });
+    },
+    dmLeave: (id: string) => request<{ left: boolean }>(`/social/dm/conversations/${id}/leave`, { method: 'POST', auth: true }),
+    // Uzun bekleyen istek (~25 sn); yeni olay gelince hemen döner
+    dmEvents: (boot: string | null, after: number) =>
+      request<{ boot: string; seq: number; reset: boolean; events: DmEvent[] }>('/social/dm/events', { auth: true, query: { ...(boot ? { boot } : {}), after: String(after) }, timeoutMs: 40_000 }),    // Şikâyet, itiraz, moderasyon kuyruğu ve oturumlar
+    report: (input: { targetType: ReportTarget; targetId: string; reason: ReportReason; details?: string | null }) =>
+      request<{ id: string; received: boolean }>('/social/reports', { method: 'POST', body: input, auth: true }),
+    moderationNotices: () => request<ModerationNotice[]>('/social/moderation/notices', { auth: true }),
+    appeal: (input: { targetType: ContentTarget; targetId: string; text: string }) => request<{ id: string }>('/social/appeals', { method: 'POST', body: input, auth: true }),
+    moderationReports: (status: 'OPEN' | 'ACTION_TAKEN' | 'DISMISSED' = 'OPEN') => request<ModerationReportItem[]>('/admin/moderation/reports', { auth: true, query: { status } }),
+    moderationReport: (id: string) => request<ModerationReportDetail>(`/admin/moderation/reports/${id}`, { auth: true }),
+    resolveReport: (id: string, action: 'REMOVE' | 'DISMISS', note?: string | null) =>
+      request<ModerationReportDetail>(`/admin/moderation/reports/${id}/resolve`, { method: 'POST', body: { action, note }, auth: true }),
+    moderationAppeals: (status: 'OPEN' | 'ACCEPTED' | 'REJECTED' = 'OPEN') => request<ModerationAppealItem[]>('/admin/moderation/appeals', { auth: true, query: { status } }),
+    decideAppeal: (id: string, accept: boolean, note?: string | null) => request<{ status: string }>(`/admin/moderation/appeals/${id}/decide`, { method: 'POST', body: { accept, note }, auth: true }),
+    sessions: () => request<SessionItem[]>('/auth/sessions', { auth: true }),
+    revokeSession: (id: string) => request<{ revoked: number }>(`/auth/sessions/${id}`, { method: 'DELETE', auth: true }),
+    revokeOtherSessions: () => request<{ revoked: number }>('/auth/sessions/revoke-others', { method: 'POST', auth: true }),    // İçerik kütüphanesi ve Programım
+    library: () => request<{ items: LibraryItemCard[]; programs: LibraryProgramCard[] }>('/library', { auth: true }),
+    libraryItem: (id: string) => request<LibraryItemDetail>(`/library/items/${encodeURIComponent(id)}`, { auth: true }),
+    libraryProgram: (id: string) => request<LibraryProgramDetail>(`/library/programs/${encodeURIComponent(id)}`, { auth: true }),
+    joinLibraryProgram: (id: string, startDate?: string) =>
+      request<{ id: string; programId: string; startDate: string }>(`/library/programs/${encodeURIComponent(id)}/join`, { method: 'POST', body: startDate ? { startDate } : {}, auth: true }),
+    libraryEnrollments: () => request<LibraryEnrollmentItem[]>('/me/library/enrollments', { auth: true }),
+    leaveLibraryProgram: (enrollmentId: string) => request<{ id: string }>(`/me/library/enrollments/${enrollmentId}/leave`, { method: 'POST', auth: true }),
+    setLibraryStep: (enrollmentId: string, dayIndex: number, stepIndex: number, done: boolean) =>
+      request<{ status: string }>(`/me/library/enrollments/${enrollmentId}/steps`, { method: 'POST', body: { dayIndex, stepIndex, done }, auth: true }),
+    addLibraryTask: (itemId: string, date?: string) =>
+      request<{ id: string; itemId: string; date: string }>('/me/library/tasks', { method: 'POST', body: date ? { itemId, date } : { itemId }, auth: true }),
+    removeLibraryTask: (id: string) => request<{ id: string }>(`/me/library/tasks/${id}`, { method: 'DELETE', auth: true }),
+    setLibraryTaskDone: (id: string, done: boolean) => request<{ id: string }>(`/me/library/tasks/${id}/done`, { method: 'POST', body: { done }, auth: true }),
+    myProgramDay: (date: string) => request<MyProgramDay>(`/me/program?date=${date}`, { auth: true }),    requestDeletion: (password: string) =>
       request<{ deletionScheduledFor: string; graceDays: number }>('/users/me/delete', { method: 'POST', body: { password }, auth: true }),
     consents: () => request<{ type: string; textVersion: string; grantedAt: string }[]>('/consents', { auth: true }),
     grantConsent: (type: 'health_data' | 'marketing') => request<unknown[]>(`/consents/${type}`, { method: 'PUT', auth: true }),
@@ -438,9 +619,13 @@ export function createApiClient(config: ApiClientConfig) {
     cancelReminder: (id: string) => request<ReminderItem>(`/reminders/${id}/cancel`, { method: 'POST', auth: true }),
 
     // ───────────── Bildirimler ─────────────
-    notifications: (limit = 50) => request<{ unread: number; items: AppNotificationItem[] }>('/notifications', { auth: true, query: { limit: String(limit) } }),
-    markNotificationsRead: (ids?: string[]) => request<{ updated: number }>('/notifications/read', { method: 'POST', body: ids ? { ids } : {}, auth: true }),
-
+    notifications: (limit = 50, center?: NotificationCenter) =>
+      request<{ unread: number; items: AppNotificationItem[] }>('/notifications', { auth: true, query: { limit: String(limit), ...(center ? { center } : {}) } }),
+    notificationCounts: () => request<{ social: number; pro: number; total: number }>('/notifications/counts', { auth: true }),
+    markNotificationsRead: (ids?: string[], center?: NotificationCenter) =>
+      request<{ updated: number }>('/notifications/read', { method: 'POST', body: { ...(ids ? { ids } : {}), ...(center ? { center } : {}) }, auth: true }),
+    notificationPreferences: () => request<NotificationPreferences>('/notifications/preferences', { auth: true }),
+    setNotificationPreferences: (patch: Partial<NotificationPreferences>) => request<NotificationPreferences>('/notifications/preferences', { method: 'PUT', body: patch, auth: true }),
     // ───────────── Egzersiz programı ve antrenman kayıtları ─────────────
     clientProgram: (clientId: string) => request<ProgramOverview>(`/clients/${clientId}/program`, { auth: true }),
     createProgramDraft: (clientId: string, input: { content?: ProgramContent; fromPublished?: boolean } = {}) =>

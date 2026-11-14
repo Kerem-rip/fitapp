@@ -1,6 +1,7 @@
 // Uygulamanın ana çerçevesi. Giriş durumuna ve hesap türüne göre doğru bölümü açar:
 // girişsiz → (auth); profesyonel başvurusu inceleniyorsa → (application);
-// aksi halde hesabın rolüne ait panel. Başvurusu onaylanmamış kişi profesyonel alanı hiç görmez.
+// aksi halde sosyal arayüz. Profesyonel hesap "Hesap değiştir" ile kendi paneline geçer (aynı oturum);
+// son kullandığı arayüzde açılır, ilk girişte sosyal arayüzdedir. Başvurusu onaylanmamış kişi profesyonel alanı hiç görmez.
 import { ThemeProvider, ToastHost, useTheme } from '@fitapp/ui-mobile';
 import { Stack } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
@@ -10,7 +11,7 @@ import { loadServerUrl } from '@/api/config';
 import { setSessionExpiredHandler } from '@/api/client';
 import { handleSessionExpired, restoreSession } from '@/auth/actions';
 import { needsApplicationScreen, useAuth } from '@/auth/auth-store';
-import { useAccount, roleTheme } from '@/demo/hooks';
+import { isProRole, roleTheme, useAccount, useSurface } from '@/demo/hooks';
 import { hydrate, useDemo, useHydrated } from '@/demo/store';
 
 SplashScreen.preventAutoHideAsync().catch(() => {});
@@ -21,8 +22,10 @@ function Shell() {
   const account = useAccount();
   const auth = useAuth();
   const role = account?.roleKey;
+  const surface = useSurface();
   const applicationScreen = Boolean(account) && needsApplicationScreen(auth);
-  const consumer = (role === 'user' || role === 'teen') && !applicationScreen;
+  const pro = isProRole(role) && surface === 'pro';
+  const consumer = (role === 'user' || role === 'teen' || (isProRole(role) && surface === 'social')) && !applicationScreen;
 
   return (
     <>
@@ -37,16 +40,16 @@ function Shell() {
         <Stack.Protected guard={consumer}>
           <Stack.Screen name="(user)" options={{ animation: 'fade' }} />
         </Stack.Protected>
-        <Stack.Protected guard={role === 'dietitian'}>
+        <Stack.Protected guard={pro && role === 'dietitian'}>
           <Stack.Screen name="(dietitian)" options={{ animation: 'fade' }} />
         </Stack.Protected>
-        <Stack.Protected guard={role === 'trainer'}>
+        <Stack.Protected guard={pro && role === 'trainer'}>
           <Stack.Screen name="(trainer)" options={{ animation: 'fade' }} />
         </Stack.Protected>
-        <Stack.Protected guard={role === 'gymManager'}>
+        <Stack.Protected guard={pro && role === 'gymManager'}>
           <Stack.Screen name="(gym-manager)" options={{ animation: 'fade' }} />
         </Stack.Protected>
-        <Stack.Protected guard={role === 'gymStaff'}>
+        <Stack.Protected guard={pro && role === 'gymStaff'}>
           <Stack.Screen name="(gym-staff)" options={{ animation: 'fade' }} />
         </Stack.Protected>
         <Stack.Protected guard={role === 'admin'}>
@@ -62,6 +65,7 @@ export default function RootLayout() {
   const hydrated = useHydrated();
   const auth = useAuth();
   const account = useAccount();
+  const surface = useSurface();
   const preference = useDemo((s) => s.ui.themePref);
 
   useEffect(() => {
@@ -80,7 +84,8 @@ export default function RootLayout() {
   if (!ready) return null;
 
   return (
-    <ThemeProvider role={roleTheme(account?.roleKey)} preference={preference}>
+    // Sosyal arayüz herkes için aynı görünür; profesyonel renkleri sadece panelde
+    <ThemeProvider role={surface === 'social' && account?.roleKey !== 'admin' ? roleTheme(account?.roleKey === 'teen' ? 'teen' : 'user') : roleTheme(account?.roleKey)} preference={preference}>
       <Shell />
     </ThemeProvider>
   );

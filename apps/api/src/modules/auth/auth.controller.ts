@@ -1,4 +1,4 @@
-import { Body, Controller, HttpCode, Inject, Post, UseGuards } from '@nestjs/common';
+import { Body, Controller, Delete, Get, HttpCode, Inject, Param, Post, UseGuards } from '@nestjs/common';
 import { Throttle } from '@nestjs/throttler';
 import { env } from '../../config/env.js';
 import { AuthGuard, CurrentUser, type AuthUser } from './auth.guard.js';
@@ -63,5 +63,27 @@ export class AuthController {
   @UseGuards(AuthGuard)
   async logout(@CurrentUser() user: AuthUser) {
     await this.auth.logout(user.sessionId);
+  }
+
+  // GET /api/auth/sessions → açık oturumlar (cihazlar); current bu cihazdır
+  @Get('sessions')
+  @UseGuards(AuthGuard)
+  sessions(@CurrentUser() user: AuthUser) {
+    return this.auth.listSessions(user.userId, user.sessionId);
+  }
+
+  // POST /api/auth/sessions/revoke-others → bu cihaz dışındaki tüm oturumları kapatır
+  @Post('sessions/revoke-others')
+  @HttpCode(200)
+  @UseGuards(AuthGuard)
+  revokeOthers(@CurrentUser() user: AuthUser) {
+    return this.auth.revokeOtherSessions(user.userId, user.sessionId);
+  }
+
+  // DELETE /api/auth/sessions/:id → seçilen cihazdaki oturumu kapatır
+  @Delete('sessions/:id')
+  @UseGuards(AuthGuard)
+  revokeSession(@CurrentUser() user: AuthUser, @Param('id') id: string) {
+    return this.auth.revokeSession(user.userId, id);
   }
 }

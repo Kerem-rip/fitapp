@@ -188,7 +188,7 @@ export function UserHome() {
         </Card>
       ) : null}
 
-      <SectionHeader title={enrolledPrograms.length ? 'Programların' : 'Sana önerilen programlar'} action="Tümü" onAction={() => router.push('/exercises')} />
+      <SectionHeader title={enrolledPrograms.length ? 'Programların' : 'Sana önerilen programlar'} action="Tümü" onAction={() => router.push('/library')} />
       <Card padded={false} style={{ paddingHorizontal: 16 }}>
         {(enrolledPrograms.length ? enrolledPrograms : suggested).map((program, i, list) => {
           const done = data.enrollments[program.id]?.completedDays.length ?? 0;
