@@ -37,6 +37,16 @@ Kartlar (`workout-cards.ts`): 40'tan fazla kart; ortam ve ekipman hareketlerden 
 
 `apps/mobile/assets/demo/` (14 fotoğraf, Wikimedia Commons; CC0 / CC BY / CC BY-SA) ve `features/workout/demoMedia.ts` (eşleme ve yazar/lisans kaydı; kart ekranında gösterilir). Gerçek yayından önce kendi çekimlerinle değiştirilmelidir. Hareket satırlarındaki küçük resimler geçici ikon karesidir.
 
+## Bölgesel kütüphane, 28 günlük paketler, yüz bölümü (son düzen)
+
+- **Kütüphane sekmeleri:** Antrenmanlar (bölge kutuları) · Programlar (28 günlük paketler + programlar) · Yüz Egzersizi ve Masajlar. "Hareketler" ve "Beslenme" sekmeleri kaldırıldı (hareketler bölgelerde ve aramada; beslenme içeriği silinmedi, sadece görünmez).
+- **Bölgesel kartlar (`workout-cards.ts`):** fitness bölgelerinde (kalça, bacak, göğüs, sırt, omuz, kol, karın) her ANA hareket yalnızca tek bölgede (testle denetlenir); karma antrenmanlar "Tüm vücut"ta. Yoga, pilates, postür, kardiyo, mobilite, spor ve 7 yüz bölgesi ayrı.
+- **28 günlük paketler (`packs.ts`):** 8 paket, 4 hafta, her gün bir karta bağlı; mevcut program altyapısıyla (katılma, Görevlerim) çalışır. Başlıklarda sonuç vaadi yoktur (testle denetlenir).
+- **Yüz (`face-moves.ts`):** ~77 egzersiz ve masaj hareketi, bölgeye ve türe göre; kanıt sınırlı uyarısı sabittir.
+- **Gezinme:** Ana Sayfa · Akış · Kütüphane · Programım · Profil. Akış ana sayfanın yanındadır.
+- **Tasarım:** Ana Yeşil #244A3B, Açık Zemin #F5F2EA, Toprak #B58B68, Koyu #202724 (`packages/design-tokens`). Yazı tipi Satoshi henüz yüklenmedi (sistem yazı tipi).
+- **Oynatıcı:** Üstte büyük tekrar eden medya, altında bilgi, altta sabit ana düğme. Medya: `apps/api/demo-media/<hareket-kimliği>.(mp4|webm|gif|webp)` (Git'e girmez, üretimde kapalı); klip yoksa kapak fotoğrafı. Native'de video için expo-video gerekir (şimdilik web'de video, gif/webp her yerde).
+
 ## Eksikler
 
 Tek kaynaklı hareketler, hiçbir hareket için video/görsel, düşük etkili kardiyo kartı (kaynaklı hareket yok), WHO tam metni, birçok mevcut hareketin kaynak taraması.

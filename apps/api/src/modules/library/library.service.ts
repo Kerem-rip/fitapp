@@ -1,16 +1,19 @@
-// İçerik kütüphanesi ve Programım (kütüphane kısmı): ücretsiz programa katılma, gün gün görevler, tek hareket ekleme.
+﻿// İçerik kütüphanesi ve Programım (kütüphane kısmı): ücretsiz programa katılma, gün gün görevler, tek hareket ekleme.
 // İçerik genel bilgidir; kişiye özel program uzmandan gelir (danışan dosyasındaki plan ve program, ayrı modül).
 import { Inject, Injectable } from '@nestjs/common';
 import { badRequest, conflict, notFound } from '../../common/app-error.js';
 import { addLocalDays, isValidDay, localDay } from '../../common/local-day.js';
 import { PrismaService } from '../../common/prisma/prisma.service.js';
 import { PlanService } from '../personal-plan/plan.service.js';
-import { CATEGORY_LABELS, findItem, findProgram, ITEMS, PROGRAMS, type LibraryItem, type LibraryProgram } from './catalog.js';
+import { CATEGORY_LABELS, findItem, ITEMS, type LibraryItem, type LibraryProgram } from './catalog.js';
+import { ALL_PROGRAMS, findAnyProgram } from './packs.js';
 import { dayDurationSec, dayIndexOn, nextDayFrom, scheduleDate, setSeconds, workSeconds, workText } from './library-rules.js';
 import { BODY_AREAS, type BodyArea } from '../personal-plan/plan-types.js';
 import { EVIDENCE, FACE_EVIDENCE_WARNING, SOURCES } from './evidence.js';
+import { findDemoMedia } from './demo-media.js';
 import { EXTRA_EN } from './extra-moves.js';
-import { CARDS, cardMeta, cardsWithItem, CATEGORY_TITLES, findCard, resolveCard, RESTRICTION_AREAS, RESTRICTION_LABELS, type WorkoutCardDef } from './workout-cards.js';
+import { FACE_EN } from './face-moves.js';
+import { CARDS, cardMeta, cardsWithItem, CATEGORY_TITLES, findCard, regionSummaries, resolveCard, RESTRICTION_AREAS, RESTRICTION_LABELS, type WorkoutCardDef } from './workout-cards.js';
 
 // "KNEE,LOW_BACK" → geçerli bölge listesi (bilinmeyenler atılır)
 export const parseAvoid = (s: string): BodyArea[] => [...new Set(s.split(',').filter((a): a is BodyArea => (BODY_AREAS as readonly string[]).includes(a)))];
@@ -45,6 +48,9 @@ const programCard = (p: LibraryProgram) => ({
   daysPerWeek: p.daysPerWeek,
   totalDays: p.days.length,
   access: p.access,
+  kind: p.kind ?? 'PROGRAM',
+  hero: p.hero ?? 'fullbody',
+  goal: p.goal ?? '',
   // Bir günün ortalama süresi (dakika, yukarı yuvarlanmış)
   minutesPerDay: Math.ceil(p.days.reduce((s, d) => s + dayDurationSec(d), 0) / p.days.length / 60),
 });
@@ -54,6 +60,8 @@ function resolvedDay(p: LibraryProgram, dayIndex: number) {
   return {
     dayIndex,
     title: day.title,
+    cardId: day.cardId ?? null,
+    hero: p.hero ?? 'fullbody',
     durationSec: dayDurationSec(day),
     steps: day.steps.map((s, i) => {
       const item = findItem(s.itemId)!;
@@ -79,7 +87,7 @@ export class LibraryService {
   ) {}
 
   catalog() {
-    return { items: ITEMS.map(itemCard), programs: PROGRAMS.map(programCard) };
+    return { items: ITEMS.map(itemCard), programs: ALL_PROGRAMS.map(programCard) };
   }
 
   item(id: string) {
@@ -101,7 +109,7 @@ export class LibraryService {
       // Kanıt katmanı: kaynaklar, doğrulama durumu, varyasyon ailesi ve alternatifler
       evidence: {
         verification: ev?.verification ?? 'none',
-        nameEn: ev?.nameEn ?? EXTRA_EN[id] ?? null,
+        nameEn: ev?.nameEn ?? EXTRA_EN[id] ?? FACE_EN[id] ?? null,
         family: ev?.family ?? null,
         variationOf: ev?.variationOf ? { id: ev.variationOf, title: findItem(ev.variationOf)?.title ?? ev.variationOf } : null,
         note: ev?.note ?? null,
@@ -114,7 +122,7 @@ export class LibraryService {
       // Görsel/video durumu: lisanslı içerik eklenene kadar "yok" (uydurma bağlantı gösterilmez)
       // Bu hareketin yer aldığı hazır antrenmanlar: kullanıcı nereden başlayacağını düşünmeden sıralı kartı seçer
       cards: cardsWithItem(id).map((c) => ({ id: c.id, title: c.title, categoryLabel: CATEGORY_TITLES[c.category], estimatedMinutes: this.cardSummary(c, []).estimatedMinutes })),
-      media: { status: i.videoUrl ? 'LICENSED' : 'MISSING' },
+      media: findDemoMedia(id) ? { status: 'DEMO' as const, ...findDemoMedia(id)! } : { status: i.videoUrl ? ('LICENSED' as const) : ('MISSING' as const) },
     };
   }
 
@@ -123,6 +131,7 @@ export class LibraryService {
   cards(avoid: BodyArea[]) {
     return {
       restrictions: RESTRICTION_AREAS.map((a) => ({ key: a, label: RESTRICTION_LABELS[a] })),
+      regions: regionSummaries(),
       cards: CARDS.map((c) => this.cardSummary(c, avoid)),
     };
   }
@@ -202,16 +211,21 @@ export class LibraryService {
   }
 
   async program(userId: string, id: string) {
-    const p = findProgram(id);
+    const p = findAnyProgram(id);
     if (!p) throw notFound('PROGRAM_NOT_FOUND', 'Program bulunamadı.');
     const enrollment = await this.prisma.libraryEnrollment.findFirst({ where: { userId, programId: id, status: 'ACTIVE' }, select: { id: true, startDate: true } });
     // Program günlerinden sadece farklı olan şablonlar gösterilir (tekrar eden günler aynıdır)
     const preview = p.days.slice(0, Math.min(p.days.length, p.daysPerWeek)).map((_, i) => resolvedDay(p, i));
-    return { ...programCard(p), preview, enrollment: enrollment ? { id: enrollment.id, startDate: dayOf(enrollment.startDate) } : null };
+    // Hafta hafta plan: paketlerde her gün bir antrenman kartıdır (günlük süre ve hareket sayısıyla)
+    const weekPlan = Array.from({ length: p.weeks }, (_, w) => ({
+      week: w + 1,
+      days: p.days.slice(w * p.daysPerWeek, (w + 1) * p.daysPerWeek).map((d, i) => ({ dayIndex: w * p.daysPerWeek + i, title: d.title, cardId: d.cardId ?? null, minutes: Math.max(1, Math.round(dayDurationSec(d) / 60)), moveCount: d.steps.length })),
+    }));
+    return { ...programCard(p), preview, weekPlan, enrollment: enrollment ? { id: enrollment.id, startDate: dayOf(enrollment.startDate) } : null };
   }
 
   async join(userId: string, programId: string, startDate?: string) {
-    const p = findProgram(programId);
+    const p = findAnyProgram(programId);
     if (!p) throw notFound('PROGRAM_NOT_FOUND', 'Program bulunamadı.');
     const today = localDay();
     const start = startDate ?? today;
@@ -242,7 +256,7 @@ export class LibraryService {
   async setStepDone(userId: string, id: string, dayIndex: number, stepIndex: number, done: boolean) {
     const e = await this.enrollment(userId, id);
     if (e.status === 'LEFT') throw conflict('NOT_ACTIVE', 'Bu programı bırakmışsın.');
-    const p = findProgram(e.programId);
+    const p = findAnyProgram(e.programId);
     const day = p?.days[dayIndex];
     if (!p || !day || !day.steps[stepIndex]) throw badRequest('INVALID_STEP', 'Geçersiz program adımı.');
     if (scheduleDate(p, dayOf(e.startDate), dayIndex) > localDay()) throw badRequest('DAY_IN_FUTURE', 'Henüz gelmemiş program günü işaretlenemez.');
@@ -271,7 +285,7 @@ export class LibraryService {
     });
     const today = localDay();
     return rows.flatMap((e) => {
-      const p = findProgram(e.programId);
+      const p = findAnyProgram(e.programId);
       if (!p) return [];
       const start = dayOf(e.startDate);
       const total = p.days.reduce((s, d) => s + d.steps.length, 0);
@@ -322,7 +336,7 @@ export class LibraryService {
       this.prisma.workoutCardTask.findMany({ where: { userId, date: asDate(date) }, orderBy: { createdAt: 'asc' } }),
     ]);
     const programs = enrollments.flatMap((e) => {
-      const p = findProgram(e.programId);
+      const p = findAnyProgram(e.programId);
       if (!p) return [];
       const start = dayOf(e.startDate);
       const dayIndex = dayIndexOn(p, start, date);
@@ -340,7 +354,7 @@ export class LibraryService {
         if (!c) return [];
         const avoid = parseAvoid(t.avoid);
         const r = resolveCard(c, avoid, workText);
-        return [{ id: t.id, card: { id: c.id, title: c.title, categoryLabel: CATEGORY_TITLES[c.category] }, avoid, estimatedMinutes: r.estimatedMinutes, moveCount: r.moveCount, done: t.doneAt !== null, completedMoves: t.completedMoves, totalMoves: t.totalMoves, sections: r.sections }];
+        return [{ id: t.id, hero: cardMeta(c).hero, card: { id: c.id, title: c.title, categoryLabel: CATEGORY_TITLES[c.category] }, avoid, estimatedMinutes: r.estimatedMinutes, moveCount: r.moveCount, done: t.doneAt !== null, completedMoves: t.completedMoves, totalMoves: t.totalMoves, sections: r.sections }];
       }),
       tasks: tasks.flatMap((t) => {
         const item = findItem(t.itemId);

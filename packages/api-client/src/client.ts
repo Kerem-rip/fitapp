@@ -67,6 +67,7 @@ import type {
   LibraryItemDetail,
   WorkoutCardDetail,
   WorkoutCardSummary,
+  WorkoutRegion,
   LibraryProgramCard,
   LibraryProgramDetail,
   MyProgramDay,
@@ -487,7 +488,7 @@ export function createApiClient(config: ApiClientConfig) {
     removeLibraryTask: (id: string) => request<{ id: string }>(`/me/library/tasks/${id}`, { method: 'DELETE', auth: true }),
     setLibraryTaskDone: (id: string, done: boolean) => request<{ id: string }>(`/me/library/tasks/${id}/done`, { method: 'POST', body: { done }, auth: true }),
     workoutCards: (avoid: string[] = []) =>
-      request<{ restrictions: { key: BodyAreaKey; label: string }[]; cards: WorkoutCardSummary[] }>(`/workout-cards${avoid.length ? `?avoid=${avoid.join(',')}` : ''}`, { auth: true }),
+      request<{ restrictions: { key: BodyAreaKey; label: string }[]; regions: WorkoutRegion[]; cards: WorkoutCardSummary[] }>(`/workout-cards${avoid.length ? `?avoid=${avoid.join(',')}` : ''}`, { auth: true }),
     workoutCard: (id: string, avoid: string[] = []) =>
       request<WorkoutCardDetail>(`/workout-cards/${encodeURIComponent(id)}${avoid.length ? `?avoid=${avoid.join(',')}` : ''}`, { auth: true }),
     addWorkoutCardTask: (cardId: string, date?: string, avoid: string[] = []) =>

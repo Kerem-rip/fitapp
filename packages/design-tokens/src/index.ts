@@ -6,42 +6,48 @@ export type ColorScheme = 'light' | 'dark';
 // Her hesap türünün kendi vurgu rengi vardır, böylece hangi panelde olunduğu hemen anlaşılır
 export type RoleTheme = 'user' | 'teen' | 'dietitian' | 'trainer' | 'gymManager' | 'gymStaff' | 'admin';
 
+// SocialFit tasarım sistemi: Ana Yeşil #244A3B, Açık Zemin #F5F2EA, Toprak #B58B68, Koyu #202724
 const light = {
-  background: '#F4F5FA',
+  background: '#F5F2EA',
   surface: '#FFFFFF',
-  surfaceAlt: '#EDEFF6',
-  text: '#0F1218',
-  textSecondary: '#586172',
-  textMuted: '#8A93A3',
-  border: '#E2E5EE',
-  overlay: 'rgba(15,18,24,0.45)',
-  success: '#12B76A',
-  successSoft: '#DCFAE9',
-  warning: '#F79009',
-  warningSoft: '#FEF0C7',
-  danger: '#F04438',
-  dangerSoft: '#FEE4E2',
-  info: '#2E90FA',
-  infoSoft: '#D1E9FF',
+  surfaceAlt: '#EEEAE0',
+  text: '#202724',
+  textSecondary: '#59625C',
+  textMuted: '#8B928C',
+  border: '#E3DED1',
+  overlay: 'rgba(32,39,36,0.45)',
+  success: '#2F7D5B',
+  successSoft: '#DDEEE4',
+  warning: '#B8832A',
+  warningSoft: '#F6EAD2',
+  danger: '#C8473D',
+  dangerSoft: '#F7E0DD',
+  info: '#3C6E91',
+  infoSoft: '#DCE8F0',
+  // Toprak: Premium etiketi ve ikincil vurgu
+  earth: '#B58B68',
+  earthSoft: '#F1E6DB',
 };
 
 const dark: typeof light = {
-  background: '#0B0D12',
-  surface: '#151921',
-  surfaceAlt: '#1E232D',
-  text: '#F3F5F9',
-  textSecondary: '#A0A9BA',
-  textMuted: '#6F7889',
-  border: '#262C38',
+  background: '#121614',
+  surface: '#1B211E',
+  surfaceAlt: '#252C28',
+  text: '#F2F0EA',
+  textSecondary: '#A9B0AA',
+  textMuted: '#78807A',
+  border: '#2B332E',
   overlay: 'rgba(0,0,0,0.6)',
-  success: '#32D583',
-  successSoft: '#12372A',
-  warning: '#FDB022',
-  warningSoft: '#3D2E10',
-  danger: '#F97066',
-  dangerSoft: '#40191A',
-  info: '#53B1FD',
-  infoSoft: '#12304F',
+  success: '#4CB88A',
+  successSoft: '#17342A',
+  warning: '#E0A94A',
+  warningSoft: '#3A2E15',
+  danger: '#E8776E',
+  dangerSoft: '#40201D',
+  info: '#6FA6CA',
+  infoSoft: '#1B3140',
+  earth: '#C99F7C',
+  earthSoft: '#3B2E24',
 };
 
 export const palettes = { light, dark } as const;
@@ -54,7 +60,7 @@ export interface RoleThemeColors {
 }
 
 export const roleThemes: Record<RoleTheme, RoleThemeColors> = {
-  user: { gradient: ['#10C98F', '#18A0FB'], solid: '#0FB67F', soft: { light: '#DDF7EE', dark: '#0F3A2D' } },
+  user: { gradient: ['#244A3B', '#2C5845'], solid: '#244A3B', soft: { light: '#E1ECE5', dark: '#1D3A2D' } },
   teen: { gradient: ['#FF5FA2', '#8E6BFF'], solid: '#E8498F', soft: { light: '#FFE3EF', dark: '#431A30' } },
   dietitian: { gradient: ['#7C5CFF', '#4F8BFF'], solid: '#6B4EF0', soft: { light: '#E9E3FF', dark: '#2B2252' } },
   trainer: { gradient: ['#FF7A45', '#FF3D77'], solid: '#F2562F', soft: { light: '#FFE6DC', dark: '#4A2216' } },
@@ -90,8 +96,8 @@ export const typography: Record<
 
 // Yumuşak gölgeler (iOS gölge özellikleri + Android elevation)
 export const shadows = {
-  card: { shadowColor: '#0F1218', shadowOpacity: 0.07, shadowRadius: 14, shadowOffset: { width: 0, height: 6 }, elevation: 3 },
-  float: { shadowColor: '#0F1218', shadowOpacity: 0.16, shadowRadius: 24, shadowOffset: { width: 0, height: 10 }, elevation: 10 },
+  card: { shadowColor: '#202724', shadowOpacity: 0.05, shadowRadius: 12, shadowOffset: { width: 0, height: 4 }, elevation: 2 },
+  float: { shadowColor: '#202724', shadowOpacity: 0.1, shadowRadius: 18, shadowOffset: { width: 0, height: 6 }, elevation: 6 },
 } as const;
 
 // Tabletlerde içerik bu genişliği geçmez, ortada durur

@@ -8,7 +8,7 @@ import { badRequest, conflict, forbidden, notFound } from '../../common/app-erro
 import { PrismaService } from '../../common/prisma/prisma.service.js';
 import type { Prisma } from '../../generated/prisma/client.js';
 import type { StoryAudience } from '../../generated/prisma/enums.js';
-import { findProgram } from '../library/catalog.js';
+import { findAnyProgram as findProgram } from '../library/packs.js';
 import { MediaService } from '../media/media.service.js';
 import { NotifyService } from '../notifications/notify.service.js';
 import { decodeCursor, encodeCursor } from './cursor.js';

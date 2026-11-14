@@ -1,160 +1,203 @@
-// Kütüphane: uygulamanın ücretsiz programları, hareketleri, yüz masajları ve beslenme rehberleri.
-// İçerik genel bilgidir; kişiye özel program uzmandan gelir (Programım sekmesi).
-import type { BodyAreaKey, LibraryItemCard, LibraryProgramCard, WorkoutCardSummary } from '@fitapp/api-client';
-import { Card, Chip, EmptyState, Icon, ListRow, Notice, Screen, Tag, Text, useTheme } from '@fitapp/ui-mobile';
+// Egzersiz Kütüphanesi: Antrenmanlar (bölge kutuları), Programlar (28 günlük paketler ve programlar), Yüz Egzersizi ve Masajlar.
+// Hareketler ayrı bir sekme değildir: bölgelerin içinde ve aramada bulunur. Beslenme burada değildir.
+import type { LibraryItemCard, LibraryProgramCard, WorkoutCardSummary, WorkoutRegion } from '@fitapp/api-client';
+import { Chip, EmptyState, Icon, ListRow, Notice, Screen, Text, useTheme } from '@fitapp/ui-mobile';
 import { useFocusEffect, useRouter } from 'expo-router';
-import { useCallback, useEffect, useState } from 'react';
-import { ScrollView, TextInput, View } from 'react-native';
+import { useCallback, useState } from 'react';
+import { Pressable, ScrollView, TextInput, View } from 'react-native';
 import { api } from '@/api/client';
 import { errorText } from '@/auth/actions';
 import { ChipRow } from '@/components/ChipRow';
 import { SocialHeader } from '@/components/social/SocialHeader';
-import { CardTile } from '@/features/workout/CardHero';
-import { RestrictionPicker } from '@/features/workout/RestrictionPicker';
-import { durationText, LEVEL_TEXT, programMeta } from './labels';
+import { CardTile, HeroImage, RegionTile } from '@/features/workout/CardHero';
+import { LEVEL_TEXT } from './labels';
 
-type Section = 'cards' | 'programs' | 'moves' | 'face' | 'nutrition';
-const SECTIONS: { key: Section; label: string }[] = [
-  { key: 'cards', label: 'Antrenmanlar' },
+type Tab = 'workouts' | 'programs' | 'face';
+const TABS: { key: Tab; label: string }[] = [
+  { key: 'workouts', label: 'Antrenmanlar' },
   { key: 'programs', label: 'Programlar' },
-  { key: 'moves', label: 'Hareketler' },
-  { key: 'face', label: 'Yüz masajı' },
-  { key: 'nutrition', label: 'Beslenme' },
+  { key: 'face', label: 'Yüz Egzersizi ve Masajlar' },
 ];
+const GROUPS: { key: string; label: string }[] = [
+  { key: 'all', label: 'Tümü' },
+  { key: 'fitness', label: 'Fitness' },
+  { key: 'yoga', label: 'Yoga' },
+  { key: 'pilates', label: 'Pilates' },
+  { key: 'posture', label: 'Postür' },
+  { key: 'cardio', label: 'Kardiyo' },
+  { key: 'mobility', label: 'Mobilite' },
+  { key: 'sport', label: 'Spor' },
+];
+
+function Pill({ text, tone }: { text: string; tone: 'free' | 'earth' }) {
+  const { c } = useTheme();
+  return (
+    <View style={{ alignSelf: 'flex-start', backgroundColor: tone === 'earth' ? c.earth : 'rgba(255,255,255,0.9)', borderRadius: 999, paddingHorizontal: 10, paddingVertical: 4 }}>
+      <Text variant="micro" style={{ color: tone === 'earth' ? '#FFFFFF' : '#202724' }}>
+        {text}
+      </Text>
+    </View>
+  );
+}
+
+// Program kartı: görsel, üstte etiket, altta başlık ve bilgi
+function ProgramTile({ p, onPress }: { p: LibraryProgramCard; onPress: () => void }) {
+  return (
+    <Pressable onPress={onPress} accessibilityRole="button" accessibilityLabel={`${p.title}, ${p.totalDays} antrenman günü`} style={{ marginBottom: 14 }}>
+      <HeroImage hero={p.hero} height={190} />
+      <View style={{ position: 'absolute', left: 16, top: 14 }}>
+        <Pill text="Ücretsiz" tone="free" />
+      </View>
+      <View style={{ position: 'absolute', left: 16, right: 16, bottom: 14 }}>
+        <Text variant="heading" style={{ color: '#FFFFFF' }}>
+          {p.title}
+        </Text>
+        <Text variant="caption" style={{ color: 'rgba(255,255,255,0.85)' }}>
+          {p.weeks} hafta · haftada {p.daysPerWeek} gün · ~{p.minutesPerDay} dk · {LEVEL_TEXT[p.level] ?? p.level}
+        </Text>
+      </View>
+    </Pressable>
+  );
+}
 
 export function LibraryScreen() {
   const router = useRouter();
   const { c } = useTheme();
-  const [section, setSection] = useState<Section>('cards');
-  const [data, setData] = useState<{ items: LibraryItemCard[]; programs: LibraryProgramCard[] } | null>(null);
-  const [cards, setCards] = useState<WorkoutCardSummary[]>([]);
-  const [avoid, setAvoid] = useState<BodyAreaKey[]>([]);
-  const [cat, setCat] = useState<string>('all');
-  const [showRestr, setShowRestr] = useState(false);
+  const [tab, setTab] = useState<Tab>('workouts');
+  const [group, setGroup] = useState('all');
   const [query, setQuery] = useState('');
-  const [short, setShort] = useState(false);
+  const [regions, setRegions] = useState<WorkoutRegion[]>([]);
+  const [cards, setCards] = useState<WorkoutCardSummary[]>([]);
+  const [programs, setPrograms] = useState<LibraryProgramCard[]>([]);
+  const [items, setItems] = useState<LibraryItemCard[]>([]);
   const [error, setError] = useState<string | null>(null);
 
   useFocusEffect(
     useCallback(() => {
-      api
-        .library()
-        .then((d) => {
-          setData(d);
+      Promise.all([api.workoutCards(), api.library()])
+        .then(([w, lib]) => {
+          setRegions(w.regions);
+          setCards(w.cards);
+          setPrograms(lib.programs);
+          setItems(lib.items.filter((i) => i.kind === 'MOVE' || i.kind === 'FACE'));
           setError(null);
         })
         .catch((e) => setError(errorText(e)));
     }, []),
   );
-  // Kısıt seçimi değişince kart süreleri ve hareket sayıları yeniden gelir
-  useEffect(() => {
-    api
-      .workoutCards(avoid)
-      .then((r) => setCards(r.cards))
-      .catch((e) => setError(errorText(e)));
-  }, [avoid]);
-  // Filtre çipleri: kısa süre, tümü ve hedef bölgeler (yalnızca var olanlar; karışıklık olmasın)
-  const areaChips = [...new Set(cards.flatMap((c) => c.areas))].map((a) => ({ key: a, label: a }));
-  const q = query.trim().toLocaleLowerCase('tr');
-  const shownCards = cards.filter(
-    (c) =>
-      (cat === 'all' || c.areas.includes(cat)) &&
-      (!short || c.estimatedMinutes <= 15) &&
-      (!q || `${c.title} ${c.region} ${c.categoryLabel} ${c.goal} ${c.areas.join(' ')}`.toLocaleLowerCase('tr').includes(q)),
-  );
 
-  const items = (data?.items ?? []).filter((i) =>
-    section === 'moves' ? i.kind === 'MOVE' : section === 'face' ? i.kind === 'FACE' : section === 'nutrition' ? i.kind === 'GUIDE' : false,
-  );
-  // Hareketler kategoriye göre gruplanır (Evde, Salon, Duruş ve esneme)
-  const groups = [...new Set(items.map((i) => i.categoryLabel))];
+  const q = query.trim().toLocaleLowerCase('tr');
+  const open = (r: WorkoutRegion) => router.push({ pathname: '/region/[key]', params: { key: r.key } });
+  const goCard = (id: string) => router.push({ pathname: '/workout-card/[id]', params: { id } });
+  const goProgram = (id: string) => router.push(`/library-program/${id}`);
+  const isFace = tab === 'face';
+  const regionList = regions.filter((r) => (r.category === 'face') === isFace);
+
+  // Arama: bölgeler, antrenmanlar ve hareketler birlikte aranır
+  const matchedRegions = regionList.filter((r) => (isFace || group === 'all' || r.category === group) && (!q || r.title.toLocaleLowerCase('tr').includes(q)));
+  const matchedCards = q ? cards.filter((x) => (x.category === 'face') === isFace && `${x.title} ${x.region} ${x.goal}`.toLocaleLowerCase('tr').includes(q)) : [];
+  const matchedItems = q ? items.filter((i) => (i.kind === 'FACE') === isFace && `${i.title} ${i.summary}`.toLocaleLowerCase('tr').includes(q)).slice(0, 20) : [];
+  const packs = programs.filter((p) => p.kind === 'PACK');
+  const classics = programs.filter((p) => p.kind === 'PROGRAM');
+  const faceRoutines = cards.filter((x) => ['face-morning', 'face-evening'].includes(x.id));
 
   return (
     <Screen tabBarInset>
-      <SocialHeader title="Kütüphane" />
-      <Card padded={false} variant="soft" style={{ paddingHorizontal: 16 }}>
-        <ListRow icon="sparkles-outline" title="Kişisel 28 günlük program" subtitle="Hedefine ve seviyene göre hazırlanır, ilerlemene göre güncellenir" onPress={() => router.push('/plan')} last />
-      </Card>
-      <ChipRow options={SECTIONS} selected={[section]} onToggle={setSection} />
-      <View style={{ height: 12 }} />
+      <SocialHeader title="Egzersiz Kütüphanesi" />
+      <ChipRow options={TABS} selected={[tab]} onToggle={setTab} />
       {error ? <Notice kind="danger" text={error} /> : null}
 
-      {section === 'cards' ? (
+      {tab !== 'programs' ? (
         <>
-          <Text variant="title" style={{ marginBottom: 10 }}>
-            Günlük Antrenmanlar
-          </Text>
           <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, backgroundColor: c.surfaceAlt, borderRadius: 16, paddingHorizontal: 14, height: 48, marginBottom: 12 }}>
             <Icon name="search-outline" size={20} color={c.textMuted} />
-            <TextInput value={query} onChangeText={setQuery} placeholder="Antrenman ara" placeholderTextColor={c.textMuted} accessibilityLabel="Antrenman ara" style={{ flex: 1, fontSize: 15, color: c.text }} />
+            <TextInput value={query} onChangeText={setQuery} placeholder={isFace ? 'Yüz hareketi ara' : 'Bölge, antrenman ya da hareket ara'} placeholderTextColor={c.textMuted} accessibilityLabel="Ara" style={{ flex: 1, fontSize: 15, color: c.text }} />
           </View>
-          <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 8, paddingHorizontal: 16, paddingBottom: 12 }} style={{ marginHorizontal: -16 }}>
-            <Chip label="Kısa süre" icon="swap-vertical-outline" selected={short} onPress={() => setShort((v) => !v)} />
-            {[{ key: 'all', label: 'Tümü' }, ...areaChips].map((o) => (
-              <Chip key={o.key} label={o.label} selected={cat === o.key} onPress={() => setCat(o.key)} />
-            ))}
-          </ScrollView>
-          {shownCards.map((card) => (
-            <CardTile key={card.id} hero={card.hero} title={card.title} moves={card.moveCount} minutes={card.estimatedMinutes} onPress={() => router.push({ pathname: '/workout-card/[id]', params: { id: card.id, avoid: avoid.join(',') } })} />
+          {!isFace ? (
+            <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 8, paddingHorizontal: 16, paddingBottom: 12 }} style={{ marginHorizontal: -16 }}>
+              {GROUPS.map((g) => (
+                <Chip key={g.key} label={g.label} selected={group === g.key} onPress={() => setGroup(g.key)} />
+              ))}
+            </ScrollView>
+          ) : null}
+
+          {isFace && !q ? (
+            <>
+              <Notice kind="info" text="Yüz egzersizi ve masajının etkisi için bilimsel kanıt sınırlıdır; sonuç garanti edilmez. Cildin hassassa ya da yüzünde yara varsa uygulama." />
+              {faceRoutines.map((x) => (
+                <CardTile key={x.id} hero={x.hero} title={x.title} moves={x.moveCount} minutes={x.estimatedMinutes} onPress={() => goCard(x.id)} />
+              ))}
+              <Text variant="heading" style={{ marginTop: 6, marginBottom: 10 }}>
+                Bölgelere göre
+              </Text>
+            </>
+          ) : null}
+
+          {matchedRegions.map((r) => (
+            <RegionTile key={r.key} hero={r.hero} title={r.title} subtitle={`${r.moveCount} Hareket · ${r.cardCount} antrenman`} onPress={() => open(r)} />
           ))}
-          {shownCards.length === 0 ? <EmptyState icon="search-outline" title="Antrenman bulunamadı" text="Aramayı ya da filtreyi değiştir." /> : null}
-          <Text variant="caption" tone="secondary" style={{ marginVertical: 8 }} onPress={() => setShowRestr((v) => !v)}>
-            {showRestr ? '▾' : '▸'} Ağrı ya da sakatlığım var{avoid.length ? ` (${avoid.length})` : ''}
-          </Text>
-          {showRestr ? <RestrictionPicker value={avoid} onChange={setAvoid} /> : null}
-          <Notice kind="info" text="Yüz egzersizleri ve masajı için bilimsel kanıt sınırlıdır; bu yüzden hazır bir yüz antrenmanı yoktur." />
-        </>
-      ) : null}
 
-      {section === 'programs'
-        ? data?.programs.map((p) => (
-            <Card key={p.id} onPress={() => router.push(`/library-program/${p.id}`)}>
-              <View style={{ flexDirection: 'row', gap: 6, marginBottom: 6 }}>
-                <Tag label="Ücretsiz" kind="success" />
-                <Tag label={p.categoryLabel} />
-                <Tag label={LEVEL_TEXT[p.level] ?? p.level} kind="info" />
+          {matchedCards.length ? (
+            <>
+              <Text variant="subheading" style={{ marginTop: 8, marginBottom: 8 }}>
+                Antrenmanlar
+              </Text>
+              {matchedCards.map((x) => (
+                <CardTile key={x.id} hero={x.hero} title={x.title} moves={x.moveCount} minutes={x.estimatedMinutes} onPress={() => goCard(x.id)} />
+              ))}
+            </>
+          ) : null}
+          {matchedItems.length ? (
+            <>
+              <Text variant="subheading" style={{ marginTop: 8, marginBottom: 8 }}>
+                Hareketler
+              </Text>
+              <View style={{ backgroundColor: c.surface, borderRadius: 20, borderWidth: 1, borderColor: c.border, paddingHorizontal: 16 }}>
+                {matchedItems.map((i, idx) => (
+                  <ListRow key={i.id} icon="body-outline" title={i.title} subtitle={i.summary} onPress={() => router.push(`/library-item/${i.id}`)} last={idx === matchedItems.length - 1} />
+                ))}
               </View>
-              <Text variant="heading">{p.title}</Text>
-              <Text variant="body" tone="secondary" style={{ marginTop: 2 }}>
-                {p.description}
-              </Text>
-              <Text variant="caption" tone="muted" style={{ marginTop: 6 }}>
-                {programMeta(p)}
-              </Text>
-            </Card>
-          ))
-        : null}
-
-      {section === 'face' ? <Notice kind="info" text="Cildin hassassa, yüzünde yara veya iltihap varsa masaj yapma." /> : null}
-      {section === 'nutrition' ? <Notice kind="info" text="Bunlar genel bilgi kartlarıdır. Sana özel beslenme planı için bir diyetisyenle çalış." /> : null}
-
-      {section !== 'programs'
-        ? groups.map((g) => (
-            <View key={g}>
-              {section === 'moves' ? (
-                <Text variant="subheading" style={{ marginTop: 8, marginBottom: 8 }}>
-                  {g}
-                </Text>
-              ) : null}
-              <Card padded={false} style={{ paddingHorizontal: 16 }}>
-                {items
-                  .filter((i) => i.categoryLabel === g)
-                  .map((i, idx, arr) => (
-                    <ListRow
-                      key={i.id}
-                      icon={i.kind === 'GUIDE' ? 'book-outline' : i.kind === 'FACE' ? 'happy-outline' : 'barbell-outline'}
-                      title={i.title}
-                      subtitle={i.kind === 'GUIDE' ? `${i.minutes ?? 2} dk okuma · ${i.summary}` : `${i.workText ?? ''} · ~${durationText(i.durationSec ?? 0)}`}
-                      onPress={() => router.push(`/library-item/${i.id}`)}
-                      last={idx === arr.length - 1}
-                    />
-                  ))}
-              </Card>
+            </>
+          ) : null}
+          {q && matchedRegions.length + matchedCards.length + matchedItems.length === 0 ? <EmptyState icon="search-outline" title="Sonuç bulunamadı" text="Başka bir kelime dene." /> : null}
+        </>
+      ) : (
+        <>
+          {/* Kişisel 28 günlük program: sunucudaki mevcut ürün */}
+          <Pressable onPress={() => router.push('/plan')} accessibilityRole="button" accessibilityLabel="28 Günlük Kişisel Dönüşüm" style={{ marginBottom: 18 }}>
+            <HeroImage hero="fullbody" height={210} />
+            <View style={{ position: 'absolute', left: 18, top: 16 }}>
+              <Pill text="Premium" tone="earth" />
             </View>
-          ))
-        : null}
+            <View style={{ position: 'absolute', left: 18, right: 18, bottom: 16 }}>
+              <Text variant="title" style={{ color: '#FFFFFF' }}>
+                28 Günlük Kişisel Dönüşüm
+              </Text>
+              <Text variant="caption" style={{ color: 'rgba(255,255,255,0.9)', marginTop: 4 }}>
+                Hedefine, seviyene ve zamanına göre hazırlanır; ilerlemene göre güncellenir.
+              </Text>
+              <View style={{ alignSelf: 'flex-start', backgroundColor: '#FFFFFF', borderRadius: 999, paddingHorizontal: 16, paddingVertical: 8, marginTop: 10 }}>
+                <Text variant="bodyStrong" style={{ color: '#244A3B' }}>
+                  Programı incele
+                </Text>
+              </View>
+            </View>
+          </Pressable>
 
-      {data && section !== 'programs' && section !== 'cards' && items.length === 0 ? <EmptyState icon="albums-outline" title="Bu bölümde içerik yok" /> : null}
+          <Text variant="heading" style={{ marginBottom: 10 }}>
+            28 Günlük Paketler
+          </Text>
+          {packs.map((p) => (
+            <ProgramTile key={p.id} p={p} onPress={() => goProgram(p.id)} />
+          ))}
+          <Text variant="heading" style={{ marginTop: 6, marginBottom: 10 }}>
+            Programlar
+          </Text>
+          {classics.map((p) => (
+            <ProgramTile key={p.id} p={p} onPress={() => goProgram(p.id)} />
+          ))}
+        </>
+      )}
     </Screen>
   );
 }

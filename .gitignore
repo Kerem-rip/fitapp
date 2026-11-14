@@ -39,3 +39,7 @@ Thumbs.db
 # Yüklenen başvuru belgeleri (kişisel veri, GitHub'a gitmez)
 storage/
 storage-test/
+
+# Gecici demo medyasi (yalnizca yerel)
+apps/api/demo-media/*
+!apps/api/demo-media/README.txt

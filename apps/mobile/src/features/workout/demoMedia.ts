@@ -18,6 +18,7 @@ export const DEMO_IMAGES: Record<string, ImageSourcePropType> = {
   cardio: require('../../../assets/demo/cardio.jpg'),
   mobility: require('../../../assets/demo/mobility.jpg'),
   sport: require('../../../assets/demo/sport.jpg'),
+  face: require('../../../assets/demo/face.jpg'),
 };
 
 // Hareketin çalıştırdığı bölgeye göre demo görsel anahtarı (görsel yoksa kategoriye göre)
@@ -48,4 +49,5 @@ export const DEMO_CREDITS: Record<string, { author: string; license: string; pag
   cardio: { author: 'Joseph Sly1015', license: 'CC BY-SA 4.0', page: 'https://commons.wikimedia.org/wiki/File:Running_to_exercise.jpg' },
   mobility: { author: 'Nenad Stojkovic', license: 'CC BY 2.0', page: 'https://commons.wikimedia.org/wiki/File:Woman_on_the_yoga_mat_stretching_her_hamstrings_-_50398044188.jpg' },
   sport: { author: 'Kiet Le', license: 'CC BY 2.0', page: 'https://commons.wikimedia.org/wiki/File:HIIT_Workout.jpg' },
+  face: { author: 'Alvinategyeka', license: 'CC BY-SA 4.0', page: 'https://commons.wikimedia.org/wiki/File:Emotions_Spa_Facial_Massage_Parlour.jpg' },
 };

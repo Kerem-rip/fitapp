@@ -61,6 +61,36 @@ describe('Antrenman kartları ve kanıt katmanı (e2e)', () => {
     await http().get('/api/workout-cards').expect(401);
   });
 
+  it('bölgeler, yüz bölgeleri ve 28 günlük paket: katılınca günün antrenman kartı Görevlerim\'de gelir', async () => {
+    const user = (await registerUser(app)) as Token;
+    const auth = bearer(user.accessToken);
+    const today = localDay();
+
+    const res = (await http().get('/api/workout-cards').set(auth).expect(200)).body as { regions: { key: string; moveCount: number; cardCount: number; hero: string }[]; cards: { regionKey: string; hero: string; areas: string[] }[] };
+    for (const key of ['hip', 'chest', 'arms', 'core', 'fullbody', 'face-alin', 'face-cene']) expect(res.regions.some((r) => r.key === key && r.moveCount > 0), key).toBe(true);
+    expect(res.cards.every((c) => c.regionKey && c.hero && c.areas.length > 0)).toBe(true);
+
+    const lib = (await http().get('/api/library').set(auth).expect(200)).body as { programs: { id: string; kind: string; hero: string; totalDays: number }[] };
+    const packs = lib.programs.filter((p) => p.kind === 'PACK');
+    expect(packs.length).toBeGreaterThanOrEqual(8);
+    expect(lib.programs.some((p) => p.kind === 'PROGRAM' && p.id === 'ev-baslangic')).toBe(true);
+
+    const detail = (await http().get('/api/library/programs/pack-karin').set(auth).expect(200)).body as { weekPlan: { week: number; days: { cardId: string | null; minutes: number }[] }[] };
+    expect(detail.weekPlan).toHaveLength(4);
+    expect(detail.weekPlan[0]!.days.every((d) => d.cardId && d.minutes > 0)).toBe(true);
+
+    await http().post('/api/library/programs/pack-karin/join').set(auth).send({}).expect(201);
+    const day = (await http().get(`/api/me/program?date=${today}`).set(auth).expect(200)).body as { programs: { cardId: string | null; hero: string; steps: unknown[] }[] };
+    expect(day.programs[0]).toMatchObject({ cardId: 'core-beginner', hero: 'core' });
+    expect(day.programs[0]!.steps.length).toBeGreaterThan(3);
+
+    const face = (await http().get('/api/library/items/face-cene-yukari').set(auth).expect(200)).body as { kind: string; warnings: string[]; steps: string[] };
+    expect(face.kind).toBe('FACE');
+    expect(face.warnings.some((w) => w.includes('garanti edilmez'))).toBe(true);
+    await http().get('/api/demo-media/yok.gif').expect(404);
+    await http().get('/api/demo-media/..%2Fpackage.json').expect(404);
+  });
+
   it('Takvime ekle görevlere girer, çift ekleme reddedilir; Hemen Başla bitişi tamamlama kaydı yazar', async () => {
     const user = (await registerUser(app)) as Token;
     const auth = bearer(user.accessToken);

@@ -8,7 +8,7 @@ import { api } from '@/api/client';
 import { errorText } from '@/auth/actions';
 import { ChipRow } from '@/components/ChipRow';
 import { dateKey, formatShort } from '@/demo/dates';
-import { HeroImage } from '@/features/workout/CardHero';
+import { MoveMedia } from '@/features/workout/CardHero';
 import { DEMO_CREDITS, heroFor } from '@/features/workout/demoMedia';
 import { EvidenceBlock } from './EvidenceBlock';
 import { durationText, LEVEL_TEXT } from './labels';
@@ -54,9 +54,9 @@ export function LibraryItemScreen() {
         <>
           {item.kind === 'MOVE' ? (
             <>
-              <HeroImage hero={heroFor(item)} height={200} />
+              <MoveMedia media={item.media} hero={heroFor(item)} height={240} />
               <Text variant="micro" tone="muted" style={{ marginTop: 4, marginBottom: 10 }}>
-                Geçici demo görseli · {DEMO_CREDITS[heroFor(item)]?.author} · {DEMO_CREDITS[heroFor(item)]?.license} · Wikimedia Commons
+                {item.media.status === 'DEMO' ? 'Geçici demo klibi' : `Geçici demo görseli · ${DEMO_CREDITS[heroFor(item)]?.author} · ${DEMO_CREDITS[heroFor(item)]?.license} · Wikimedia Commons`}
               </Text>
               {item.evidence.nameEn ? (
                 <Text variant="caption" tone="secondary" style={{ marginBottom: 8 }}>

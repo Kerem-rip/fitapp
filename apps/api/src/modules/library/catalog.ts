@@ -5,6 +5,7 @@
 
 import { CONTENT } from './evidence.js';
 import { EXTRA_ITEMS } from './extra-moves.js';
+import { FACE_ITEMS } from './face-moves.js';
 
 export type ItemKind = 'MOVE' | 'FACE' | 'GUIDE';
 export type ItemCategory = 'home' | 'fitness' | 'posture' | 'face' | 'nutrition' | 'cardio' | 'mobility';
@@ -51,6 +52,8 @@ export interface ProgramStep {
 export interface ProgramDayDef {
   title: string;
   steps: ProgramStep[];
+  // 28 günlük paketlerde günün antrenman kartı ("Hemen Başla" bu karta gider)
+  cardId?: string;
 }
 
 export interface LibraryProgram {
@@ -64,6 +67,11 @@ export interface LibraryProgram {
   // Ücretsiz programlar herkese açıktır (ücretli ve reklamla açılan paketler sonraki bir aşamada)
   access: 'FREE';
   days: ProgramDayDef[];
+  // PACK: 28 günlük tematik paket (antrenman kartlarından kurulur); PROGRAM: klasik program
+  kind?: 'PACK' | 'PROGRAM';
+  // Liste görseli anahtarı ve kısa hedef cümlesi
+  hero?: string;
+  goal?: string;
 }
 
 export const CATEGORY_LABELS: Record<ItemCategory, string> = {
@@ -392,7 +400,7 @@ export const PROGRAMS: LibraryProgram[] = [
 ];
 
 // Genişletilmiş hareketler (kimlikler tabloda benzersizdir; mevcut kayıtlarla çakışan eklenmez)
-for (const e of EXTRA_ITEMS) if (!ITEMS.some((i) => i.id === e.id)) ITEMS.push(e);
+for (const e of [...EXTRA_ITEMS, ...FACE_ITEMS]) if (!ITEMS.some((i) => i.id === e.id)) ITEMS.push(e);
 
 // Kaynaklı içerik taslak metinlerin üzerine yazılır (tek kayıt, her yerde aynı hareket)
 for (const item of ITEMS) {

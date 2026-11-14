@@ -4,7 +4,32 @@ import { EVIDENCE, SOURCES } from './evidence.js';
 import { workText } from './library-rules.js';
 import { PLAN_META } from '../personal-plan/plan-meta.js';
 import { BODY_AREAS } from '../personal-plan/plan-types.js';
-import { CARDS, resolveCard } from './workout-cards.js';
+import { FACE_META } from './face-moves.js';
+import { PACKS } from './packs.js';
+import { CARDS, regionSummaries, resolveCard } from './workout-cards.js';
+
+describe('28 günlük paketler', () => {
+  it('her paket 4 hafta, her günü mevcut bir karta bağlı ve adımları var', () => {
+    expect(PACKS.length).toBeGreaterThanOrEqual(8);
+    for (const p of PACKS) {
+      expect(p.weeks, p.id).toBe(4);
+      expect(p.days.length, p.id).toBe(4 * p.daysPerWeek);
+      expect(p.daysPerWeek, p.id).toBeLessThanOrEqual(7);
+      for (const d of p.days) {
+        expect(CARDS.some((c) => c.id === d.cardId), `${p.id}:${d.cardId}`).toBe(true);
+        expect(d.steps.length, `${p.id}:${d.cardId}`).toBeGreaterThan(0);
+      }
+    }
+  });
+
+  it('başlıklar "28 Günde" ile başlar ve sonuç vaadi içermez (eritir, yakar, yok eder)', () => {
+    for (const p of PACKS) {
+      expect(p.title.startsWith('28 Günde'), p.id).toBe(true);
+      expect(`${p.title} ${p.description}`.toLocaleLowerCase('tr')).not.toMatch(/erit|yağ yak|yok et|garanti ederiz|kesin sonuç/);
+    }
+    expect(PACKS.find((p) => p.id === 'pack-yuz')!.description).toContain('garanti edilmez');
+  });
+});
 
 describe('kanıt katmanı', () => {
   it('her kanıt kaydı mevcut bir harekete bağlı ve kaynakları tanımlı', () => {
@@ -45,12 +70,45 @@ describe('antrenman kartları', () => {
     }
   });
 
-  it('kart en az bir ana hareket içerir; "doğrulama sürüyor" hareketi ana bölümde kullanılmaz', () => {
+  it('kart en az bir ana hareket içerir; "doğrulama sürüyor" hareketi ana bölümde kullanılmaz (yüz hariç: kanıt uyarısı vardır)', () => {
     for (const c of CARDS) {
       const main = c.sections.filter((s) => s.kind === 'MAIN').flatMap((s) => s.items);
       expect(main.length, c.id).toBeGreaterThan(0);
+      if (c.category === 'face') continue;
       for (const i of main) expect(EVIDENCE[i.itemId]?.verification, `${c.id}:${i.itemId}`).not.toBe('held');
     }
+  });
+
+  it('fitness bölgelerinde her ANA hareket yalnızca tek bir bölgede yer alır (tekrar yok)', () => {
+    const regions = ['hip', 'legs', 'chest', 'back', 'shoulder', 'arms', 'core'];
+    const owner = new Map<string, string>();
+    for (const c of CARDS.filter((x) => regions.includes(x.regionKey))) {
+      for (const s of c.sections.filter((x) => x.kind === 'MAIN')) {
+        for (const i of s.items) {
+          const prev = owner.get(i.itemId);
+          expect(prev === undefined || prev === c.regionKey, `${i.itemId}: ${prev} ve ${c.regionKey}`).toBe(true);
+          owner.set(i.itemId, c.regionKey);
+        }
+      }
+    }
+    expect(owner.size).toBeGreaterThan(60);
+  });
+
+  it('bölge özetleri: her bölgede kart ve hareket var; yüz bölgeleri dahil', () => {
+    const regions = regionSummaries();
+    expect(regions.length).toBeGreaterThanOrEqual(21);
+    for (const r of regions) {
+      expect(r.cardCount, r.key).toBeGreaterThan(0);
+      expect(r.moveCount, r.key).toBeGreaterThan(0);
+    }
+    expect(regions.some((r) => r.key === 'face-cene')).toBe(true);
+  });
+
+  it('yüz egzersizi ve masaj hareketleri çok sayıda (60+) ve hepsinin bölge/tür kaydı var', () => {
+    const face = ITEMS.filter((i) => i.kind === 'FACE');
+    expect(face.length).toBeGreaterThanOrEqual(60);
+    for (const i of face) expect(FACE_META[i.id], i.id).toBeDefined();
+    expect(face.filter((i) => FACE_META[i.id]!.type === 'ms').length).toBeGreaterThanOrEqual(25);
   });
 
   it('her kartta hareket sırası ve dinlenme açık: dinlenme 0 ya da pozitif, son hareketten sonra dinlenme yok', () => {
@@ -72,8 +130,8 @@ describe('antrenman kartları', () => {
 
   it('her kategoride en az bir kart var; kart sayısı yeterli', () => {
     const cats = new Set(CARDS.map((c) => c.category));
-    for (const k of ['fitness', 'yoga', 'pilates', 'posture', 'cardio', 'mobility', 'sport']) expect(cats.has(k as never), k).toBe(true);
-    expect(CARDS.length).toBeGreaterThanOrEqual(35);
+    for (const k of ['fitness', 'yoga', 'pilates', 'posture', 'cardio', 'mobility', 'sport', 'face']) expect(cats.has(k as never), k).toBe(true);
+    expect(CARDS.length).toBeGreaterThanOrEqual(60);
   });
 
   it('her kartın dayanağı yazılı', () => {

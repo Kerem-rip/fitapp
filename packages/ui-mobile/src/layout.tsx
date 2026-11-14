@@ -8,7 +8,7 @@ import { IconButton, Text, tap } from './primitives';
 import { useTheme } from './theme';
 
 // Alttan yüzen menünün altında içerik kalmasın diye bırakılan boşluk
-export const TAB_BAR_INSET = 112;
+export const TAB_BAR_INSET = 96;
 
 export function Screen({
   children,

@@ -994,7 +994,8 @@ export interface LibraryItemEvidence {
 export interface LibraryItemDetail extends LibraryItemCard {
   evidence: LibraryItemEvidence;
   cards: { id: string; title: string; categoryLabel: string; estimatedMinutes: number }[];
-  media: { status: 'MISSING' | 'LICENSED' };
+  // DEMO: geçici yerel klip (kind: video | image, url: sunucu yolu)
+  media: { status: 'MISSING' | 'LICENSED' | 'DEMO'; kind?: 'video' | 'image'; url?: string };
   work: { sets: number; reps?: number; seconds?: number; perSide?: boolean; restSec: number } | null;
   equipment: string | null;
   videoUrl: string | null;
@@ -1018,6 +1019,10 @@ export interface LibraryProgramCard {
   totalDays: number;
   access: 'FREE';
   minutesPerDay: number;
+  // PACK: 28 günlük tematik paket; PROGRAM: klasik program
+  kind: 'PACK' | 'PROGRAM';
+  hero: string;
+  goal: string;
 }
 
 export interface LibraryStep {
@@ -1034,12 +1039,16 @@ export interface LibraryStep {
 export interface LibraryProgramDay {
   dayIndex: number;
   title: string;
+  // Paketlerde günün antrenman kartı
+  cardId: string | null;
+  hero: string;
   durationSec: number;
   steps: LibraryStep[];
 }
 
 export interface LibraryProgramDetail extends LibraryProgramCard {
   preview: LibraryProgramDay[];
+  weekPlan: { week: number; days: { dayIndex: number; title: string; cardId: string | null; minutes: number; moveCount: number }[] }[];
   enrollment: { id: string; startDate: string } | null;
 }
 
@@ -1070,7 +1079,18 @@ export interface MyProgramDay {
 
 export type BodyAreaKey = 'NECK' | 'SHOULDER' | 'WRIST' | 'LOW_BACK' | 'HIP' | 'KNEE' | 'ANKLE';
 
+export interface WorkoutRegion {
+  key: string;
+  title: string;
+  category: string;
+  hero: string;
+  cardCount: number;
+  moveCount: number;
+  moves: { id: string; title: string; level: string }[];
+}
+
 export interface WorkoutCardSummary {
+  regionKey: string;
   id: string;
   title: string;
   summary: string;
@@ -1122,6 +1142,7 @@ export interface WorkoutCardDetail extends WorkoutCardSummary {
 
 export interface WorkoutCardTask {
   id: string;
+  hero: string;
   card: { id: string; title: string; categoryLabel: string };
   avoid: BodyAreaKey[];
   estimatedMinutes: number;

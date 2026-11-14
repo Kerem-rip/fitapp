@@ -237,6 +237,17 @@ export function MyProgramScreen() {
               {p.dayIndex + 1}. gün / {p.program.totalDays} · ~{durationText(p.durationSec)} · {p.doneCount}/{p.steps.length} tamam
             </Text>
           </Pressable>
+          {p.cardId ? (
+            <View style={{ marginBottom: 8, alignSelf: 'flex-start' }}>
+              <Button
+                label={p.doneCount >= p.steps.length ? 'Tekrar başla' : 'Hemen Başla'}
+                size="sm"
+                icon="play-circle-outline"
+                disabled={future}
+                onPress={() => router.push({ pathname: '/workout-play/[id]', params: { id: p.cardId!, enrollmentId: p.enrollmentId, dayIndex: String(p.dayIndex) } })}
+              />
+            </View>
+          ) : null}
           {p.steps.map((s, i) => (
             <View key={s.index}>
               <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12, paddingVertical: 8 }}>
