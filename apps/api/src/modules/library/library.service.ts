@@ -9,7 +9,8 @@ import { CATEGORY_LABELS, findItem, findProgram, ITEMS, PROGRAMS, type LibraryIt
 import { dayDurationSec, dayIndexOn, nextDayFrom, scheduleDate, setSeconds, workSeconds, workText } from './library-rules.js';
 import { BODY_AREAS, type BodyArea } from '../personal-plan/plan-types.js';
 import { EVIDENCE, FACE_EVIDENCE_WARNING, SOURCES } from './evidence.js';
-import { CARDS, CATEGORY_TITLES, findCard, resolveCard, RESTRICTION_AREAS, RESTRICTION_LABELS, type WorkoutCardDef } from './workout-cards.js';
+import { EXTRA_EN } from './extra-moves.js';
+import { CARDS, cardsWithItem, CATEGORY_TITLES, findCard, resolveCard, RESTRICTION_AREAS, RESTRICTION_LABELS, type WorkoutCardDef } from './workout-cards.js';
 
 // "KNEE,LOW_BACK" → geçerli bölge listesi (bilinmeyenler atılır)
 export const parseAvoid = (s: string): BodyArea[] => [...new Set(s.split(',').filter((a): a is BodyArea => (BODY_AREAS as readonly string[]).includes(a)))];
@@ -100,7 +101,7 @@ export class LibraryService {
       // Kanıt katmanı: kaynaklar, doğrulama durumu, varyasyon ailesi ve alternatifler
       evidence: {
         verification: ev?.verification ?? 'none',
-        nameEn: ev?.nameEn ?? null,
+        nameEn: ev?.nameEn ?? EXTRA_EN[id] ?? null,
         family: ev?.family ?? null,
         variationOf: ev?.variationOf ? { id: ev.variationOf, title: findItem(ev.variationOf)?.title ?? ev.variationOf } : null,
         note: ev?.note ?? null,
@@ -111,6 +112,8 @@ export class LibraryService {
         }),
       },
       // Görsel/video durumu: lisanslı içerik eklenene kadar "yok" (uydurma bağlantı gösterilmez)
+      // Bu hareketin yer aldığı hazır antrenmanlar: kullanıcı nereden başlayacağını düşünmeden sıralı kartı seçer
+      cards: cardsWithItem(id).map((c) => ({ id: c.id, title: c.title, categoryLabel: CATEGORY_TITLES[c.category], estimatedMinutes: this.cardSummary(c, []).estimatedMinutes })),
       media: { status: i.videoUrl ? 'LICENSED' : 'MISSING' },
     };
   }
@@ -336,7 +339,7 @@ export class LibraryService {
         if (!c) return [];
         const avoid = parseAvoid(t.avoid);
         const r = resolveCard(c, avoid, workText);
-        return [{ id: t.id, card: { id: c.id, title: c.title, categoryLabel: CATEGORY_TITLES[c.category] }, avoid, estimatedMinutes: r.estimatedMinutes, moveCount: r.moveCount, done: t.doneAt !== null, completedMoves: t.completedMoves, totalMoves: t.totalMoves }];
+        return [{ id: t.id, card: { id: c.id, title: c.title, categoryLabel: CATEGORY_TITLES[c.category] }, avoid, estimatedMinutes: r.estimatedMinutes, moveCount: r.moveCount, done: t.doneAt !== null, completedMoves: t.completedMoves, totalMoves: t.totalMoves, sections: r.sections }];
       }),
       tasks: tasks.flatMap((t) => {
         const item = findItem(t.itemId);

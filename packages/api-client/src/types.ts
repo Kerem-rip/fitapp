@@ -993,6 +993,7 @@ export interface LibraryItemEvidence {
 
 export interface LibraryItemDetail extends LibraryItemCard {
   evidence: LibraryItemEvidence;
+  cards: { id: string; title: string; categoryLabel: string; estimatedMinutes: number }[];
   media: { status: 'MISSING' | 'LICENSED' };
   work: { sets: number; reps?: number; seconds?: number; perSide?: boolean; restSec: number } | null;
   equipment: string | null;
@@ -1085,6 +1086,8 @@ export interface WorkoutCardSummary {
 }
 
 export interface WorkoutCardItem {
+  // Antrenmandaki sıra (1'den başlar)
+  order: number;
   itemId: string;
   title: string;
   workText: string;
@@ -1095,10 +1098,18 @@ export interface WorkoutCardItem {
   replacedFrom?: { id: string; title: string };
 }
 
+export interface WorkoutCardSection {
+  kind: 'PREP' | 'WARMUP' | 'MAIN' | 'FINISH';
+  title: string;
+  // Bölümün neden o sırada olduğu
+  hint: string;
+  items: WorkoutCardItem[];
+}
+
 export interface WorkoutCardDetail extends WorkoutCardSummary {
   prep: string[];
   basis: string[];
-  sections: { kind: 'PREP' | 'WARMUP' | 'MAIN' | 'FINISH'; title: string; items: WorkoutCardItem[] }[];
+  sections: WorkoutCardSection[];
   swapped: { from: string; fromTitle: string; to: string | null; toTitle: string | null; area: string }[];
   avoid: BodyAreaKey[];
   disclaimer: string;
@@ -1113,6 +1124,8 @@ export interface WorkoutCardTask {
   done: boolean;
   completedMoves: number | null;
   totalMoves: number | null;
+  // Sıralı hareketler: sıra, yapılış ve dinlenme
+  sections: WorkoutCardSection[];
 }
 
 // ───── Gönderiler ─────

@@ -3,6 +3,7 @@
 // Aynı hareket tek kayıttır; birden çok kategoriye ve programa ilişkilendirilir (çoğaltılmaz).
 // İçerik TASLAKTIR: antrenör incelemesine açık; hareket kütüphanesi genişledikçe buraya satır eklenir.
 import { ITEMS } from '../library/catalog.js';
+import { EXTRA_META } from '../library/extra-moves.js';
 import type { BodyArea, Equipment, Pattern, PlanCategory, Role, Setting } from './plan-types.js';
 
 export interface PlanMeta {
@@ -93,6 +94,9 @@ export const PLAN_META: Record<string, PlanMeta> = {
   // ── Günlük hareket ──
   'standing-break': { categories: cat('WELLNESS_DAILY', 'daily_movement'), settings: ALL, equipment: [], pattern: 'CARDIO', roles: ['MAIN'], level: 1, stress: [], alternatives: ['march-in-place'], met: 2.5 },
 };
+
+// Genişletilmiş hareket tablosundaki (library/extra-moves.ts) hareketler de plan motoruna girer
+for (const [id, m] of Object.entries(EXTRA_META)) PLAN_META[id] = m as unknown as PlanMeta;
 
 export const META_IDS = Object.keys(PLAN_META);
 export const metaOf = (id: string): PlanMeta | undefined => PLAN_META[id];

@@ -28,6 +28,7 @@ export function LibraryScreen() {
   const [cards, setCards] = useState<WorkoutCardSummary[]>([]);
   const [avoid, setAvoid] = useState<BodyAreaKey[]>([]);
   const [cat, setCat] = useState<string>('all');
+  const [showRestr, setShowRestr] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   useFocusEffect(
@@ -70,23 +71,22 @@ export function LibraryScreen() {
       {section === 'cards' ? (
         <>
           <ChipRow options={[{ key: 'all', label: 'Hepsi' }, ...cardCats]} selected={[cat]} onToggle={setCat} />
-          <RestrictionPicker value={avoid} onChange={setAvoid} />
-          {shownCards.map((c) => (
-            <Card key={c.id} onPress={() => router.push({ pathname: '/workout-card/[id]', params: { id: c.id, avoid: avoid.join(',') } })}>
-              <View style={{ flexDirection: 'row', gap: 6, marginBottom: 6, flexWrap: 'wrap' }}>
-                <Tag label={c.categoryLabel} />
-                <Tag label={LEVEL_TEXT[c.level] ?? c.level} kind="info" />
-                <Tag label={c.equipment.length ? c.equipment.join(', ') : 'Ekipmansız'} />
-              </View>
-              <Text variant="heading">{c.title}</Text>
-              <Text variant="body" tone="secondary" style={{ marginTop: 2 }}>
-                {c.summary}
-              </Text>
-              <Text variant="caption" tone="muted" style={{ marginTop: 6 }}>
-                ~{c.estimatedMinutes} dk · {c.moveCount} hareket · {c.region}
-              </Text>
-            </Card>
-          ))}
+          <Text variant="caption" tone="secondary" style={{ marginBottom: 8 }} onPress={() => setShowRestr((v) => !v)}>
+            {showRestr ? '▾' : '▸'} Ağrı ya da sakatlığım var{avoid.length ? ` (${avoid.length})` : ''}
+          </Text>
+          {showRestr ? <RestrictionPicker value={avoid} onChange={setAvoid} /> : null}
+          <Card padded={false} style={{ paddingHorizontal: 16 }}>
+            {shownCards.map((c, idx) => (
+              <ListRow
+                key={c.id}
+                icon={c.setting === 'gym' ? 'barbell-outline' : 'home-outline'}
+                title={c.title}
+                subtitle={`${LEVEL_TEXT[c.level] ?? c.level} · ~${c.estimatedMinutes} dk · ${c.moveCount} hareket · ${c.region}`}
+                onPress={() => router.push({ pathname: '/workout-card/[id]', params: { id: c.id, avoid: avoid.join(',') } })}
+                last={idx === shownCards.length - 1}
+              />
+            ))}
+          </Card>
           <Notice kind="info" text="Yüz egzersizleri ve masajı için bilimsel kanıt sınırlıdır; bu yüzden hazır bir yüz antrenmanı yoktur." />
         </>
       ) : null}

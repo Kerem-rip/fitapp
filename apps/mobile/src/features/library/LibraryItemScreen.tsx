@@ -1,6 +1,6 @@
 // Kütüphane içeriği: hareket/masaj (yapılış, dikkat, "Görevime ekle") ya da beslenme rehberi (okuma kartı).
 import type { LibraryItemDetail } from '@fitapp/api-client';
-import { Button, Card, Notice, Screen, ScreenHeader, SectionHeader, showToast, Tag, Text } from '@fitapp/ui-mobile';
+import { Button, Card, ListRow, Notice, Screen, ScreenHeader, SectionHeader, showToast, Tag, Text } from '@fitapp/ui-mobile';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useEffect, useState } from 'react';
 import { View } from 'react-native';
@@ -112,6 +112,20 @@ export function LibraryItemScreen() {
               ))}
 
               {item.kind === 'MOVE' || item.kind === 'FACE' ? <EvidenceBlock item={item} /> : null}
+
+              {item.cards.length ? (
+                <>
+                  <SectionHeader title="Sıralı antrenmanda yap" />
+                  <Text variant="caption" tone="secondary" style={{ marginBottom: 6 }}>
+                    Nereden başlayacağını düşünme: sırası ve dinlenmesi hazır bir antrenmanı seç.
+                  </Text>
+                  <Card padded={false} style={{ paddingHorizontal: 16 }}>
+                    {item.cards.map((c, i) => (
+                      <ListRow key={c.id} icon="list-outline" title={c.title} subtitle={`${c.categoryLabel} · ~${c.estimatedMinutes} dk`} onPress={() => router.push(`/workout-card/${c.id}`)} last={i === item.cards.length - 1} />
+                    ))}
+                  </Card>
+                </>
+              ) : null}
 
               <SectionHeader title="Görevime ekle" />
               <ChipRow options={DAY_OPTIONS} selected={[day]} onToggle={setDay} />

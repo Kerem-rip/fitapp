@@ -12,6 +12,7 @@ import { SocialHeader } from '@/components/social/SocialHeader';
 import { DAY_SHORT, dateKey, dayNumber, formatLong, weekdayIndex } from '@/demo/dates';
 import { durationText } from '@/features/library/labels';
 import { SOURCE_TAG } from '@/features/plan/labels';
+import { CardSequence } from '@/features/workout/CardSequence';
 
 // Bugünden 3 gün öncesi ile 10 gün sonrası
 const DAYS = Array.from({ length: 14 }, (_, i) => dateKey(i - 3));
@@ -209,8 +210,9 @@ export function MyProgramScreen() {
           </View>
           <Text variant="heading">{t.card.title}</Text>
           <Text variant="caption" tone="secondary" style={{ marginBottom: 8 }}>
-            ~{t.estimatedMinutes} dk · {t.moveCount} hareket
+            ~{t.estimatedMinutes} dk · {t.moveCount} hareket · sırayla yap, dinlenmeleri uygula
           </Text>
+          <CardSequence sections={t.sections} compact onItem={(id) => router.push(`/library-item/${id}`)} />
           <View style={{ flexDirection: 'row', gap: 8, alignItems: 'center' }}>
             <Button label={t.done ? 'Tekrar başla' : 'Hemen Başla'} size="sm" disabled={future} onPress={() => router.push({ pathname: '/workout-play/[id]', params: { id: t.card.id, avoid: t.avoid.join(',') } })} />
             <Button label="Kaldır" size="sm" variant="ghost" onPress={async () => {

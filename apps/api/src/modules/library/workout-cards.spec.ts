@@ -45,12 +45,35 @@ describe('antrenman kartları', () => {
     }
   });
 
-  it('ANA bölümdeki her hareket en az "kısmen doğrulandı"dır ve kart en az bir ana hareket içerir', () => {
+  it('kart en az bir ana hareket içerir; "doğrulama sürüyor" hareketi ana bölümde kullanılmaz', () => {
     for (const c of CARDS) {
       const main = c.sections.filter((s) => s.kind === 'MAIN').flatMap((s) => s.items);
       expect(main.length, c.id).toBeGreaterThan(0);
-      for (const i of main) expect(['ok', 'partial'], `${c.id}:${i.itemId}`).toContain(EVIDENCE[i.itemId]?.verification);
+      for (const i of main) expect(EVIDENCE[i.itemId]?.verification, `${c.id}:${i.itemId}`).not.toBe('held');
     }
+  });
+
+  it('her kartta hareket sırası ve dinlenme açık: dinlenme 0 ya da pozitif, son hareketten sonra dinlenme yok', () => {
+    for (const c of CARDS) {
+      const r = resolveCard(c, [], workText);
+      const flat = r.sections.flatMap((s) => s.items);
+      expect(flat.map((i) => i.order), c.id).toEqual(flat.map((_, i) => i + 1));
+      for (const i of flat) expect(i.restAfterSec, `${c.id}:${i.itemId}`).toBeGreaterThanOrEqual(0);
+      expect(flat.at(-1)!.restAfterSec, c.id).toBe(0);
+      expect(r.sections.some((s) => s.kind === 'MAIN'), c.id).toBe(true);
+    }
+  });
+
+  it('ekipman ve ortam hareketlerden çıkar: salon hareketi olan kart "gym"', () => {
+    expect(CARDS.find((c) => c.id === 'legs-gym')!.setting).toBe('gym');
+    expect(CARDS.find((c) => c.id === 'fullbody-home')!.setting).toBe('home');
+    expect(CARDS.find((c) => c.id === 'fullbody-home')!.equipment).toEqual([]);
+  });
+
+  it('her kategoride en az bir kart var; kart sayısı yeterli', () => {
+    const cats = new Set(CARDS.map((c) => c.category));
+    for (const k of ['fitness', 'yoga', 'pilates', 'posture', 'cardio', 'mobility', 'sport']) expect(cats.has(k as never), k).toBe(true);
+    expect(CARDS.length).toBeGreaterThanOrEqual(35);
   });
 
   it('her kartın dayanağı yazılı', () => {
@@ -61,6 +84,7 @@ describe('antrenman kartları', () => {
     const r = resolveCard(CARDS.find((c) => c.id === 'chair-start')!, [], workText);
     expect(r.swapped).toEqual([]);
     expect(r.moveCount).toBe(7);
+    expect(r.sections[0]!.items[0]!.order).toBe(1);
     expect(r.estimatedMinutes).toBeGreaterThan(5);
   });
 

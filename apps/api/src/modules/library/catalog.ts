@@ -4,6 +4,7 @@
 // Tüm içerik genel bilgidir; tanı veya kişiye özel tedavi değildir.
 
 import { CONTENT } from './evidence.js';
+import { EXTRA_ITEMS } from './extra-moves.js';
 
 export type ItemKind = 'MOVE' | 'FACE' | 'GUIDE';
 export type ItemCategory = 'home' | 'fitness' | 'posture' | 'face' | 'nutrition' | 'cardio' | 'mobility';
@@ -389,6 +390,9 @@ export const PROGRAMS: LibraryProgram[] = [
     ),
   },
 ];
+
+// Genişletilmiş hareketler (kimlikler tabloda benzersizdir; mevcut kayıtlarla çakışan eklenmez)
+for (const e of EXTRA_ITEMS) if (!ITEMS.some((i) => i.id === e.id)) ITEMS.push(e);
 
 // Kaynaklı içerik taslak metinlerin üzerine yazılır (tek kayıt, her yerde aynı hareket)
 for (const item of ITEMS) {

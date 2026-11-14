@@ -18,8 +18,8 @@ export const parseAvoidParam = (s?: string): BodyAreaKey[] => (s ? s.split(',').
 export function RestrictionPicker({ value, onChange }: { value: BodyAreaKey[]; onChange: (v: BodyAreaKey[]) => void }) {
   return (
     <>
-      <Text variant="caption" tone="secondary" style={{ marginBottom: 6 }}>
-        Ağrı ya da sakatlığın olan bölgeyi seç; o bölgeyi yoran hareketler değiştirilir.
+      <Text variant="caption" tone="secondary" style={{ marginVertical: 6 }}>
+        Bölgeyi seç; onu yoran hareketler değiştirilir.
       </Text>
       <ChipRow options={RESTRICTIONS} selected={value} onToggle={(k) => onChange(value.includes(k) ? value.filter((v) => v !== k) : [...value, k])} />
     </>
