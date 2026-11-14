@@ -26,6 +26,15 @@ import type {
   ProfileLink,
   SocialProfile,
   CursorPage,
+  PlanCatalog,
+  PlanCurrent,
+  PlanDayView,
+  PlanIntakeInput,
+  PlanLogInput,
+  PersonalPlanOverview,
+  PlanPrefill,
+  PlanReportData,
+  PlanScreening,
   ContentTarget,
   ModerationAppealItem,
   ModerationNotice,
@@ -447,7 +456,20 @@ export function createApiClient(config: ApiClientConfig) {
     decideAppeal: (id: string, accept: boolean, note?: string | null) => request<{ status: string }>(`/admin/moderation/appeals/${id}/decide`, { method: 'POST', body: { accept, note }, auth: true }),
     sessions: () => request<SessionItem[]>('/auth/sessions', { auth: true }),
     revokeSession: (id: string) => request<{ revoked: number }>(`/auth/sessions/${id}`, { method: 'DELETE', auth: true }),
-    revokeOtherSessions: () => request<{ revoked: number }>('/auth/sessions/revoke-others', { method: 'POST', auth: true }),    // İçerik kütüphanesi ve Programım
+    revokeOtherSessions: () => request<{ revoked: number }>('/auth/sessions/revoke-others', { method: 'POST', auth: true }),    // Kişisel 28 günlük program
+    planCatalog: () => request<PlanCatalog>('/plan/catalog', { auth: true }),
+    planPrefill: () => request<PlanPrefill>('/plan/intake/prefill', { auth: true }),
+    planSubmitIntake: (input: PlanIntakeInput) => request<{ intakeId: string; eligible: boolean; screening: PlanScreening }>('/plan/intake', { method: 'POST', body: input, auth: true }),
+    planCurrent: () => request<PlanCurrent>('/plan/current', { auth: true }),
+    planPurchase: (idempotencyKey: string) => request<{ id: string; demo: boolean; purchaseDay: string; startWindowEndsAt: string }>('/plan/purchases', { method: 'POST', body: { idempotencyKey }, auth: true }),
+    planStart: (purchaseId: string, startDate: string) => request<{ instanceId: string; startDate: string; endDate: string }>(`/plan/purchases/${purchaseId}/start`, { method: 'POST', body: { startDate }, auth: true }),
+    planOverview: (instanceId: string) => request<PersonalPlanOverview>(`/plan/instances/${instanceId}`, { auth: true }),
+    planDay: (instanceId: string, day: number) => request<PlanDayView>(`/plan/instances/${instanceId}/days/${day}`, { auth: true }),
+    planLogEntry: (instanceId: string, day: number, index: number, input: PlanLogInput) =>
+      request<{ logged: boolean; safety: string | null; seeProfessional: boolean; dayProgress: { plannedMain: number; doneMain: number } }>(`/plan/instances/${instanceId}/days/${day}/entries/${index}/log`, { method: 'POST', body: input, auth: true }),
+    planSwapEntry: (instanceId: string, day: number, index: number, itemId: string) =>
+      request<PlanDayView>(`/plan/instances/${instanceId}/days/${day}/entries/${index}/swap`, { method: 'POST', body: { itemId }, auth: true }),
+    planReport: (instanceId: string) => request<{ final: boolean; report: PlanReportData }>(`/plan/instances/${instanceId}/report`, { auth: true }),    // İçerik kütüphanesi ve Programım
     library: () => request<{ items: LibraryItemCard[]; programs: LibraryProgramCard[] }>('/library', { auth: true }),
     libraryItem: (id: string) => request<LibraryItemDetail>(`/library/items/${encodeURIComponent(id)}`, { auth: true }),
     libraryProgram: (id: string) => request<LibraryProgramDetail>(`/library/programs/${encodeURIComponent(id)}`, { auth: true }),

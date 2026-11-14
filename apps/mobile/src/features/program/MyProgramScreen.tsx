@@ -2,7 +2,7 @@
 // "Uzmanından": diyetisyenin planındaki öğünler (sabah/öğle/akşam, saatiyle) ve antrenörün programı.
 // "Görevlerim": katıldığı ücretsiz programın o günkü hareketleri sırayla (süre ve dinlenmeyle) ve tek tek eklenen hareketler.
 import type { MyPlanListItem, MyPlanView, MyProgramDay, MyProgramListItem } from '@fitapp/api-client';
-import { Button, Card, EmptyState, Icon, ListRow, Notice, Screen, SectionHeader, showToast, Text, useTheme } from '@fitapp/ui-mobile';
+import { Button, Card, EmptyState, Icon, ListRow, Notice, Screen, SectionHeader, showToast, Tag, Text, useTheme } from '@fitapp/ui-mobile';
 import { useFocusEffect, useRouter } from 'expo-router';
 import { useCallback, useState } from 'react';
 import { Pressable, ScrollView, View } from 'react-native';
@@ -11,6 +11,7 @@ import { errorText } from '@/auth/actions';
 import { SocialHeader } from '@/components/social/SocialHeader';
 import { DAY_SHORT, dateKey, dayNumber, formatLong, weekdayIndex } from '@/demo/dates';
 import { durationText } from '@/features/library/labels';
+import { SOURCE_TAG } from '@/features/plan/labels';
 
 // Bugünden 3 gün öncesi ile 10 gün sonrası
 const DAYS = Array.from({ length: 14 }, (_, i) => dateKey(i - 3));
@@ -96,7 +97,7 @@ export function MyProgramScreen() {
     meals: meals.filter((m) => slotOf(m.time) === slot).sort((a, b) => (a.time ?? '').localeCompare(b.time ?? '')),
   })).filter((s) => s.meals.length > 0);
   const hasExpert = plans.length > 0 || trainerPrograms.length > 0;
-  const hasTasks = (day?.programs.length ?? 0) + (day?.tasks.length ?? 0) > 0;
+  const hasTasks = (day?.programs.length ?? 0) + (day?.tasks.length ?? 0) + (day?.personalPlan ? 1 : 0) > 0;
 
   return (
     <Screen tabBarInset>
@@ -179,9 +180,31 @@ export function MyProgramScreen() {
       <SectionHeader title="Görevlerim" action="Kütüphane" onAction={() => router.push('/library')} />
       {future && hasTasks ? <Notice kind="info" text="Gelecek günün görevlerini o gün geldiğinde işaretleyebilirsin." /> : null}
 
+      {/* Kişisel 28 günlük program (kaynağı: SocialFit) */}
+      {day?.personalPlan ? (
+        <Card onPress={() => router.push(`/plan-day/${day.personalPlan!.source.instanceId}/${day.personalPlan!.dayNumber}`)}>
+          <View style={{ flexDirection: 'row', gap: 6, marginBottom: 6, flexWrap: 'wrap' }}>
+            <Tag label={SOURCE_TAG} kind="accent" />
+            <Tag label={`${day.personalPlan.weekNumber}. hafta · ${day.personalPlan.dayNumber}. gün`} />
+          </View>
+          <Text variant="heading">{day.personalPlan.title}</Text>
+          <Text variant="caption" tone="secondary" style={{ marginBottom: 8 }}>
+            {day.personalPlan.kind === 'TRAINING' ? `~${day.personalPlan.estimatedMinutes} dk · ${day.personalPlan.progress.doneMain}/${day.personalPlan.progress.plannedMain} hareket tamam` : 'Toparlanma günü · isteğe bağlı hafif hareket'}
+          </Text>
+          {day.personalPlan.entries.map((e) => (
+            <Text key={e.index} variant="body" tone={e.status === 'DONE' ? 'muted' : 'primary'} style={{ marginBottom: 2, textDecorationLine: e.status === 'DONE' ? 'line-through' : 'none' }}>
+              {e.status === 'DONE' ? '✓ ' : e.status === 'SKIPPED' ? '– ' : '○ '}
+              {e.title} · {e.workText}
+            </Text>
+          ))}
+        </Card>
+      ) : null}
       {day?.programs.map((p) => (
         <Card key={p.enrollmentId}>
           <Pressable onPress={() => router.push(`/library-program/${p.program.id}`)}>
+            <View style={{ flexDirection: 'row', gap: 6, marginBottom: 6 }}>
+              <Tag label="Ücretsiz program" kind="success" />
+            </View>
             <Text variant="heading">{p.program.title}</Text>
             <Text variant="caption" tone="secondary" style={{ marginBottom: 8 }}>
               {p.dayIndex + 1}. gün / {p.program.totalDays} · ~{durationText(p.durationSec)} · {p.doneCount}/{p.steps.length} tamam
@@ -212,9 +235,9 @@ export function MyProgramScreen() {
 
       {day?.tasks.length ? (
         <Card>
-          <Text variant="bodyStrong" style={{ marginBottom: 4 }}>
-            Eklediğin hareketler
-          </Text>
+          <View style={{ flexDirection: 'row', gap: 6, marginBottom: 6 }}>
+            <Tag label="Eklediğin hareketler" />
+          </View>
           {day.tasks.map((t) => (
             <View key={t.id} style={{ flexDirection: 'row', alignItems: 'center', gap: 12, paddingVertical: 8 }}>
               <Check done={t.done} disabled={future} onPress={() => toggleTask(t.id, !t.done)} label={t.item.title} />

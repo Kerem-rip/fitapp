@@ -4,7 +4,7 @@
 // Tüm içerik genel bilgidir; tanı veya kişiye özel tedavi değildir.
 
 export type ItemKind = 'MOVE' | 'FACE' | 'GUIDE';
-export type ItemCategory = 'home' | 'fitness' | 'posture' | 'face' | 'nutrition';
+export type ItemCategory = 'home' | 'fitness' | 'posture' | 'face' | 'nutrition' | 'cardio' | 'mobility';
 export type Level = 'beginner' | 'intermediate' | 'advanced';
 
 // Hareketin yapılışı: tekrarla ya da süreyle; setler arası dinlenme
@@ -31,6 +31,8 @@ export interface LibraryItem {
   warnings?: string[];
   // Hareketlerde varsayılan yapılış (programlarda değiştirilebilir)
   work?: Work;
+  // Video ya da animasyon bağlantısı (boşsa gizlenir; içerik sonradan eklenir)
+  videoUrl?: string;
   // Rehberlerde okuma süresi ve bölümler
   minutes?: number;
   sections?: { heading: string; text: string }[];
@@ -67,11 +69,16 @@ export const CATEGORY_LABELS: Record<ItemCategory, string> = {
   posture: 'Duruş ve esneme',
   face: 'Yüz masajı',
   nutrition: 'Beslenme',
+  cardio: 'Kardiyo',
+  mobility: 'Esneme ve mobilite',
 };
 
 const KNEE = 'Dizinde keskin ağrı hissedersen dur.';
 const BACK = 'Belinde ağrı hissedersen dur; ağrı sürerse doktora başvur.';
 const SKIN = 'Cildin hassassa veya yüzünde yara varsa uygulama.';
+const ANKLE = 'Ayak bileğinde ağrı hissedersen dur.';
+const WRIST = 'Bileğinde ağrı hissedersen yumruk yap ya da bırak.';
+const SHOULDER = 'Omzunda keskin ağrı hissedersen dur.';
 
 const reps = (sets: number, n: number, restSec: number, perSide = false): Work => ({ sets, reps: n, restSec, ...(perSide ? { perSide } : {}) });
 const time = (sets: number, seconds: number, restSec: number, perSide = false): Work => ({ sets, seconds, restSec, ...(perSide ? { perSide } : {}) });
@@ -167,6 +174,92 @@ export const ITEMS: LibraryItem[] = [
   move('face-cheek', 'Yanak ve çene hattı masajı', 'face', 'beginner', 'Parmak uçları', time(1, 120, 0), ['Yanak', 'Çene hattı'], [],
     ['Parmaklarını çenenin ortasına koy.', 'Hafif baskıyla kulağa doğru kaydır.', 'Yanaklarında küçük daireler çizerek bitir.'],
     ['Cildi aşağı doğru çekmek'], [SKIN]),
+
+  // ── Kişisel program için ek hareketler (TASLAK İÇERİK: antrenör incelemesine açık; planlanan hareket kütüphanesiyle genişler) ──
+  move('arm-circles', 'Kol çevirme', 'mobility', 'beginner', 'Ekipmansız', time(1, 30, 0), ['Omuz'], ['Üst sırt'],
+    ['Kollarını yana aç.', 'Küçük dairelerle ileri doğru çevir, sonra geriye doğru.', 'Omuzlarını kulaklarına çıkarma.'],
+    ['Daireleri çok hızlı yapmak'], ['Omzunda keskin ağrı hissedersen dur.']),
+  move('march-in-place', 'Yerinde yürüyüş', 'cardio', 'beginner', 'Ekipmansız', time(1, 60, 0), ['Bacak', 'Kalp-dolaşım'], ['Karın'],
+    ['Dik dur, kollarını doğal salla.', 'Dizlerini kalça hizasına kadar sırayla kaldır.', 'Düzenli nefes al.'],
+    ['Öne eğilmek'], [KNEE]),
+  move('hip-circles', 'Kalça çevirme', 'mobility', 'beginner', 'Ekipmansız', time(1, 30, 0, true), ['Kalça'], ['Karın'],
+    ['Bir ayağın üzerinde dur, gerekirse duvara tutun.', 'Diğer dizini kaldırıp kalçadan büyük dairelerle çevir.', 'Yönü değiştir.'],
+    ['Gövdeyi yana yatırmak'], ['Dengen zayıfsa duvardan destek al.']),
+  move('hamstring-stretch', 'Arka bacak esnetme', 'mobility', 'beginner', 'Ekipmansız', time(2, 30, 10, true), ['Arka bacak'], ['Bel'],
+    ['Bir topuğunu önüne uzat, diğer dizini hafif bük.', 'Sırtını düz tutarak kalçadan öne eğil.', 'Esneme hissedince bekle, sallanma.'],
+    ['Sırtı yuvarlamak', 'Zıplayarak esnemek'], [BACK]),
+  move('quad-stretch', 'Ön bacak esnetme', 'mobility', 'beginner', 'Ekipmansız', time(2, 30, 10, true), ['Ön bacak'], ['Kalça önü'],
+    ['Duvardan destek alarak bir ayağını kalçana doğru çek.', 'Dizlerini yan yana tut, kalçanı hafif öne it.', 'Belini fazla çukurlaştırma.'],
+    ['Dizi yana açmak'], [KNEE]),
+  move('child-pose', 'Çocuk pozu', 'mobility', 'beginner', 'Ekipmansız', time(1, 45, 0), ['Bel', 'Kalça'], ['Omuz'],
+    ['Dizlerinin üzerine otur, kalçanı topuklarına yaklaştır.', 'Kollarını öne uzatıp alnını yere yaklaştır.', 'Yavaş nefes al.'],
+    ['Nefesi tutmak'], [KNEE]),
+  move('deep-breathing', 'Derin nefes', 'mobility', 'beginner', 'Ekipmansız', time(1, 60, 0), ['Diyafram'], [],
+    ['Rahat otur ya da uzan.', '4 saniye burundan nefes al, 6 saniye ağızdan ver.', 'Omuzlarını gevşek bırak.'],
+    ['Zorlayarak nefes almak'], ['Baş dönmesi hissedersen normal nefese dön.']),
+  move('downward-dog', 'Aşağı bakan köpek', 'mobility', 'beginner', 'Ekipmansız', time(3, 20, 15), ['Omuz', 'Arka bacak'], ['Baldır', 'Sırt'],
+    ['Dört ayak pozisyonundan kalçanı yukarı it.', 'Dizler hafif bükük kalabilir; sırtın uzun olsun.', 'Topukları yere yaklaştır.'],
+    ['Omuzları kulağa çıkarmak'], [WRIST]),
+  move('warrior-two', 'Savaşçı 2 pozu', 'mobility', 'intermediate', 'Ekipmansız', time(2, 30, 15, true), ['Bacak', 'Kalça'], ['Omuz', 'Karın'],
+    ['Ayaklarını geniş aç, öndeki dizini 90 dereceye yakın bük.', 'Kollarını yana uzat, bakışın öndeki elinde olsun.', 'Gövdeyi dik tut.'],
+    ['Dizin ayak ucunu geçmesi'], [KNEE]),
+  move('pilates-single-leg-stretch', 'Pilates tek bacak esnetme', 'home', 'intermediate', 'Ekipmansız', reps(3, 10, 30, true), ['Karın'], ['Kalça'],
+    ['Sırt üstü yat, başını ve omuzlarını hafif kaldır.', 'Bir dizini göğsüne çek, diğer bacağı uzat.', 'Bacakları kontrollü değiştir.'],
+    ['Boynu çekmek', 'Belin yerden kalkması'], [BACK]),
+  move('brisk-walk', 'Tempolu yürüyüş', 'cardio', 'beginner', 'Ekipmansız', time(1, 900, 0), ['Bacak', 'Kalp-dolaşım'], ['Kalça'],
+    ['Konuşabildiğin ama şarkı söyleyemediğin bir tempoda yürü.', 'Adımlarını doğal ve düzenli tut.', 'Rahat ayakkabı giy.'],
+    ['Başlangıçta çok hızlı çıkmak'], ['Göğüs ağrısı ya da baş dönmesinde dur.']),
+  move('step-jacks', 'Adım açma (düşük etkili)', 'cardio', 'beginner', 'Ekipmansız', time(3, 30, 20), ['Bacak', 'Omuz'], ['Karın'],
+    ['Bir ayağınla yana adım at, kollarını yukarı kaldır.', 'Ayağını geri getirip kollarını indir, diğer tarafa geç.', 'Zıplama yok.'],
+    ['Dizleri kilitlemek'], [KNEE]),
+  move('jumping-jack', 'Jumping jack', 'cardio', 'intermediate', 'Ekipmansız', time(3, 30, 20), ['Bacak', 'Kalp-dolaşım'], ['Omuz'],
+    ['Ayaklarını bitişik başla, zıplayıp aç ve kollarını yukarı kaldır.', 'Yumuşak ayak ucuyla in.', 'Düzenli ritim tut.'],
+    ['Sert inmek'], [KNEE, 'Yüksek etkili harekettir; eklem ağrın varsa adım açmayı seç.']),
+  move('high-knees', 'Dizleri yukarı çekme', 'cardio', 'intermediate', 'Ekipmansız', time(3, 30, 25), ['Bacak', 'Kalça'], ['Karın'],
+    ['Yerinde koşarak dizlerini kalça hizasına çek.', 'Dik dur, kollarını koşar gibi salla.', 'Yumuşak in.'],
+    ['Geriye yaslanmak'], [KNEE, 'Yüksek etkili harekettir.']),
+  move('mountain-climber', 'Dağ tırmanışı', 'cardio', 'intermediate', 'Ekipmansız', time(3, 30, 30), ['Karın', 'Omuz'], ['Bacak'],
+    ['Şınav pozisyonuna gel, vücudun düz bir çizgide olsun.', 'Dizlerini sırayla göğsüne çek.', 'Kalçan yükselmesin.'],
+    ['Kalçayı havaya kaldırmak'], [WRIST, 'Bel ağrısında yavaş tempoda yap ya da bırak.']),
+  move('shadow-boxing', 'Gölge boks', 'cardio', 'beginner', 'Ekipmansız', time(3, 45, 20), ['Omuz', 'Karın'], ['Bacak'],
+    ['Ayaklarını omuz genişliğinde açıp hafif dizlerini bük.', 'Yumruklarını sırayla ileri at, gövdeni hafif çevir.', 'Yumruğu sonuna kadar kilitleme.'],
+    ['Dirseği kilitlemek'], ['Omuz ağrısında bırak.']),
+  move('lateral-shuffle', 'Yan kayma', 'cardio', 'intermediate', 'Ekipmansız', time(3, 30, 30), ['Bacak', 'Kalça'], ['Karın'],
+    ['Hafif çömelip yana doğru hızlı küçük adımlar at.', 'Ayaklarını birbirine çarpıştırma.', 'Her sette yönü değiştir.'],
+    ['Dik durmak'], [KNEE, 'Kaygan zeminde yapma.']),
+  move('wall-push-up', 'Duvar şınavı', 'home', 'beginner', 'Ekipmansız', reps(3, 12, 45), ['Göğüs'], ['Omuz', 'Kol arkası'],
+    ['Duvara bir kol boyu uzaklıkta dur, ellerini omuz hizasında yasla.', 'Dirseklerini bükerek göğsünü duvara yaklaştır.', 'İterek başla pozisyonuna dön.'],
+    ['Kalçayı geride bırakmak'], [WRIST]),
+  move('knee-push-up', 'Dizli şınav', 'home', 'beginner', 'Ekipmansız', reps(3, 10, 45), ['Göğüs'], ['Omuz', 'Kol arkası'],
+    ['Dizlerinin üzerinde şınav pozisyonu al.', 'Vücudun dizden başa düz kalsın, göğsünü yere yaklaştır.', 'İterek yukarı çık.'],
+    ['Belin çökmesi'], [WRIST]),
+  move('dead-bug', 'Ölü böcek', 'home', 'beginner', 'Ekipmansız', reps(3, 10, 30, true), ['Karın'], ['Kalça'],
+    ['Sırt üstü yat, kollarını tavana, dizlerini 90 derece kaldır.', 'Karşı kol ve bacağı yavaşça uzat.', 'Belini yere bastırmaya devam et.'],
+    ['Belin yerden kalkması'], [BACK]),
+  move('side-plank', 'Yan plank', 'home', 'intermediate', 'Ekipmansız', time(3, 20, 30, true), ['Karın yanı'], ['Omuz', 'Kalça'],
+    ['Yan yat, dirseğini omzunun altına koy.', 'Kalçanı kaldırıp vücudunu düz çizgi yap.', 'Normal nefes al.'],
+    ['Kalçanın sarkması'], ['Omuz ağrısında dizlerin üzerinde yap.']),
+  move('single-leg-glute-bridge', 'Tek bacak kalça köprüsü', 'home', 'intermediate', 'Ekipmansız', reps(3, 10, 45, true), ['Kalça'], ['Arka bacak', 'Karın'],
+    ['Sırt üstü yat, bir ayağını yere, diğerini havaya al.', 'Kalçanı yukarı it ve sık.', 'Kontrollü in.'],
+    ['Belle kaldırmak'], [BACK]),
+  move('calf-raise', 'Baldır kaldırma', 'home', 'beginner', 'Ekipmansız', reps(3, 15, 30), ['Baldır'], ['Ayak bileği'],
+    ['Ayakların kalça genişliğinde dur, gerekirse duvardan destek al.', 'Topuklarını yavaşça kaldır.', 'Yavaşça indir.'],
+    ['Çok hızlı yapmak'], [ANKLE]),
+  move('step-up', 'Basamağa çıkma', 'home', 'beginner', 'Basamak ya da sağlam sandalye', reps(3, 10, 45, true), ['Ön bacak', 'Kalça'], ['Baldır'],
+    ['Sağlam bir basamağın önünde dur, bir ayağını üstüne koy.', 'Topuğundan iterek çık, diğer ayağı kaldır.', 'Kontrollü in.'],
+    ['Alt ayakla itmek'], [KNEE]),
+  move('band-row', 'Bantla küreği çekme', 'home', 'beginner', 'Direnç bandı', reps(3, 12, 45), ['Sırt'], ['Kol önü', 'Omuz arkası'],
+    ['Bandı sabit bir yere bağla ya da ayaklarına dola.', 'Dirseklerini geriye çek, kürek kemiklerini sık.', 'Yavaşça bırak.'],
+    ['Omuzları kulağa çekmek'], [BACK]),
+  move('goblet-squat', 'Dambıllı squat', 'fitness', 'beginner', 'Dambıl', reps(3, 12, 60), ['Ön bacak', 'Kalça'], ['Karın', 'Sırt'],
+    ['Dambılı göğsünün önünde iki elinle tut.', 'Göğsünü dik tutup çömel.', 'Topuklarından iterek kalk.'],
+    ['Dizlerin içe çökmesi'], [KNEE]),
+  move('db-floor-press', 'Yerde dambıl press', 'fitness', 'beginner', 'Dambıl', reps(3, 10, 60), ['Göğüs'], ['Omuz', 'Kol arkası'],
+    ['Sırt üstü yat, dambılları göğüs hizasında tut.', 'Kollarını tavana doğru it.', 'Dirseklerin yere değince kontrollü bırak.'],
+    ['Dirsekleri çok açmak'], [SHOULDER]),
+  move('standing-break', 'Ayağa kalk ve hareket et', 'cardio', 'beginner', 'Ekipmansız', time(1, 180, 0), ['Bacak'], [],
+    ['Oturduğun yerden kalk, 3 dakika boyunca ayakta gez ya da yerinde yürü.', 'Omuzlarını ve boynunu gevşet.', 'Su iç.'],
+    ['Telefona gömülmek'], ['Hafif bir harekettir; yorulmadan yapılabilir.']),
 
   // ── Beslenme rehberleri (okuma kartları; kişiye özel plan için diyetisyene yönlendirir) ──
   guide('akdeniz', 'Akdeniz tipi beslenme', 4, 'Sebze, baklagil, zeytinyağı ve balık ağırlıklı, sürdürülmesi kolay bir beslenme düzeni.', [

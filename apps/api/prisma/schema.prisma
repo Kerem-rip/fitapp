@@ -137,6 +137,9 @@ model User {
   moderationAppeals       ModerationAppeal[]
   notificationPreferences NotificationPreference[]
   pushDevices             PushDevice[]
+  planIntakes             PlanIntake[]
+  planPurchases           PlanPurchase[]
+  planInstances           PlanInstance[]
 }
 
 model UserRole {
@@ -2143,4 +2146,126 @@ model DmHidden {
   user    User      @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@id([messageId, userId])
+}
+
+// ═══════════════════════════════════════════════════════════════
+// KİŞİSEL 28 GÜNLÜK PROGRAM — docs/features/personal-plan.md
+// Tek seferlik satın alma, sabit 28 takvim günü, otomatik yenileme yok. Erişim sunucuda doğrulanan satın almaya bağlıdır.
+// ═══════════════════════════════════════════════════════════════
+
+enum PlanPurchaseStatus {
+  PAID
+  FAILED
+  REFUNDED
+}
+
+enum PlanLogStatus {
+  DONE
+  SKIPPED
+}
+
+// Giriş formu ve güvenlik taraması (her dönem için ayrı kayıt; eskisi silinmez ya da değiştirilmez)
+model PlanIntake {
+  id        String   @id @default(uuid())
+  userId    String
+  data      Json
+  screening Json
+  eligible  Boolean
+  createdAt DateTime @default(now())
+
+  user      User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+  purchases PlanPurchase[]
+  instances PlanInstance[]
+
+  @@index([userId, createdAt])
+}
+
+model PlanPurchase {
+  id             String             @id @default(uuid())
+  userId         String
+  intakeId       String
+  // Aynı isteğin tekrarında çift kayıt ve çift ücret oluşmasın diye
+  idempotencyKey String
+  status         PlanPurchaseStatus @default(PAID)
+  provider       String // DEV (geliştirme); gerçek ödeme sağlayıcısı sonra
+  amountMinor    Int? // Boşsa fiyat yer tutucudur
+  currency       String             @default("TRY")
+  purchaseDay    DateTime           @db.Date // Türkiye günü; başlangıç tarihi bu günden itibaren en fazla 14 gün sonrası
+  paidAt         DateTime           @default(now())
+  createdAt      DateTime           @default(now())
+
+  user     User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  intake   PlanIntake    @relation(fields: [intakeId], references: [id])
+  instance PlanInstance?
+
+  @@unique([userId, idempotencyKey])
+  @@index([userId, createdAt])
+}
+
+model PlanInstance {
+  id                 String    @id @default(uuid())
+  userId             String
+  purchaseId         String    @unique
+  intakeId           String
+  sequence           Int // Kullanıcının kaçıncı dönemi
+  startDate          DateTime  @db.Date
+  endDate            DateTime  @db.Date // başlangıç + 27 gün
+  // Hangi kurallarla üretildiği (eski programlar anlaşılabilsin)
+  engineVersion      String
+  // Motor parametreleri ve açıklama kaydı (seviye, kısıtlar, haftalık karar gerekçeleri)
+  params             Json
+  previousInstanceId String?
+  generatedWeeks     Int       @default(1)
+  needsProfessional  Boolean   @default(false)
+  report             Json?
+  reportedAt         DateTime?
+  createdAt          DateTime  @default(now())
+
+  user     User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+  purchase PlanPurchase   @relation(fields: [purchaseId], references: [id])
+  intake   PlanIntake     @relation(fields: [intakeId], references: [id])
+  days     PlanDay[]
+  logs     PlanEntryLog[]
+
+  @@unique([userId, sequence])
+  @@index([userId, startDate])
+}
+
+model PlanDay {
+  id               String   @id @default(uuid())
+  instanceId       String
+  dayNumber        Int // 1-28
+  weekNumber       Int
+  date             DateTime @db.Date
+  kind             String // TRAINING | REST
+  focus            String?
+  title            String
+  estimatedMinutes Int
+  estimatedKcal    Int
+  entries          Json
+
+  instance PlanInstance @relation(fields: [instanceId], references: [id], onDelete: Cascade)
+
+  @@unique([instanceId, dayNumber])
+  @@index([instanceId, date])
+}
+
+model PlanEntryLog {
+  id            String        @id @default(uuid())
+  instanceId    String
+  dayNumber     Int
+  entryIndex    Int
+  status        PlanLogStatus
+  rpe           Int? // Algılanan zorlanma 1-10
+  pain          Boolean       @default(false)
+  painArea      String?
+  painSharp     Boolean       @default(false)
+  note          String?
+  actualReps    Int?
+  actualSeconds Int?
+  loggedAt      DateTime      @default(now())
+
+  instance PlanInstance @relation(fields: [instanceId], references: [id], onDelete: Cascade)
+
+  @@unique([instanceId, dayNumber, entryIndex])
 }

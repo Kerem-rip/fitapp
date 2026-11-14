@@ -1,0 +1,57 @@
+# Test APK'sı: GitHub'ın makinesinde derlenir (Windows dosya yolu sınırı sorunu olmaz).
+# Elle çalıştırılır: GitHub > Actions > "Android test APK" > Run workflow. Bitince "Artifacts" bölümünden APK indirilir.
+# APK test imzalıdır (mağazaya yüklenemez). Sunucu adresi derleme sırasında girilir; uygulamada "Bağlantı ayarı"ndan da değiştirilebilir.
+name: Android test APK
+
+on:
+  workflow_dispatch:
+    inputs:
+      api_url:
+        description: 'Sunucu adresi (ör. http://192.168.1.114:3000/api)'
+        required: true
+        default: 'http://192.168.1.114:3000/api'
+
+permissions:
+  contents: read
+
+jobs:
+  apk:
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: pnpm
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 17
+
+      - name: Bağımlılıkları kur
+        run: pnpm install --frozen-lockfile
+
+      # android klasörü depoda tutulmaz; app.json'dan her derlemede üretilir
+      - name: Android projesini üret
+        working-directory: apps/mobile
+        run: pnpm exec expo prebuild --platform android --no-install
+
+      - name: APK derle
+        working-directory: apps/mobile/android
+        env:
+          EXPO_PUBLIC_API_URL: ${{ inputs.api_url }}
+          NODE_ENV: production
+        run: ./gradlew assembleRelease --no-daemon --console=plain
+
+      - name: APK'yı yükle
+        uses: actions/upload-artifact@v4
+        with:
+          name: socialfit-test-apk
+          path: apps/mobile/android/app/build/outputs/apk/release/*.apk
+          if-no-files-found: error
+          retention-days: 14

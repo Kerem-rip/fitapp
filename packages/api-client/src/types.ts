@@ -979,6 +979,7 @@ export interface LibraryItemCard {
 
 export interface LibraryItemDetail extends LibraryItemCard {
   equipment: string | null;
+  videoUrl: string | null;
   primary: string[];
   secondary: string[];
   steps: string[];
@@ -1035,6 +1036,8 @@ export interface LibraryEnrollmentItem {
 
 export interface MyProgramDay {
   date: string;
+  // Kişisel 28 günlük program görevleri (kaynağı ayrı tutulur)
+  personalPlan: PlanDayTasks | null;
   programs: (Omit<LibraryProgramDay, 'steps'> & {
     enrollmentId: string;
     program: { id: string; title: string; totalDays: number };
@@ -1276,4 +1279,207 @@ export interface SessionItem {
   deviceName: string | null;
   lastActiveAt: string;
   current: boolean;
+}
+
+// ───── Kişisel 28 günlük program ─────
+
+export type PlanPhase = 'AWAITING_START' | 'START_WINDOW_MISSED' | 'ACTIVE' | 'COMPLETED' | 'EXPIRED';
+export type PlanGoal = 'LOSE_FAT' | 'BUILD_MUSCLE' | 'ENDURANCE' | 'MOBILITY_POSTURE' | 'GENERAL_HEALTH' | 'SPORT_PERFORMANCE';
+export type PlanSetting = 'HOME_NONE' | 'HOME_EQUIP' | 'GYM';
+export type PlanBodyArea = 'NECK' | 'SHOULDER' | 'WRIST' | 'LOW_BACK' | 'HIP' | 'KNEE' | 'ANKLE';
+export type ScreeningAnswer = 'YES' | 'NO' | 'UNSURE';
+
+export interface PlanCatalog {
+  engineVersion: string;
+  minAge: number;
+  startWindowDays: number;
+  price: { amountMinor: number | null; currency: string; label: string; demo: boolean };
+  categories: { id: string; title: string; moves: number; subcategories: { id: string; title: string }[] }[];
+  options: {
+    goals: PlanGoal[];
+    experiences: string[];
+    capacities: string[];
+    settings: PlanSetting[];
+    equipment: string[];
+    dailyActivities: string[];
+    painAreas: { id: PlanBodyArea; title: string }[];
+    extras: string[];
+  };
+  screeningQuestions: { key: string; text: string }[];
+}
+
+export interface PlanIntakeInput {
+  goal: PlanGoal;
+  experience: 'NONE' | 'BEGINNER' | 'INTERMEDIATE' | 'ADVANCED';
+  capacity: 'LOW' | 'MEDIUM' | 'HIGH';
+  setting: PlanSetting;
+  equipment: ('DUMBBELL' | 'BAND' | 'STEP')[];
+  daysPerWeek: number;
+  minutesPerSession: number;
+  dailyActivity: 'SEDENTARY' | 'LIGHT' | 'MODERATE' | 'ACTIVE';
+  sex: 'female' | 'male' | 'other';
+  heightCm: number;
+  weightKg: number;
+  waistCm?: number | null;
+  hipCm?: number | null;
+  neckCm?: number | null;
+  armCm?: number | null;
+  painAreas: PlanBodyArea[];
+  extras: 'FACE_CARE'[];
+  screening: Record<string, ScreeningAnswer>;
+}
+
+export interface PlanPrefill {
+  ageYears: number;
+  sex: 'female' | 'male' | 'other';
+  heightCm: number | null;
+  weightKg: number | null;
+  waistCm: number | null;
+  hipCm: number | null;
+  armCm: number | null;
+  lastIntake: { data: PlanIntakeInput; createdAt: string } | null;
+  needsConfirmation: boolean;
+}
+
+export interface PlanScreening {
+  status: 'ELIGIBLE' | 'CAUTION' | 'BLOCKED';
+  reasons: string[];
+  restrictedAreas: PlanBodyArea[];
+  lowImpactOnly: boolean;
+  volumeFactor: number;
+  referToProfessional: boolean;
+}
+
+export interface PlanProgress {
+  trainingDays: number;
+  completedDays: number;
+  plannedMain: number;
+  doneMain: number;
+  allCompleted: boolean;
+}
+
+export interface PlanCurrent {
+  phase: PlanPhase | 'NONE';
+  awaitingRepurchase: boolean;
+  canPurchase: boolean;
+  price: PlanCatalog['price'];
+  purchase: { id: string; purchaseDay: string; startWindowEndsAt: string; provider: string } | null;
+  instance: {
+    id: string;
+    sequence: number;
+    startDate: string;
+    endDate: string;
+    currentDay: number | null;
+    generatedWeeks: number;
+    needsProfessional: boolean;
+    engineVersion: string;
+    progress: PlanProgress;
+    hasReport: boolean;
+  } | null;
+  intake: { id: string; eligible: boolean; status: PlanScreening['status'] | null; reasons: string[]; referToProfessional: boolean; createdAt: string } | null;
+}
+
+export interface PersonalPlanOverview {
+  id: string;
+  sequence: number;
+  startDate: string;
+  endDate: string;
+  currentDay: number | null;
+  phase: PlanPhase;
+  generatedWeeks: number;
+  needsProfessional: boolean;
+  engineVersion: string;
+  level: number;
+  pendingWeeks: { week: number; preparedOn: string }[];
+  progress: PlanProgress;
+  adaptationLog: string[];
+  days: { dayNumber: number; weekNumber: number; date: string; kind: 'TRAINING' | 'REST'; focus: string | null; title: string; estimatedMinutes: number; estimatedKcal: number; plannedMain: number; doneMain: number; isToday: boolean }[];
+  energy: { bmr: number; tdee: number };
+  disclaimer: string;
+}
+
+export interface PlanEntryLog {
+  status: 'DONE' | 'SKIPPED';
+  rpe: number | null;
+  pain: boolean;
+  painArea: PlanBodyArea | null;
+  painSharp: boolean;
+  note: string | null;
+  actualReps: number | null;
+  actualSeconds: number | null;
+}
+
+export interface PlanEntryView {
+  index: number;
+  section: 'WARMUP' | 'MAIN' | 'COOLDOWN' | 'RECOVERY';
+  itemId: string;
+  title: string;
+  workText: string;
+  sets: number;
+  reps: number | null;
+  seconds: number | null;
+  perSide: boolean;
+  restSec: number;
+  durationSec: number;
+  optional: boolean;
+  rationale: string;
+  original: { id: string; title: string } | null;
+  videoUrl: string | null;
+  equipment: string | null;
+  steps: string[];
+  mistakes: string[];
+  warnings: string[];
+  log: PlanEntryLog | null;
+  alternatives: { id: string; title: string }[];
+}
+
+export interface PlanDayView {
+  instanceId: string;
+  dayNumber: number;
+  weekNumber: number;
+  date: string;
+  kind: 'TRAINING' | 'REST';
+  focus: string | null;
+  title: string;
+  estimatedMinutes: number;
+  estimatedKcal: number;
+  source: { kind: 'SOCIALFIT_PLAN'; title: string };
+  progress: { plannedMain: number; doneMain: number };
+  entries: PlanEntryView[];
+  safety: string;
+}
+
+export interface PlanDayTasks {
+  source: { kind: 'SOCIALFIT_PLAN'; title: string; instanceId: string };
+  dayNumber: number;
+  weekNumber: number;
+  title: string;
+  kind: 'TRAINING' | 'REST';
+  estimatedMinutes: number;
+  progress: { plannedMain: number; doneMain: number };
+  entries: { index: number; section: string; itemId: string; title: string; workText: string; durationSec: number; optional: boolean; status: 'DONE' | 'SKIPPED' | null }[];
+}
+
+export interface PlanReportData {
+  generatedAt: string;
+  totals: { trainingDays: number; completedDays: number; plannedMain: number; doneMain: number; skippedMain: number; completionRate: number; avgRpe: number | null; painReports: number };
+  weeks: { week: number; trainingDays: number; completedDays: number; plannedMain: number; doneMain: number; avgRpe: number | null; painReports: number }[];
+  improvements: { itemId: string; title: string; unit: 'reps' | 'seconds'; firstWeek: number; lastWeek: number; first: number; last: number; change: number }[];
+  body: Record<'weightKg' | 'waistCm' | 'hipCm' | 'armCm', { start: number | null; end: number | null }>;
+  energy: { avgSessionKcal: number | null; bmr: number; tdee: number };
+  needsProfessional: boolean;
+  adaptationLog: string[];
+  notes: string[];
+  disclaimer: string;
+}
+
+export interface PlanLogInput {
+  status: 'DONE' | 'SKIPPED';
+  rpe?: number | null;
+  pain?: boolean;
+  painArea?: PlanBodyArea | null;
+  painSharp?: boolean;
+  note?: string | null;
+  actualReps?: number | null;
+  actualSeconds?: number | null;
 }

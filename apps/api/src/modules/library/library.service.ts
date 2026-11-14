@@ -4,6 +4,7 @@ import { Inject, Injectable } from '@nestjs/common';
 import { badRequest, conflict, notFound } from '../../common/app-error.js';
 import { addLocalDays, isValidDay, localDay } from '../../common/local-day.js';
 import { PrismaService } from '../../common/prisma/prisma.service.js';
+import { PlanService } from '../personal-plan/plan.service.js';
 import { CATEGORY_LABELS, findItem, findProgram, ITEMS, PROGRAMS, type LibraryItem, type LibraryProgram } from './catalog.js';
 import { dayDurationSec, dayIndexOn, nextDayFrom, scheduleDate, setSeconds, workSeconds, workText } from './library-rules.js';
 
@@ -64,7 +65,10 @@ function resolvedDay(p: LibraryProgram, dayIndex: number) {
 
 @Injectable()
 export class LibraryService {
-  constructor(@Inject(PrismaService) private readonly prisma: PrismaService) {}
+  constructor(
+    @Inject(PrismaService) private readonly prisma: PrismaService,
+    @Inject(PlanService) private readonly plan: PlanService,
+  ) {}
 
   catalog() {
     return { items: ITEMS.map(itemCard), programs: PROGRAMS.map(programCard) };
@@ -73,7 +77,7 @@ export class LibraryService {
   item(id: string) {
     const i = findItem(id);
     if (!i) throw notFound('ITEM_NOT_FOUND', 'İçerik bulunamadı.');
-    return { ...itemCard(i), equipment: i.equipment ?? null, primary: i.primary ?? [], secondary: i.secondary ?? [], steps: i.steps, mistakes: i.mistakes ?? [], warnings: i.warnings ?? [], sections: i.sections ?? [] };
+    return { ...itemCard(i), equipment: i.equipment ?? null, primary: i.primary ?? [], secondary: i.secondary ?? [], videoUrl: i.videoUrl ?? null, steps: i.steps, mistakes: i.mistakes ?? [], warnings: i.warnings ?? [], sections: i.sections ?? [] };
   }
 
   async program(userId: string, id: string) {
@@ -189,9 +193,11 @@ export class LibraryService {
 
   async day(userId: string, date: string) {
     if (!isValidDay(date)) throw badRequest('INVALID_DATE', 'Tarih geçerli değil.');
-    const [enrollments, tasks] = await Promise.all([
+    const [enrollments, tasks, personalPlan] = await Promise.all([
       this.prisma.libraryEnrollment.findMany({ where: { userId, status: { in: ['ACTIVE', 'COMPLETED'] } }, include: { completions: { select: { dayIndex: true, stepIndex: true } } } }),
       this.prisma.libraryTask.findMany({ where: { userId, date: asDate(date) }, orderBy: { createdAt: 'asc' } }),
+      // Kişisel 28 günlük program görevleri (kaynağı ayrı tutulur)
+      this.plan.dayTasks(userId, date),
     ]);
     const programs = enrollments.flatMap((e) => {
       const p = findProgram(e.programId);
@@ -205,6 +211,7 @@ export class LibraryService {
     });
     return {
       date,
+      personalPlan,
       programs,
       tasks: tasks.flatMap((t) => {
         const item = findItem(t.itemId);

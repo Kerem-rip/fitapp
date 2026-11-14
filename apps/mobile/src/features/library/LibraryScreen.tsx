@@ -46,6 +46,9 @@ export function LibraryScreen() {
   return (
     <Screen tabBarInset>
       <SocialHeader title="Kütüphane" />
+      <Card padded={false} variant="soft" style={{ paddingHorizontal: 16 }}>
+        <ListRow icon="sparkles-outline" title="Kişisel 28 günlük program" subtitle="Hedefine ve seviyene göre hazırlanır, ilerlemene göre güncellenir" onPress={() => router.push('/plan')} last />
+      </Card>
       <ChipRow options={SECTIONS} selected={[section]} onToggle={setSection} />
       <View style={{ height: 12 }} />
       {error ? <Notice kind="danger" text={error} /> : null}

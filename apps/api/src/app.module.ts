@@ -16,6 +16,7 @@ import { HealthModule } from './modules/health/health.module.js';
 import { DmModule } from './modules/dm/dm.module.js';
 import { LibraryModule } from './modules/library/library.module.js';
 import { MediaModule } from './modules/media/media.module.js';
+import { PersonalPlanModule } from './modules/personal-plan/plan.module.js';
 import { ModerationModule } from './modules/moderation/moderation.module.js';
 import { SocialModule } from './modules/social/social.module.js';
 import { GymsModule } from './modules/gyms/gyms.module.js';
@@ -49,6 +50,7 @@ import { UsersModule } from './modules/users/users.module.js';
     LibraryModule,
     DmModule,
     ModerationModule,
+    PersonalPlanModule,
   ],
   providers: [{ provide: APP_GUARD, useClass: ThrottlerGuard }],
 })
