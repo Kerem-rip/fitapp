@@ -26,6 +26,9 @@ export function SocialMenu({ visible, onClose, unread }: { visible: boolean; onC
 
       <SectionHeader title="Sağlığım" />
       <ListRow icon="today-outline" title="Bugün" subtitle="Kalori, su ve kilo özeti" onPress={() => go('/today')} />
+      <ListRow icon="flame-outline" title="Kalori hesaplama" subtitle="Amacına göre günlük hedefin" onPress={() => go('/calorie')} />
+      <ListRow icon="analytics-outline" title="Günün analizi" subtitle="Yediklerin, içtiklerin ve hareketlerin" onPress={() => go('/day-analysis')} />
+      <ListRow icon="time-outline" title="Geçmişim" subtitle="Başladıkların ve yaptıkların" onPress={() => go('/history')} />
       <ListRow icon="restaurant-outline" title="Öğün ve su kaydı" subtitle="Beslenme günlüğün" onPress={() => go('/nutrition')} />
       <ListRow icon="clipboard-outline" title="Ölçümlerim ve sağlık öyküm" onPress={() => go('/my-health')} last />
 

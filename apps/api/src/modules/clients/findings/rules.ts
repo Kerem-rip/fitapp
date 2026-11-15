@@ -153,6 +153,7 @@ const KIND_LABEL: Record<MeasurementKind, string> = {
   HEIGHT: 'Boy',
   WAIST: 'Bel çevresi',
   HIP: 'Kalça çevresi',
+  NECK: 'Boyun çevresi',
   CHEST: 'Göğüs çevresi',
   ARM: 'Kol çevresi',
   THIGH: 'Bacak çevresi',

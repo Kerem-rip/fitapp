@@ -17,6 +17,7 @@ export const MEASUREMENT_SPECS: Record<MeasurementKind, MeasurementSpec> = {
   HEIGHT: { unit: 'cm', min: 100, max: 250, methods: ['TAPE', 'SELF_REPORT', 'OTHER'], category: 'MEASUREMENTS' },
   WAIST: { unit: 'cm', min: 40, max: 250, methods: CIRCUMFERENCE, category: 'MEASUREMENTS' },
   HIP: { unit: 'cm', min: 50, max: 250, methods: CIRCUMFERENCE, category: 'MEASUREMENTS' },
+  NECK: { unit: 'cm', min: 20, max: 80, methods: CIRCUMFERENCE, category: 'MEASUREMENTS' },
   CHEST: { unit: 'cm', min: 50, max: 250, methods: CIRCUMFERENCE, category: 'MEASUREMENTS' },
   ARM: { unit: 'cm', min: 10, max: 80, methods: CIRCUMFERENCE, category: 'MEASUREMENTS' },
   THIGH: { unit: 'cm', min: 20, max: 120, methods: CIRCUMFERENCE, category: 'MEASUREMENTS' },

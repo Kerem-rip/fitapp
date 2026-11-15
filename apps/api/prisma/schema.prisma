@@ -55,6 +55,11 @@ model User {
   libraryEnrollments LibraryEnrollment[]
   libraryTasks       LibraryTask[]
   workoutCardTasks   WorkoutCardTask[]
+  calorieProfile     CalorieProfile?
+  premiumGrant       PremiumGrant?
+  routineItems       RoutineItem[]
+  taskChecks         TaskCheck[]
+  userEvents         UserEvent[]
   profile            Profile?
 
   following     Follow[]        @relation("follower")
@@ -793,6 +798,7 @@ enum MeasurementKind {
   HEIGHT // cm
   WAIST // cm
   HIP // cm
+  NECK // cm (vücut kompozisyonu tahmini için)
   CHEST // cm
   ARM // cm
   THIGH // cm
@@ -1834,6 +1840,97 @@ model LibraryTask {
 
   @@unique([userId, itemId, date])
   @@index([userId, date])
+}
+
+// ═══════════════════════════════════════════════════════════════
+// KALORİ ARACI, PREMIUM, GÜNÜN DÜZENİ VE KULLANICI GEÇMİŞİ — docs/features/daily-routines.md
+// ═══════════════════════════════════════════════════════════════
+
+// Kullanıcının kalori aracı kaydı: onayladığı profil bilgileri, amacı ve hesaplanan hedefler. Tüm değerler TAHMİNİDİR.
+// Hesap ortak pakette (@fitapp/shared) yapılır; sunucu güvenlik sınırlarını (alt kalori, haftalık 1 kg, yaş) denetler.
+model CalorieProfile {
+  userId              String   @id
+  goal                String // lose | gain | maintain | muscle | athlete | breastfeeding
+  activity            String // sedentary | light | moderate | active | very_active
+  sport               String? // gym | endurance | team | combat | other
+  breastfeedingMonths Int?
+  // Onaylanan profil bilgileri (hesap anındaki hâli)
+  sex                 String
+  ageYears            Int
+  heightCm            Float
+  weightKg            Float
+  bodyFatPercent      Float? // Premium: çevre ölçülerinden tahmin
+  // Sonuç
+  bmr                 Int
+  tdee                Int
+  targetKcal          Int
+  proteinG            Int
+  carbsG              Int
+  fatG                Int
+  waterMl             Int
+  confirmedAt         DateTime @default(now())
+  updatedAt           DateTime @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+// Premium işareti. Gerçek ödeme yokken yalnızca geliştirmede (source DEV) elle açılır; üretimde kapalıdır.
+model PremiumGrant {
+  userId    String   @id
+  source    String // DEV | (ileride) STORE
+  createdAt DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+// Günün düzeni: saat dilimi (MORNING/NOON/AFTERNOON/EVENING/ANYTIME) ve şerit (CARE bakım, EXERCISE egzersiz, MEAL yemek) ayrı tutulur.
+// SUGGESTED öğeler yalnızca premium kullanıcıda; MANUAL öğeleri herkes ekler.
+model RoutineItem {
+  id        String    @id @default(uuid())
+  userId    String
+  date      String // "YYYY-AA-GG" (Türkiye günü)
+  slot      String
+  lane      String
+  kind      String // CARD | CARE | FOOD | CUSTOM
+  refId     String? // CARD için antrenman kartı kimliği
+  title     String
+  subtitle  String?
+  data      Json? // FOOD: kalemler ve besin değerleri (+ günlüğe yazılan öğün kimlikleri)
+  source    String // SUGGESTED | MANUAL
+  doneAt    DateTime?
+  createdAt DateTime  @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, date])
+}
+
+// Görev işareti: uzman planı (diyetisyen öğünü, antrenör günü) gibi başka kaynaklı görevlerin "yapıldı" kaydı
+model TaskCheck {
+  id        String   @id @default(uuid())
+  userId    String
+  key       String // ör. "plan:<planId>:<mealId>"
+  date      String
+  createdAt DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, key, date])
+  @@index([userId, date])
+}
+
+// Kullanıcı geçmişi ("beyin"): önemli olaylar. Program/kart/ölçü/öğün kayıtları kendi tablolarından okunur ve geçmişte birleştirilir.
+model UserEvent {
+  id     String   @id @default(uuid())
+  userId String
+  kind   String
+  title  String
+  data   Json?
+  at     DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, at])
 }
 
 // Takvime eklenen antrenman kartı (workout-cards.ts CARDS[].id); "Hemen Başla" bitince doneAt dolar

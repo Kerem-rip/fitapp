@@ -39,6 +39,6 @@ import { NotesService } from './notes.service.js';
     ProgramsService,
     WorkoutsService,
   ],
-  exports: [MeasurementsService, AnamnesisService, FindingsService],
+  exports: [MeasurementsService, AnamnesisService, FindingsService, FoodLogService],
 })
 export class ClientsModule {}

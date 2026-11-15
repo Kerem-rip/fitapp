@@ -1,6 +1,6 @@
 // Ana Sayfa: selamlama, bugünün antrenmanı, kısayollar ve günlük ilerleme.
 // Her öğe gerçek veriden gelir ve çalışan bir yere gider; olmayan veri (adım gibi) gösterilmez.
-import type { MyProgramDay, WorkoutCardSummary } from '@fitapp/api-client';
+import type { CalorieProfileSaved, MyProgramDay, WorkoutCardSummary } from '@fitapp/api-client';
 import { Avatar, Icon, IconButton, ProgressBar, Screen, Text, useTheme, type IconName } from '@fitapp/ui-mobile';
 import { useFocusEffect, useRouter } from 'expo-router';
 import { useCallback, useState } from 'react';
@@ -40,15 +40,19 @@ export function HomeScreen() {
   const { c, accent } = useTheme();
   const account = useAccount();
   const today = useToday();
-  const { target, missing } = useTarget();
+  const { target: hookTarget, missing: hookMissing } = useTarget();
   const { day: food } = useFoodLog(today);
   const [menuOpen, setMenuOpen] = useState(false);
   const [unread, setUnread] = useState(0);
   const [mine, setMine] = useState<MyProgramDay | null>(null);
   const [fallback, setFallback] = useState<WorkoutCardSummary | null>(null);
+  const [calorie, setCalorie] = useState<CalorieProfileSaved | null>(null);
+  const [routineDone, setRoutineDone] = useState<boolean[]>([]);
 
   useFocusEffect(
     useCallback(() => {
+      api.calorieProfile().then((r) => setCalorie(r.profile)).catch(() => setCalorie(null));
+      api.routine(today).then((r) => setRoutineDone(r.items.map((i) => i.done))).catch(() => setRoutineDone([]));
       api.notifications(1).then((r) => setUnread(r.unread)).catch(() => setUnread(0));
       api.myProgramDay(today).then(setMine).catch(() => setMine(null));
       api
@@ -60,6 +64,9 @@ export function HomeScreen() {
 
   if (!account) return null;
   const teen = account.roleKey === 'teen';
+  // Kalori aracıyla kaydedilen hedef varsa o kullanılır
+  const target = calorie?.targetKcal ?? hookTarget;
+  const missing = calorie ? false : hookMissing;
 
   // Bugünün antrenmanı: önce takvime eklenen kart, sonra katıldığın programın bugünkü günü, yoksa öneri
   const play = (cardId: string, extra: Record<string, string> = {}) => router.push({ pathname: '/workout-play/[id]', params: { id: cardId, ...extra } });
@@ -83,6 +90,7 @@ export function HomeScreen() {
   // Günlük ilerleme: bugünün görevleri (kart, program adımı, tek hareket, kişisel program)
   const units = mine
     ? [
+        ...routineDone,
         ...mine.cards.map((x) => x.done),
         ...mine.programs.flatMap((p) => p.steps.map((s) => s.done)),
         ...mine.tasks.map((t) => t.done),
@@ -177,9 +185,27 @@ export function HomeScreen() {
               {(water / 1000).toLocaleString('tr-TR', { minimumFractionDigits: 1, maximumFractionDigits: 2 })} / {WATER_GOAL_ML / 1000} L
             </Text>
           </View>
-          <ProgressBar value={water} max={WATER_GOAL_ML} />
+          <ProgressBar value={water} max={calorie?.waterMl ?? WATER_GOAL_ML} />
         </Pressable>
       </View>
+
+      {/* Kalori hesaplama aracı: sayfanın en altında; 18 yaş altında kapalıdır */}
+      {!teen ? (
+        <Pressable onPress={() => router.push('/calorie')} accessibilityRole="button" accessibilityLabel="Kalori hesaplama" style={{ marginTop: 16, backgroundColor: accent, borderRadius: 24, padding: 18, flexDirection: 'row', alignItems: 'center', gap: 14 }}>
+          <View style={{ width: 52, height: 52, borderRadius: 16, backgroundColor: 'rgba(255,255,255,0.16)', alignItems: 'center', justifyContent: 'center' }}>
+            <Icon name="flame-outline" size={26} color="#FFFFFF" />
+          </View>
+          <View style={{ flex: 1 }}>
+            <Text variant="heading" style={{ color: '#FFFFFF' }}>
+              Kalori Hesaplama
+            </Text>
+            <Text variant="caption" style={{ color: 'rgba(255,255,255,0.85)' }}>
+              {calorie ? `Hedefin: ${calorie.targetKcal} kcal · Güncellemek için dokun` : 'Amacına göre günlük kalori, protein ve su hedefini hesapla.'}
+            </Text>
+          </View>
+          <Icon name="arrow-forward" size={20} color="#FFFFFF" />
+        </Pressable>
+      ) : null}
     </Screen>
   );
 }

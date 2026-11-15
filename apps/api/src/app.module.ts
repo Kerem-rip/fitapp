@@ -13,6 +13,7 @@ import { ConsentsModule } from './modules/consents/consents.module.js';
 import { EmailModule } from './modules/email/email.module.js';
 import { FilesModule } from './modules/files/files.module.js';
 import { HealthModule } from './modules/health/health.module.js';
+import { DailyModule } from './modules/daily/daily.module.js';
 import { DmModule } from './modules/dm/dm.module.js';
 import { LibraryModule } from './modules/library/library.module.js';
 import { MediaModule } from './modules/media/media.module.js';
@@ -51,6 +52,7 @@ import { UsersModule } from './modules/users/users.module.js';
     DmModule,
     ModerationModule,
     PersonalPlanModule,
+    DailyModule,
   ],
   providers: [{ provide: APP_GUARD, useClass: ThrottlerGuard }],
 })

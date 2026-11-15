@@ -4,5 +4,9 @@ export const ROLE_TYPES = ["USER", "DIETITIAN", "TRAINER", "GYM_MANAGER", "ADMIN
 export type RoleType = (typeof ROLE_TYPES)[number];
 
 export * from './nutrition';
+export * from './calorie-tool';
+export * from './body';
+export * from './day-analysis';
+export * from './routines';
 export * from './seed/foods';
 export * from './validation';

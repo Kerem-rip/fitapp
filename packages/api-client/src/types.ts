@@ -199,6 +199,7 @@ export type MeasurementKind =
   | 'HEIGHT'
   | 'WAIST'
   | 'HIP'
+  | 'NECK'
   | 'CHEST'
   | 'ARM'
   | 'THIGH'
@@ -1073,6 +1074,105 @@ export interface MyProgramDay {
     doneCount: number;
   })[];
   tasks: { id: string; item: { id: string; title: string; kind: LibraryItemKind }; workText: string; durationSec: number; done: boolean }[];
+}
+
+// ───── Kalori aracı, premium, günün düzeni, geçmiş ─────
+
+export type ToolGoalKey = 'lose' | 'gain' | 'maintain' | 'muscle' | 'athlete' | 'breastfeeding';
+
+export interface CalorieProfileSaved {
+  goal: ToolGoalKey;
+  activity: 'sedentary' | 'light' | 'moderate' | 'active' | 'very_active';
+  sport: 'gym' | 'endurance' | 'team' | 'combat' | 'other' | null;
+  breastfeedingMonths: number | null;
+  sex: 'female' | 'male' | 'other';
+  ageYears: number;
+  heightCm: number;
+  weightKg: number;
+  bodyFatPercent: number | null;
+  bmr: number;
+  tdee: number;
+  targetKcal: number;
+  proteinG: number;
+  carbsG: number;
+  fatG: number;
+  waterMl: number;
+  confirmedAt: string;
+  updatedAt: string;
+}
+
+export interface CalorieProfileInput {
+  goal: ToolGoalKey;
+  activity: CalorieProfileSaved['activity'];
+  sport?: NonNullable<CalorieProfileSaved['sport']>;
+  breastfeedingMonths?: number;
+  sex: 'female' | 'male' | 'other';
+  ageYears: number;
+  heightCm: number;
+  weightKg: number;
+  bodyFatPercent?: number;
+  bmr: number;
+  tdee: number;
+  targetKcal: number;
+  proteinG: number;
+  carbsG: number;
+  fatG: number;
+  waterMl: number;
+  screening: { pregnant: boolean; medicalRestriction: boolean; eatingDisorderHistory: boolean };
+}
+
+export interface PremiumState {
+  active: boolean;
+  source: string | null;
+  // Gerçek ödeme henüz yok; deneme yalnızca geliştirmede açılır
+  paymentAvailable: boolean;
+}
+
+export type RoutineSlotKey = 'MORNING' | 'NOON' | 'AFTERNOON' | 'EVENING' | 'ANYTIME';
+export type RoutineLaneKey = 'CARE' | 'EXERCISE' | 'MEAL';
+export interface RoutineFoodItem {
+  name: string;
+  portion: string;
+  servings: number;
+  kcal: number;
+  proteinG: number;
+  carbsG: number;
+  fatG: number;
+}
+export interface RoutineItemView {
+  id: string;
+  date: string;
+  slot: RoutineSlotKey;
+  lane: RoutineLaneKey;
+  kind: 'CARD' | 'CARE' | 'FOOD' | 'CUSTOM';
+  refId: string | null;
+  title: string;
+  subtitle: string | null;
+  data: { items?: RoutineFoodItem[] } | null;
+  source: 'SUGGESTED' | 'MANUAL';
+  done: boolean;
+}
+export interface RoutineDay {
+  date: string;
+  premium: boolean;
+  items: RoutineItemView[];
+}
+export interface RoutineInput {
+  date?: string;
+  slot: RoutineSlotKey;
+  lane: RoutineLaneKey;
+  kind: 'CARD' | 'CARE' | 'FOOD' | 'CUSTOM';
+  refId?: string;
+  title: string;
+  subtitle?: string;
+  data?: { items?: RoutineFoodItem[] };
+  source: 'SUGGESTED' | 'MANUAL';
+}
+export interface HistoryEntry {
+  at: string;
+  kind: string;
+  title: string;
+  detail?: string;
 }
 
 // ───── Antrenman kartları ─────
